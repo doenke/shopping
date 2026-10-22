@@ -4,7 +4,64 @@ Selbst gehostete, offline-fähige Einkaufslisten-App im Stil von Bring!,
 mit nativer Mealie-Anbindung, Login über Pocket ID, REST-API für Home Assistant und
 eingebautem MCP-Server.
 
-> Status: **Konzeptphase** – noch kein Code.
+> Status: **Phase 1 (Fundament)** umgesetzt – siehe [Roadmap](docs/konzept/13-roadmap-und-entscheidungen.md).
+
+## Was Phase 1 kann
+
+- Login über **Pocket ID** (OIDC mit PKCE), langlebige Sessions
+- Einkaufslisten mit **Hauptliste** ⭐, Artikel mit **Menge, Einheit, Eigenschaften, Notiz**
+- **Eine Eingabezeile für alles**: „2 kg Kartoffeln“, „500g Hack gemischt bio“, „Milch, Butter, 6 Eier“
+- Doppelte Artikel werden zusammengeführt (1 l + 2 l Milch = 3 l)
+- **Offline-first**: lokale Datenbank im Browser, Änderungen werden gepuffert und
+  nachgeliefert (auch per Background Sync, wenn die App schon zu ist)
+- **Echtzeit**: Abhaken erscheint bei anderen in ~0,1 s, mit „✓ von Anna“
+- PWA zum Installieren auf Android; am Laptop drei Spalten mit Katalog zum Durchklicken
+- Lebensmittel-Katalog (Grundkatalog + **Import aus Mealie**, Labels → Kategorien)
+- Kategorien wie bei Bring!, Kacheln mit Buchstaben-Platzhalter bis zu den generierten Icons
+- **Teilen per Link** über den Teilen-Dialog des Handys: Wer den Link angemeldet öffnet,
+  ist dabei (Besitzer kann den Link erneuern, Mitglieder können die Liste verlassen)
+
+Noch nicht dabei (folgende Phasen): Gastzugang ohne Account, Mitglieder entfernen,
+Mealie-Eingangskorb, Rezept-Import, Vorlagen, REST-API-Tokens, Home Assistant, MCP, Icons.
+
+## Betrieb
+
+1. In Pocket ID einen OIDC-Client anlegen:
+   - Callback-URL: `https://<deine-adresse>/auth/callback`
+   - „Public Client“ / PKCE aktiv (dann kein Client-Secret nötig)
+   - Zugriff über „Allowed User Groups“ steuern
+2. `.env.example` nach `.env` kopieren und ausfüllen.
+3. `docker compose up -d` – die App lauscht auf Port 3000.
+4. Reverse Proxy mit HTTPS davor (WebSocket-Upgrade für `/ws` erlauben).
+
+Datenbank-Migrationen laufen beim Start automatisch. Backup: `pg_dump` der Datenbank.
+
+## Entwicklung
+
+Voraussetzungen: Node 22, pnpm, eine PostgreSQL-Datenbank.
+
+```bash
+pnpm install
+cp .env.example .env    # DATABASE_URL, PUBLIC_URL=http://localhost:5173, SECRET_KEY, DEV_LOGIN=true
+pnpm --filter @shopping/server dev   # API auf :3000
+pnpm --filter @shopping/web dev      # PWA auf :5173 (leitet /api, /auth, /ws an :3000 weiter)
+```
+
+Mit `DEV_LOGIN=true` kann man sich lokal nur mit einem Namen anmelden – **niemals in Produktion**.
+
+```bash
+pnpm typecheck
+pnpm test     # Server-Tests brauchen TEST_DATABASE_URL (Standard: postgres://postgres@127.0.0.1:54329/postgres)
+pnpm build
+```
+
+Struktur:
+
+| Pfad | Inhalt |
+|------|--------|
+| `packages/shared` | Datenmodell, Eingabe-Parser, Einheiten, Kategorien, Sync-Logik (HLC, Feld-LWW), Grundkatalog |
+| `apps/server` | Fastify: OIDC, Sync (WebSocket + HTTP), Katalog, Mealie, Postgres via Drizzle |
+| `apps/web` | React-PWA: Dexie (IndexedDB), Sync-Engine, Service Worker |
 
 ## Konzept
 

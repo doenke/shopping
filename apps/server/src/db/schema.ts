@@ -82,6 +82,18 @@ export const listMembers = pgTable(
   (t) => [primaryKey({ columns: [t.listId, t.userId] }), index('list_members_user_idx').on(t.userId)],
 );
 
+/** One active link per list; whoever opens it (logged in) becomes a member. */
+export const shareLinks = pgTable('share_links', {
+  listId: uuid('list_id')
+    .primaryKey()
+    .references(() => lists.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+  /** Encrypted token, so every member can share the link again. */
+  tokenSealed: text('token_sealed').notNull(),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const listItems = pgTable(
   'list_items',
   {

@@ -16,6 +16,7 @@ import type { Db } from './db/index.js';
 import { catalogItems, integrations, users } from './db/schema.js';
 import { currentSeq } from './db/seed.js';
 import { MealieClient, MealieError } from './mealie/client.js';
+import { sharingRoutes } from './sharing/routes.js';
 import { importFoods } from './mealie/import.js';
 import { SyncHub } from './sync/hub.js';
 import { toCatalogItem, toMe } from './sync/rows.js';
@@ -70,6 +71,8 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
     if (!userId) return reply.code(401).send({ error: 'unauthorized' });
     request.userId = userId;
   };
+
+  await app.register(sharingRoutes, { config, db, sync, hub, secrets, requireUser });
 
   // ---- Sync ---------------------------------------------------------------
 
@@ -221,7 +224,6 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   if (webDist && existsSync(webDist)) {
     await app.register(fastifyStatic, {
       root: webDist,
-      wildcard: false,
       setHeaders(res, path) {
         // The service worker and the app shell must always be revalidated.
         if (path.endsWith('sw.js') || path.endsWith('index.html') || path.endsWith('.webmanifest')) {
@@ -232,7 +234,9 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
       },
     });
     app.setNotFoundHandler((request, reply) => {
-      if (request.method === 'GET' && !/^\/(api|auth|ws)\b/.test(request.url)) {
+      // Client-side routes get the app shell; missing files (e.g. old asset hashes) get a real 404.
+      const path = request.url.split('?')[0]!;
+      if (request.method === 'GET' && !/^\/(api|auth|ws)\b/.test(path) && !/\.[a-z0-9]+$/i.test(path)) {
         return reply.header('Cache-Control', 'no-cache').sendFile('index.html');
       }
       return reply.code(404).send({ error: 'not_found' });

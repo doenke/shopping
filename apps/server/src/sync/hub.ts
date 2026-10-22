@@ -1,4 +1,5 @@
-import { ClientMessageSchema, type ServerMessage } from '@shopping/shared';
+import type { ServerMessage } from '@shopping/shared';
+import { ClientMessageSchema } from '@shopping/shared/schemas';
 import type { FastifyBaseLogger } from 'fastify';
 import type { WebSocket } from 'ws';
 import type { SyncService } from './service.js';

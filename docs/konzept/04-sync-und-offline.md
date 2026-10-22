@@ -112,6 +112,19 @@ Dasselbe Protokoll ist per HTTP verfügbar (`POST /api/v1/sync/push`,
 `GET /api/v1/sync/pull?since=`) – für Background Sync, native Clients und
 Notfälle ohne WebSocket.
 
+## Umsetzung (Phase 1)
+
+- Alle synchronisierten Zeilen tragen eine globale, fortlaufende Nummer
+  (`sync_seq`) und pro Feld einen HLC-Zeitstempel (`hlc`-Spalte).
+- Schreibzugriffe und Delta-Abfragen laufen im Server hintereinander
+  (In-Process-Mutex). So kann kein Client-Cursor eine später committete Zeile
+  überspringen. Das setzt **eine** Server-Instanz voraus – für einen Haushalt
+  mehr als genug.
+- Nach jeder Änderung bekommt jedes verbundene Gerät der betroffenen Nutzer
+  sein persönliches Delta ab seinem Cursor.
+- Ein Ping ohne Antwort binnen 5 s oder ein fehlendes `ack` binnen 8 s
+  beendet die Verbindung und startet sie neu.
+
 ## Tests, die das absichern müssen
 
 - Zwei Clients offline, beide ändern, dann online in beliebiger Reihenfolge → gleicher Endzustand.

@@ -2,7 +2,6 @@ import {
   Hlc,
   applyPatch,
   mergeAmounts,
-  MutationSchema,
   type ChangeSet,
   type ItemPatch,
   type ItemRow,
@@ -10,6 +9,7 @@ import {
   type ListRow,
   type Mutation,
 } from '@shopping/shared';
+import { MutationSchema } from '@shopping/shared/schemas';
 import { and, eq, gt, inArray, ne, sql } from 'drizzle-orm';
 import type { Db, Tx } from '../db/index.js';
 import { currentSeq } from '../db/seed.js';
@@ -256,6 +256,53 @@ export class SyncService {
     const state = { defaultListId: user.defaultListId, hlc: { ...user.hlc } };
     if (applyPatch(state, patch, ts).length === 0) return;
     await tx.update(users).set({ defaultListId: state.defaultListId, hlc: state.hlc, seq: nextSeq }).where(eq(users.id, userId));
+  }
+
+  /** Adds the user to a list (opening its link). Returns false if the list is gone. */
+  join(userId: string, listId: string): Promise<boolean> {
+    return this.mutex.run(async () => {
+      const [list] = await this.db.select({ deleted: lists.deleted }).from(lists).where(eq(lists.id, listId));
+      if (!list || list.deleted) return false;
+      await this.db
+        .insert(listMembers)
+        .values({ listId, userId })
+        .onConflictDoUpdate({
+          target: [listMembers.listId, listMembers.userId],
+          set: { removed: false, seq: nextSeq },
+          setWhere: sql`${listMembers.removed} = true`,
+        });
+      return true;
+    });
+  }
+
+  /** Removes a member; the owner cannot leave their own list. */
+  leave(userId: string, listId: string): Promise<'ok' | 'owner' | 'not_member'> {
+    return this.mutex.run(async () => {
+      const [list] = await this.db.select({ ownerId: lists.ownerId }).from(lists).where(eq(lists.id, listId));
+      if (!list) return 'not_member';
+      if (list.ownerId === userId) return 'owner';
+      const updated = await this.db
+        .update(listMembers)
+        .set({ removed: true, seq: nextSeq })
+        .where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId), eq(listMembers.removed, false)))
+        .returning({ listId: listMembers.listId });
+      if (updated.length) {
+        // Unset the main list if it was this one.
+        await this.db
+          .update(users)
+          .set({ defaultListId: null, seq: nextSeq })
+          .where(and(eq(users.id, userId), eq(users.defaultListId, listId)));
+      }
+      return updated.length ? 'ok' : 'not_member';
+    });
+  }
+
+  async isMember(userId: string, listId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ removed: listMembers.removed })
+      .from(listMembers)
+      .where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId)));
+    return !!row && !row.removed;
   }
 
   /** Everything the user has not seen since `since`. */

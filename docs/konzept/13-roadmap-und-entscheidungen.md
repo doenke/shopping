@@ -24,7 +24,7 @@
 
 ## Phasen
 
-### Phase 1 – Fundament (MVP)
+### Phase 1 – Fundament (MVP) ✅ umgesetzt
 - Monorepo, Docker-Compose, CI
 - Login mit Pocket ID, Listen mit Besitzer
 - Einkaufslisten mit Hauptliste: Artikel mit Menge/Einheit/Eigenschaften/Notiz
@@ -33,11 +33,18 @@
 - Kachel-UI (Handy) + Drei-Spalten-UI (Laptop), Buchstaben-Fallback statt Icons
 - **Meilenstein:** Wocheneinkauf damit erledigen, zu zweit, im echten Supermarkt.
 
+Aus Phase 2 vorgezogen, weil der Meilenstein „zu zweit“ sonst nicht erreichbar ist:
+**Beitreten per Link** für angemeldete Nutzer (Link teilen, erneuern, Liste verlassen).
+
+Bewusst noch offen aus Phase 1: Kategorien-Reihenfolge per Drag & Drop
+(derzeit feste Bring!-Reihenfolge), Pflege-Ansicht für den Katalog (Dubletten,
+Ausblenden).
+
 ### Phase 2 – Bring ablösen
 - Mealie-Eingangskorb (Webhook + Abgleich) → n8n-Flow „mealie2bring“ abschalten
 - Rezept- und Wochenplan-Import
 - Vorlagen
-- Teilen per Link (Teilen-Dialog des Handys), Mitglieder, Gäste
+- Gastzugang per Link ohne Account, Mitglieder anzeigen/entfernen
 
 ### Phase 3 – Offen machen
 - REST-API mit Tokens, OpenAPI, SSE

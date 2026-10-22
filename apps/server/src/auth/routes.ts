@@ -9,6 +9,11 @@ import { createSession, destroySession } from './session.js';
 
 const FLOW_COOKIE = 'oidc_flow';
 
+/** Only local paths are allowed as return target (no open redirects). */
+export function safeNext(next: unknown): string {
+  return typeof next === 'string' && /^\/s\/[A-Za-z0-9_-]{10,100}$/.test(next) ? next : '/';
+}
+
 interface Profile {
   subject: string;
   email: string | null;
@@ -54,7 +59,8 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config; d
 
   app.get('/auth/config', async () => ({ oidc: !!config.OIDC_ISSUER, devLogin: config.DEV_LOGIN }));
 
-  app.get('/auth/login', async (_request, reply) => {
+  app.get('/auth/login', async (request, reply) => {
+    const next = safeNext((request.query as Record<string, unknown>).next);
     const cfg = await oidcConfig();
     const verifier = oidc.randomPKCECodeVerifier();
     const state = oidc.randomState();
@@ -67,7 +73,7 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config; d
       state,
       nonce,
     });
-    reply.setCookie(FLOW_COOKIE, JSON.stringify({ verifier, state, nonce }), {
+    reply.setCookie(FLOW_COOKIE, JSON.stringify({ verifier, state, nonce, next }), {
       path: '/auth',
       httpOnly: true,
       sameSite: 'lax',
@@ -82,7 +88,7 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config; d
     const raw = request.cookies[FLOW_COOKIE];
     const unsigned = raw ? request.unsignCookie(raw) : undefined;
     if (!unsigned?.valid || !unsigned.value) return reply.redirect('/?login=expired');
-    const flow = JSON.parse(unsigned.value) as { verifier: string; state: string; nonce: string };
+    const flow = JSON.parse(unsigned.value) as { verifier: string; state: string; nonce: string; next?: string };
     reply.clearCookie(FLOW_COOKIE, { path: '/auth' });
 
     const cfg = await oidcConfig();
@@ -112,7 +118,7 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config; d
       isAdmin: groups.includes(config.OIDC_ADMIN_GROUP),
     });
     await createSession(db, userId, reply, secure);
-    return reply.redirect('/');
+    return reply.redirect(safeNext(flow.next));
   });
 
   if (config.DEV_LOGIN) {
