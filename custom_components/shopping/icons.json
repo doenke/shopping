@@ -1,0 +1,26 @@
+{
+  "services": {
+    "add_items": {
+      "service": "mdi:cart-plus"
+    },
+    "apply_template": {
+      "service": "mdi:clipboard-list"
+    },
+    "import_mealie_recipe": {
+      "service": "mdi:chef-hat"
+    },
+    "import_mealie_mealplan": {
+      "service": "mdi:calendar-week"
+    },
+    "clear_checked": {
+      "service": "mdi:cart-remove"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "open_items": {
+        "default": "mdi:cart"
+      }
+    }
+  }
+}

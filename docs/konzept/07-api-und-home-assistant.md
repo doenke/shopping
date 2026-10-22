@@ -12,47 +12,49 @@ beschrieben (`/api/v1/openapi.json`, Doku unter `/api/docs`).
 | Home Assistant, n8n, Skripte | `Authorization: Bearer shopping_pat_…` – persönliches API-Token |
 | MCP-Clients | OAuth 2.1 (siehe [08](08-mcp-server.md)) oder API-Token |
 
-Tokens werden in der App unter *Profil → API-Tokens* erstellt, mit
-**Scopes** (`lists:read`, `lists:write`, `items:write`, `catalog:read`,
-`mealie:import`) und optional beschränkt auf bestimmte Listen.
+Tokens werden in der App unter *Einstellungen → API & Integrationen* erstellt,
+mit den Berechtigungen `read`, `write` und `mealie`. Ein Token sieht genau die
+Listen seines Nutzers. Tokens können keine weiteren Tokens erzeugen.
 
-## REST-Endpunkte (Auszug)
+## REST-Endpunkte (umgesetzt)
+
+Listen dürfen überall per ID, per Name (`Einkauf`) oder als `default` (Hauptliste)
+angesprochen werden. Vollständig beschrieben unter `/api/v1/openapi.json`,
+lesbar unter `/api/docs`.
 
 ```
-GET    /api/v1/lists                          ?type=shopping&templates=false
-POST   /api/v1/lists                          {name, type, fromTemplateId?}
-GET    /api/v1/lists/{id}                     inkl. Artikel; {id} = `default` → Hauptliste
-PATCH  /api/v1/lists/{id}
+GET    /api/v1/lists                          ?templates=exclude|include|only
+POST   /api/v1/lists                          {name, template?, isTemplate?}
+GET    /api/v1/lists/{id}                     ?items=open|done|all
+PATCH  /api/v1/lists/{id}                     {name}
 DELETE /api/v1/lists/{id}
 
-GET    /api/v1/lists/{id}/items               ?checked=false
-POST   /api/v1/lists/{id}/items               {text:"2 kg Kartoffeln festkochend"}  ← wird geparst
-                                              oder {name, quantity, unit, properties, note}
-POST   /api/v1/lists/{id}/items:bulk          [ … ]
-PATCH  /api/v1/items/{id}
+GET    /api/v1/lists/{id}/items               ?items=open|done|all
+POST   /api/v1/lists/{id}/items               {text:"2 kg Kartoffeln, Milch"} und/oder
+                                              {items:["Butter", {name, quantity, unit, properties, note, category}]}
+POST   /api/v1/lists/{id}/clear-checked
+POST   /api/v1/lists/{id}/apply-template      {template, includeOptional?}
+POST   /api/v1/lists/{id}/import/mealie       {recipe, servings?, includePantry?} | {from, to, includePantry?}
+
+GET    /api/v1/items/{id}
+PATCH  /api/v1/items/{id}                     {name?, quantity?, unit?, properties?, note?, category?, checked?}
 POST   /api/v1/items/{id}/check               /uncheck
 DELETE /api/v1/items/{id}
-POST   /api/v1/lists/{id}/clear-checked
-
-POST   /api/v1/lists/{id}/apply-template      {templateId, itemIds?}
-POST   /api/v1/lists/{id}/import/mealie       {recipeSlug, servings} | {mealplan:{from,to}}
 
 GET    /api/v1/catalog/search?q=milch
-POST   /api/v1/parse                          {text} → strukturierter Artikel (ohne Speichern)
-
-GET    /api/v1/events                         SSE-Stream aller Änderungen (für Integrationen)
-GET    /api/v1/sync/pull?since=  POST /api/v1/sync/push      (Sync-Protokoll, siehe 04)
+POST   /api/v1/parse                          {text} → strukturierte Artikel (ohne Speichern)
+GET    /api/v1/history?list=&limit=           zuletzt gekauft
+GET    /api/v1/events                         Server-Sent Events
 ```
 
 Fehler im Format RFC 9457 (`application/problem+json`).
-Schreibende Requests akzeptieren `Idempotency-Key`.
 
 ## Echtzeit für Integrationen
 
-- **SSE** `GET /api/v1/events?lists=…` – Ereignisse `item.added`,
-  `item.updated`, `item.checked`, `item.unchecked`, `item.removed`,
-  `list.updated`. Einfach zu konsumieren, funktioniert durch jeden Proxy.
-- **Ausgehende Webhooks** (optional, HMAC-signiert) – für eigene
+- **SSE** `GET /api/v1/events` – Ereignisse `list.changed`, `list.removed`,
+  `item.changed`, `item.removed` (jeweils mit dem Objekt als JSON). Einfach zu
+  konsumieren, funktioniert durch jeden Proxy.
+- **Ausgehende Webhooks** (noch nicht umgesetzt; optional, HMAC-signiert) – für eigene
   Automationen, z. B. in n8n. Die App selbst verschickt keine
   Benachrichtigungen.
 

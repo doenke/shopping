@@ -1,0 +1,149 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect Shopping",
+        "description": "Address of the Shopping app and an API token (in the app: Settings → API & Integrationen).",
+        "data": {
+          "url": "URL",
+          "token": "API-Token"
+        },
+        "data_description": {
+          "url": "e.g. https://shopping.example.org",
+          "token": "Starts with shp_"
+        }
+      },
+      "reauth_confirm": {
+        "title": "New token",
+        "description": "The token is no longer accepted. Please enter a new one.",
+        "data": {
+          "token": "API-Token"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid token or missing permission",
+      "cannot_connect": "Cannot reach Shopping"
+    },
+    "abort": {
+      "already_configured": "Account already configured",
+      "reauth_successful": "Token updated",
+      "wrong_account": "The token belongs to another account"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "open_items": {
+        "name": "Open items"
+      }
+    }
+  },
+  "services": {
+    "add_items": {
+      "name": "Add items",
+      "description": "Adds items as free text; amount, unit and properties are recognised.",
+      "fields": {
+        "items": {
+          "name": "Items",
+          "description": "Free text, e.g. \"2 l Milch\""
+        },
+        "list": {
+          "name": "List",
+          "description": "Name or id, empty = main list"
+        },
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only needed with several Shopping accounts"
+        }
+      }
+    },
+    "apply_template": {
+      "name": "Apply template",
+      "description": "Puts a template's items on a list.",
+      "fields": {
+        "template": {
+          "name": "Template",
+          "description": "Name of the template"
+        },
+        "include_optional": {
+          "name": "Optional items",
+          "description": "Also add optional items"
+        },
+        "list": {
+          "name": "List",
+          "description": "Name or id, empty = main list"
+        },
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only needed with several Shopping accounts"
+        }
+      }
+    },
+    "import_mealie_recipe": {
+      "name": "Recipe from Mealie",
+      "description": "Puts the ingredients of a Mealie recipe on the list.",
+      "fields": {
+        "recipe": {
+          "name": "Recipe",
+          "description": "Recipe slug in Mealie"
+        },
+        "servings": {
+          "name": "Servings",
+          "description": ""
+        },
+        "include_pantry": {
+          "name": "Pantry",
+          "description": "Also add salt, oil & co."
+        },
+        "list": {
+          "name": "List",
+          "description": "Name or id, empty = main list"
+        },
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only needed with several Shopping accounts"
+        }
+      }
+    },
+    "import_mealie_mealplan": {
+      "name": "Meal plan from Mealie",
+      "description": "Puts the ingredients of all recipes in the period on the list.",
+      "fields": {
+        "from": {
+          "name": "From",
+          "description": ""
+        },
+        "to": {
+          "name": "To",
+          "description": ""
+        },
+        "include_pantry": {
+          "name": "Pantry",
+          "description": "Also add salt, oil & co."
+        },
+        "list": {
+          "name": "List",
+          "description": "Name or id, empty = main list"
+        },
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only needed with several Shopping accounts"
+        }
+      }
+    },
+    "clear_checked": {
+      "name": "Clear bought items",
+      "description": "Empties the recently bought items.",
+      "fields": {
+        "list": {
+          "name": "List",
+          "description": "Name or id, empty = main list"
+        },
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only needed with several Shopping accounts"
+        }
+      }
+    }
+  }
+}

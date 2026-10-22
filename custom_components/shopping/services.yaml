@@ -1,0 +1,87 @@
+add_items:
+  fields:
+    items:
+      required: true
+      example: ["2 l Milch", "500 g Hack gemischt bio"]
+      selector:
+        text:
+          multiple: true
+    list:
+      example: Einkauf
+      selector:
+        text:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: shopping
+apply_template:
+  fields:
+    template:
+      required: true
+      example: Grillabend
+      selector:
+        text:
+    include_optional:
+      default: false
+      selector:
+        boolean:
+    list:
+      selector:
+        text:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: shopping
+import_mealie_recipe:
+  fields:
+    recipe:
+      required: true
+      example: spaghetti-bolognese
+      selector:
+        text:
+    servings:
+      selector:
+        number:
+          min: 1
+          max: 100
+    include_pantry:
+      default: false
+      selector:
+        boolean:
+    list:
+      selector:
+        text:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: shopping
+import_mealie_mealplan:
+  fields:
+    from:
+      required: true
+      selector:
+        date:
+    to:
+      required: true
+      selector:
+        date:
+    include_pantry:
+      default: false
+      selector:
+        boolean:
+    list:
+      selector:
+        text:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: shopping
+clear_checked:
+  fields:
+    list:
+      selector:
+        text:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: shopping

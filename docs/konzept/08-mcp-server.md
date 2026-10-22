@@ -10,13 +10,12 @@ Assist mit LLM, n8n-AI-Agent …), Listen zu lesen und zu bearbeiten.
   Remote-Server).
 - **Auth nach MCP-Spezifikation (OAuth 2.1):** Shopping ist Resource Server und
   veröffentlicht `/.well-known/oauth-protected-resource`. Zwei Varianten:
-  1. Shopping agiert selbst als schlanker Authorization Server (Login-Schritt
-     leitet an Pocket ID weiter, Consent-Seite „Claude möchte auf
-     deine Listen zugreifen“, Dynamic Client Registration) – **empfohlen**,
-     unabhängig davon, was Pocket ID an MCP-Spezialitäten unterstützt.
-  2. Direkt Pocket ID als Authorization Server, falls es die
-     MCP-Anforderungen (u. a. Dynamic Client Registration) erfüllt –
-     beim Bau prüfen.
+  1. **Umgesetzt:** Shopping agiert selbst als schlanker Authorization Server
+     (Login-Schritt leitet an Pocket ID weiter, Zustimmungsseite „Claude möchte
+     auf Shopping zugreifen“, Dynamic Client Registration, PKCE S256,
+     Refresh-Token-Rotation).
+  2. Verworfen: Pocket ID direkt als Authorization Server – so bleibt Shopping
+     unabhängig davon, was der OIDC-Provider unterstützt.
 - **Fallback:** API-Token als Bearer (für lokale/einfache Clients).
 
 ## Tools
@@ -45,15 +44,15 @@ wie die REST-API.
 
 ## Ressourcen & Prompts
 
-- Ressourcen: `shopping://lists/{id}` (Liste als Markdown), `shopping://templates`.
-  Abonnierbar → Client bekommt Änderungen mit.
-- Prompts: „Wocheneinkauf planen“ (Mealplan + Vorlage „Basis“ + Verlauf
-  kombinieren), „Liste nach Laden sortieren“.
+- Ressourcen: `shopping://lists/{id}` (Liste als Markdown, Vorlagen eingeschlossen).
+- Prompt: „Wocheneinkauf planen“ (Mealplan + Vorlage + Verlauf kombinieren).
+- Umgesetzt zustandslos: pro Anfrage ein Server im Namen des Nutzers, daher keine
+  Abos auf Ressourcen.
 
 ## Sicherheit
 
 - Der MCP-Client handelt im Namen des angemeldeten Nutzers und sieht nur
   dessen Listen (eigene + über Link beigetretene).
 - Scopes wie bei API-Tokens; standardmäßig kein Löschen ganzer Listen per MCP.
-- Alle MCP-Änderungen tragen `source = mcp` und den Client-Namen →
-  in der App sichtbar („hinzugefügt von Claude“), rückgängig machbar.
+- Noch nicht umgesetzt: MCP-Änderungen mit Client-Namen kennzeichnen
+  („hinzugefügt von Claude“). Derzeit erscheinen sie als Änderung des Nutzers.

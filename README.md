@@ -4,7 +4,7 @@ Selbst gehostete, offline-fähige Einkaufslisten-App im Stil von Bring!,
 mit nativer Mealie-Anbindung, Login über Pocket ID, REST-API für Home Assistant und
 eingebautem MCP-Server.
 
-> Status: **Phase 1 und 2** umgesetzt – siehe [Roadmap](docs/konzept/13-roadmap-und-entscheidungen.md).
+> Status: **Phase 1 bis 3** umgesetzt – siehe [Roadmap](docs/konzept/13-roadmap-und-entscheidungen.md).
 
 ## Was die App kann
 
@@ -20,7 +20,6 @@ eingebautem MCP-Server.
 - Kategorien wie bei Bring!, Kacheln mit Buchstaben-Platzhalter bis zu den generierten Icons
 - **Teilen per Link** über den Teilen-Dialog des Handys: Wer den Link angemeldet öffnet,
   ist dabei (Besitzer kann den Link erneuern, Mitglieder können die Liste verlassen)
-
 - **Gäste ohne Account**: Link öffnen, Namen eingeben, nur diese Liste; Link erneuern wirft Gäste raus.
   „Wer ist dabei?“ zeigt Mitglieder, der Besitzer kann Leute entfernen.
 - **Mealie-Eingangskorb** (ersetzt den n8n-Flow „mealie2bring“): Was in Mealie auf der
@@ -31,7 +30,13 @@ eingebautem MCP-Server.
 - **Vorlagen** (◇): nicht abhakbar, „Neue Liste“ aus Vorlage, „Vorlage übernehmen“ mit
   Auswahl, „Als Vorlage speichern“, optionale Artikel
 
-Noch nicht dabei (folgende Phasen): REST-API-Tokens, Home Assistant, MCP, Icons.
+- **REST-API** mit API-Tokens (lesen / ändern / Mealie), OpenAPI-Doku unter `/api/docs`,
+  Echtzeit-Ereignisse per Server-Sent Events
+- **Home Assistant**: Listen als To-do-Listen (auch für Assist: „Füge Milch zur
+  Einkaufsliste hinzu“), Live-Updates per Push, Sensor „offene Artikel“, Aktionen
+- **MCP-Server** für Claude & Co. mit OAuth-Anmeldung über Pocket ID
+
+Noch nicht dabei: generierte Icons (Phase 4).
 
 ### Mealie-Eingangskorb einrichten
 
@@ -40,6 +45,28 @@ Noch nicht dabei (folgende Phasen): REST-API-Tokens, Home Assistant, MCP, Icons.
 3. Die angezeigte Apprise-URL in Mealie unter *Haushalt → Benachrichtigungen* als
    Notifier eintragen, Ereignis *Einkaufsliste* aktivieren.
 4. Den n8n-Flow „mealie2bring“ abschalten.
+
+### Home Assistant
+
+1. In der App: *Einstellungen → API & Integrationen* ein Token mit „Lesen“ und „Ändern“
+   erzeugen (für Mealie-Aktionen zusätzlich „Mealie-Import“).
+2. HACS → *Benutzerdefinierte Repositories* → `https://github.com/doenke/shopping`, Typ
+   *Integration* → „Shopping“ installieren, HA neu starten.
+3. *Einstellungen → Geräte & Dienste → Integration hinzufügen → Shopping*: Adresse und Token.
+
+Jede Einkaufsliste wird eine To-do-Liste (`todo.einkauf`) plus Sensor mit der Zahl offener
+Artikel. Änderungen kommen per Push sofort an. Aktionen: `shopping.add_items`,
+`shopping.apply_template`, `shopping.import_mealie_recipe`, `shopping.import_mealie_mealplan`,
+`shopping.clear_checked` (Liste per Name, leer = Hauptliste).
+
+Die HA-Instanz sieht dieselben Listen wie der Nutzer, dem das Token gehört.
+
+### KI-Assistenten (MCP)
+
+MCP-Server-Adresse: `https://<deine-adresse>/mcp`. In Claude als *Custom Connector*
+eintragen; beim Verbinden meldest du dich über Pocket ID an und erlaubst den Zugriff.
+Verbundene Assistenten stehen in den Einstellungen und lassen sich dort trennen.
+Für einfache Clients geht statt OAuth auch ein API-Token als `Authorization: Bearer shp_…`.
 
 ## Betrieb
 
@@ -80,6 +107,8 @@ Struktur:
 | `packages/shared` | Datenmodell, Eingabe-Parser, Einheiten, Kategorien, Sync-Logik (HLC, Feld-LWW), Grundkatalog |
 | `apps/server` | Fastify: OIDC, Sync (WebSocket + HTTP), Katalog, Mealie, Postgres via Drizzle |
 | `apps/web` | React-PWA: Dexie (IndexedDB), Sync-Engine, Service Worker |
+| `custom_components/shopping` | Home-Assistant-Integration (HACS) |
+| `ha-tests` | Tests der HA-Integration gegen einen echten Server (`pip install -r ha-tests/requirements.txt`, dann `pytest` in `ha-tests`) |
 
 ## Konzept
 

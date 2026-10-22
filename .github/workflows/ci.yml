@@ -36,8 +36,38 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+  homeassistant:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @shopping/server build
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install -r ha-tests/requirements.txt
+      - run: python -m pytest -q
+        working-directory: ha-tests
+
   image:
-    needs: test
+    needs: [test, homeassistant]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:

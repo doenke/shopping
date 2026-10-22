@@ -56,10 +56,22 @@ Umsetzungsdetails:
 - Gäste sind eigene Nutzer (`is_guest`), dürfen nur in ihrer Liste arbeiten, keine Listen
   anlegen und nicht an Einstellungen/Integrationen.
 
-### Phase 3 – Offen machen
+### Phase 3 – Offen machen ✅ umgesetzt
 - REST-API mit Tokens, OpenAPI, SSE
 - Home-Assistant-Integration (HACS)
 - MCP-Server
+
+Umsetzungsdetails:
+- Token-Berechtigungen vereinfacht auf `read`, `write`, `mealie` (statt feiner Scopes).
+- Eine gemeinsame Dienstschicht für REST und MCP; alle Schreibzugriffe laufen über
+  die Sync-Engine und sind sofort in den Apps sichtbar.
+- MCP-Server zustandslos (Streamable HTTP, JSON-Antworten), OAuth 2.1 mit Shopping als
+  Authorization Server (dynamische Client-Registrierung, PKCE, Zustimmungsseite,
+  Refresh-Token-Rotation, Zugriffstoken 1 h, Refresh 90 Tage).
+- Die HA-Integration liegt im selben Repo (`custom_components/`, `hacs.json`) statt in
+  einem eigenen; sie wird in der CI in einem echten Home Assistant gegen einen echten
+  Server getestet.
+- Ausgehende Webhooks und `Idempotency-Key` sind noch nicht umgesetzt.
 
 ### Phase 4 – Icons (kann parallel ab Phase 1 laufen)
 - Stil finden (Anker-Set) – geht ohne Code, direkt in der Weboberfläche

@@ -1,0 +1,149 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Shopping verbinden",
+        "description": "Adresse der Shopping-App und ein API-Token (in der App: Einstellungen → API & Integrationen).",
+        "data": {
+          "url": "Adresse",
+          "token": "API-Token"
+        },
+        "data_description": {
+          "url": "z. B. https://einkauf.example.org",
+          "token": "Beginnt mit shp_"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Neues Token",
+        "description": "Das bisherige Token wird nicht mehr akzeptiert. Bitte ein neues eingeben.",
+        "data": {
+          "token": "API-Token"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Token ungültig oder ohne Berechtigung",
+      "cannot_connect": "Shopping ist nicht erreichbar"
+    },
+    "abort": {
+      "already_configured": "Dieses Konto ist schon eingerichtet",
+      "reauth_successful": "Token aktualisiert",
+      "wrong_account": "Das Token gehört zu einem anderen Konto"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "open_items": {
+        "name": "Offene Artikel"
+      }
+    }
+  },
+  "services": {
+    "add_items": {
+      "name": "Artikel hinzufügen",
+      "description": "Fügt Artikel als Freitext hinzu; Menge, Einheit und Eigenschaften werden erkannt.",
+      "fields": {
+        "items": {
+          "name": "Artikel",
+          "description": "Freitext, z. B. „2 l Milch“"
+        },
+        "list": {
+          "name": "Liste",
+          "description": "Name oder ID, leer = Hauptliste"
+        },
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Nur nötig bei mehreren Shopping-Konten"
+        }
+      }
+    },
+    "apply_template": {
+      "name": "Vorlage übernehmen",
+      "description": "Setzt die Artikel einer Vorlage auf eine Liste.",
+      "fields": {
+        "template": {
+          "name": "Vorlage",
+          "description": "Name der Vorlage"
+        },
+        "include_optional": {
+          "name": "Optionale Artikel",
+          "description": "Auch optionale Artikel übernehmen"
+        },
+        "list": {
+          "name": "Liste",
+          "description": "Name oder ID, leer = Hauptliste"
+        },
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Nur nötig bei mehreren Shopping-Konten"
+        }
+      }
+    },
+    "import_mealie_recipe": {
+      "name": "Rezept aus Mealie",
+      "description": "Setzt die Zutaten eines Mealie-Rezepts auf die Liste.",
+      "fields": {
+        "recipe": {
+          "name": "Rezept",
+          "description": "Rezept-Slug aus Mealie"
+        },
+        "servings": {
+          "name": "Portionen",
+          "description": ""
+        },
+        "include_pantry": {
+          "name": "Vorräte",
+          "description": "Auch Salz, Öl & Co. übernehmen"
+        },
+        "list": {
+          "name": "Liste",
+          "description": "Name oder ID, leer = Hauptliste"
+        },
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Nur nötig bei mehreren Shopping-Konten"
+        }
+      }
+    },
+    "import_mealie_mealplan": {
+      "name": "Wochenplan aus Mealie",
+      "description": "Setzt die Zutaten aller Rezepte im Zeitraum auf die Liste.",
+      "fields": {
+        "from": {
+          "name": "Von",
+          "description": ""
+        },
+        "to": {
+          "name": "Bis",
+          "description": ""
+        },
+        "include_pantry": {
+          "name": "Vorräte",
+          "description": "Auch Salz, Öl & Co. übernehmen"
+        },
+        "list": {
+          "name": "Liste",
+          "description": "Name oder ID, leer = Hauptliste"
+        },
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Nur nötig bei mehreren Shopping-Konten"
+        }
+      }
+    },
+    "clear_checked": {
+      "name": "Gekauftes leeren",
+      "description": "Leert „Zuletzt verwendet“.",
+      "fields": {
+        "list": {
+          "name": "Liste",
+          "description": "Name oder ID, leer = Hauptliste"
+        },
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Nur nötig bei mehreren Shopping-Konten"
+        }
+      }
+    }
+  }
+}

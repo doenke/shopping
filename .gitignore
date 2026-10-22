@@ -9,3 +9,6 @@ coverage/
 
 # Eigene Compose-Datei (aus docker-compose.example.yml kopiert)
 docker-compose.yml
+__pycache__/
+*.pyc
+.pytest_cache/
