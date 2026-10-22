@@ -6,3 +6,6 @@ dev-dist/
 /data/
 /pg/
 coverage/
+
+# Eigene Compose-Datei (aus docker-compose.example.yml kopiert)
+docker-compose.yml

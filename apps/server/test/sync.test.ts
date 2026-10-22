@@ -36,6 +36,14 @@ afterAll(async () => {
   await t?.close();
 });
 
+describe('health', () => {
+  it('reports healthy while the database answers', async () => {
+    const res = await t.app.inject({ method: 'GET', url: '/healthz' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ ok: true });
+  });
+});
+
 describe('auth', () => {
   it('rejects requests without session', async () => {
     const res = await t.app.inject({ method: 'GET', url: '/api/v1/me' });

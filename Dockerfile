@@ -26,5 +26,5 @@ COPY --from=build /app/apps/server/drizzle ./drizzle
 COPY --from=build /app/apps/web/dist ./web
 USER node
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s CMD wget -qO- "http://127.0.0.1:${PORT}/healthz" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD wget -qO- "http://127.0.0.1:${PORT}/healthz" || exit 1
 CMD ["node", "dist/main.js"]

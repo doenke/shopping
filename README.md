@@ -47,8 +47,9 @@ Noch nicht dabei (folgende Phasen): REST-API-Tokens, Home Assistant, MCP, Icons.
    - Callback-URL: `https://<deine-adresse>/auth/callback`
    - „Public Client“ / PKCE aktiv (dann kein Client-Secret nötig)
    - Zugriff über „Allowed User Groups“ steuern
-2. `.env.example` nach `.env` kopieren und ausfüllen.
-3. `docker compose up -d` – die App lauscht auf Port 3000.
+2. `.env.example` nach `.env` und `docker-compose.example.yml` nach `docker-compose.yml` kopieren, `.env` ausfüllen.
+3. `docker compose up -d` – die App lauscht auf `127.0.0.1:3000`. `docker compose ps` zeigt beide
+   Dienste als `healthy`, sobald App und Datenbank laufen (`/healthz` prüft auch die Datenbank).
 4. Reverse Proxy mit HTTPS davor (WebSocket-Upgrade für `/ws` erlauben).
 
 Datenbank-Migrationen laufen beim Start automatisch. Backup: `pg_dump` der Datenbank.

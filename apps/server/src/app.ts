@@ -52,7 +52,18 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   await app.register(websocket, { options: { maxPayload: 1024 * 1024 } });
   await app.register(authRoutes, { config, db });
 
-  app.get('/healthz', async () => ({ ok: true }));
+  // Used by the Docker/Compose health check: healthy only if the database answers.
+  app.get('/healthz', async (_request, reply) => {
+    try {
+      await Promise.race([
+        db.execute(sql`SELECT 1`),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+      ]);
+      return { ok: true };
+    } catch {
+      return reply.code(503).send({ ok: false, error: 'database unavailable' });
+    }
+  });
 
   const requireUser = async (request: FastifyRequest, reply: import('fastify').FastifyReply) => {
     const principal = await sessionUser(db, request, reply, secure);

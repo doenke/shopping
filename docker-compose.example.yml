@@ -1,0 +1,50 @@
+# Beispiel für den Betrieb von Shopping mit Docker Compose.
+#
+#   cp docker-compose.example.yml docker-compose.yml
+#   cp .env.example .env          # ausfüllen: PUBLIC_URL, SECRET_KEY, POSTGRES_PASSWORD, OIDC_*
+#   docker compose up -d
+#   docker compose ps             # beide Dienste sollten "healthy" zeigen
+#
+# Davor gehört ein Reverse Proxy mit HTTPS (Pflicht für PWA/Service Worker),
+# der WebSocket-Upgrades für /ws durchlässt.
+
+services:
+  app:
+    # Feste Version statt "latest": z. B. SHOPPING_IMAGE=ghcr.io/doenke/shopping:sha-56e28f4
+    image: ${SHOPPING_IMAGE:-ghcr.io/doenke/shopping:latest}
+    # build: .   # alternativ aus dem Quellcode bauen
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://shopping:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt in .env}@db:5432/shopping
+    ports:
+      # Nur lokal veröffentlichen, der Reverse Proxy spricht mit 127.0.0.1:3000.
+      # Läuft der Proxy selbst in Docker, stattdessen ein gemeinsames Netzwerk nutzen.
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # /healthz antwortet nur mit 200, wenn auch die Datenbank erreichbar ist.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # Beim ersten Start laufen Migrationen und der Grundkatalog wird angelegt.
+      start_period: 30s
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shopping
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt in .env}
+      POSTGRES_DB: shopping
+    volumes:
+      - ./pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopping -d shopping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
