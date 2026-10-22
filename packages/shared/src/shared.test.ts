@@ -5,6 +5,7 @@ import { Hlc } from './hlc.js';
 import { applyPatch, ITEM_FIELDS, mergeRow } from './lww.js';
 import type { CatalogItem } from './model.js';
 import { parseInput, parseItem, splitInput } from './parser.js';
+import { planAdd } from './plan-add.js';
 import { seedCatalog } from './seed-catalog.js';
 
 const catalog: CatalogItem[] = seedCatalog().map((s, i) => ({
@@ -115,5 +116,26 @@ describe('lww', () => {
     applyPatch(row, { name: 'Neu' }, '0000000002000:0000:a');
     expect(applyPatch(row, { name: 'Alt' }, '0000000001000:0000:b')).toEqual([]);
     expect(row.name).toBe('Neu');
+  });
+});
+
+describe('planAdd', () => {
+  let n = 0;
+  const id = () => `new-${++n}`;
+  const base = { catalogItemId: null, deleted: false, amounts: [], properties: [], note: null, attributes: {}, position: 'a0' };
+
+  it('adds to open items, brings back bought ones, creates the rest', () => {
+    const existing = [
+      { ...base, id: 'milk', name: 'Milch', checked: false, amounts: [{ q: 1, u: 'l' }] },
+      { ...base, id: 'bread', name: 'Brot', checked: true, position: 'a1' },
+    ];
+    const plan = planAdd('L', existing, parseInput('2 l Milch, Brot, Käse, Käse'), id);
+    expect(plan.map((c) => [c.id, c.kind])).toEqual([
+      ['milk', 'merged'],
+      ['bread', 'restored'],
+      ['new-1', 'created'],
+    ]);
+    expect(plan[0]!.patch.amounts).toEqual([{ q: 3, u: 'l' }]);
+    expect(plan[2]!.patch.position! > 'a1').toBe(true);
   });
 });

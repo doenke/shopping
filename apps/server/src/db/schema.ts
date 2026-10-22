@@ -159,3 +159,39 @@ export const integrations = pgTable(
   },
   (t) => [uniqueIndex('integrations_owner_type_idx').on(t.ownerId, t.type)],
 );
+
+/**
+ * Bearer tokens: personal API tokens (Home Assistant, scripts) and OAuth
+ * access tokens issued to MCP clients. Only hashes are stored.
+ */
+export const apiTokens = pgTable(
+  'api_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    kind: text('kind').$type<'pat' | 'oauth'>().notNull(),
+    clientId: text('client_id'),
+    tokenHash: text('token_hash').notNull().unique(),
+    /** First characters of the token, to recognise it in the list. */
+    prefix: text('prefix').notNull(),
+    refreshHash: text('refresh_hash').unique(),
+    scopes: jsonb('scopes').$type<string[]>().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    refreshExpiresAt: timestamp('refresh_expires_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (t) => [index('api_tokens_user_idx').on(t.userId)],
+);
+
+/** OAuth clients registered dynamically (RFC 7591), e.g. Claude as MCP client. */
+export const oauthClients = pgTable('oauth_clients', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  redirectUris: jsonb('redirect_uris').$type<string[]>().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

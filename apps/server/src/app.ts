@@ -9,12 +9,16 @@ import { eq, gt, sql } from 'drizzle-orm';
 import Fastify, { type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { authRoutes } from './auth/routes.js';
-import { sessionUser } from './auth/session.js';
+import { tokenRoutes } from './auth/tokens.js';
+import { resolvePrincipal, requiredScope, type Principal } from './auth/principal.js';
 import type { Config } from './config.js';
 import { SecretBox } from './crypto.js';
 import type { Db } from './db/index.js';
 import { catalogItems, users } from './db/schema.js';
 import { currentSeq } from './db/seed.js';
+import { ApiError, problemHandler } from './api/errors.js';
+import { apiRoutes } from './api/routes.js';
+import { ShoppingApi } from './api/service.js';
 import { mealieRoutes } from './mealie/routes.js';
 import { MealieService } from './mealie/service.js';
 import { sharingRoutes } from './sharing/routes.js';
@@ -26,6 +30,7 @@ declare module 'fastify' {
   interface FastifyRequest {
     userId: string;
     isGuest: boolean;
+    principal: Principal;
   }
 }
 
@@ -48,6 +53,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   const hub = new SyncHub(sync, app.log);
   app.addHook('onClose', async () => hub.close());
 
+  app.setErrorHandler(problemHandler);
   await app.register(cookie, { secret: config.SECRET_KEY });
   await app.register(websocket, { options: { maxPayload: 1024 * 1024 } });
   await app.register(authRoutes, { config, db });
@@ -66,8 +72,15 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   });
 
   const requireUser = async (request: FastifyRequest, reply: import('fastify').FastifyReply) => {
-    const principal = await sessionUser(db, request, reply, secure);
-    if (!principal) return reply.code(401).send({ error: 'unauthorized' });
+    const principal = await resolvePrincipal(db, request, reply, secure);
+    if (!principal) {
+      // Tells OAuth clients (MCP) where to find out how to log in.
+      reply.header('WWW-Authenticate', `Bearer resource_metadata="${config.PUBLIC_URL}/.well-known/oauth-protected-resource"`);
+      throw new ApiError(401, 'unauthorized', 'Bitte anmelden oder ein gültiges Token mitschicken');
+    }
+    const scope = requiredScope(request);
+    if (!principal.scopes.has(scope)) throw new ApiError(403, 'insufficient_scope', `Dem Token fehlt die Berechtigung „${scope}“`, { scope });
+    request.principal = principal;
     request.userId = principal.userId;
     request.isGuest = principal.isGuest;
   };
@@ -75,9 +88,10 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   /** Everything beyond working on a shared list is for real accounts only. */
   const requireAccount = async (request: FastifyRequest, reply: import('fastify').FastifyReply) => {
     await requireUser(request, reply);
-    if (!reply.sent && request.isGuest) return reply.code(403).send({ error: 'guest' });
+    if (request.isGuest) throw new ApiError(403, 'guest', 'Gäste haben darauf keinen Zugriff');
   };
 
+  await app.register(tokenRoutes, { db, requireAccount });
   await app.register(sharingRoutes, { config, db, sync, hub, secrets, requireUser, requireAccount });
 
   // ---- Sync ---------------------------------------------------------------
@@ -142,6 +156,8 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   });
 
   const mealie = new MealieService(db, secrets, sync, hub, app.log, fetchImpl);
+  const api = new ShoppingApi(db, sync, hub, mealie);
+  await app.register(apiRoutes, { config, api, sync, hub, requireUser });
   await app.register(mealieRoutes, { config, db, sync, hub, secrets, mealie, requireUser: requireAccount });
   app.addHook('onClose', async () => mealie.stop());
 
@@ -173,5 +189,5 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
     app.log.warn('Kein Web-Build gefunden – es läuft nur die API.');
   }
 
-  return { app, sync, hub, mealie };
+  return { app, sync, hub, mealie, api };
 }

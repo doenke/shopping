@@ -1,92 +1,17 @@
-import {
-  generateKeyBetween,
-  mergeAmounts,
-  type CatalogItem,
-  type ItemPatch,
-  type ItemRow,
-  type ItemSource,
-  type ListRow,
-  type ParsedItem,
-} from '@shopping/shared';
+import { planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type NewItem, type ParsedItem } from '@shopping/shared';
 import { db } from './db';
 import { sync } from './sync/engine';
 
-function sameItem(item: ItemRow, p: { catalogItemId: string | null; name: string }): boolean {
-  if (p.catalogItemId) return item.catalogItemId === p.catalogItemId;
-  return !item.catalogItemId && item.name.toLowerCase() === p.name.toLowerCase();
-}
-
-async function lastPosition(listId: string): Promise<string | null> {
-  const items = await db.items.where('listId').equals(listId).toArray();
-  return items.reduce<string | null>((max, i) => (max === null || i.position > max ? i.position : max), null);
-}
-
-/** A parsed item plus where it came from (recipe, template …). */
-export type NewItem = ParsedItem & { sources?: ItemSource[]; optional?: boolean };
-
-function withSources(attributes: Record<string, unknown>, add: ItemSource[] | undefined): Record<string, unknown> | null {
-  if (!add?.length) return null;
-  const current = Array.isArray(attributes.sources) ? (attributes.sources as ItemSource[]) : [];
-  const merged = [...current];
-  for (const s of add) if (!merged.some((m) => m.type === s.type && m.label === s.label)) merged.push(s);
-  return merged.length === current.length ? null : { ...attributes, sources: merged };
-}
+export type { NewItem };
 
 /**
- * Adds parsed items to a list like Bring! does: an item that is already open
- * gets the new amount added, a recently bought one comes back, anything else is new.
+ * Adds parsed items to a list like Bring! does (see planAdd): open items get
+ * the amount added, recently bought ones come back, the rest is new.
  */
 export async function addItems(listId: string, parsed: NewItem[]): Promise<void> {
-  const items = (await db.items.where('listId').equals(listId).toArray()).filter((i) => !i.deleted);
-  let position = await lastPosition(listId);
-  const changes: { id: string; patch: ItemPatch }[] = [];
-  for (const p of parsed) {
-    const open = items.find((i) => !i.checked && sameItem(i, p));
-    if (open) {
-      const patch: ItemPatch = {};
-      if (p.amounts.length) open.amounts = patch.amounts = mergeAmounts(open.amounts, p.amounts);
-      const props = [...new Set([...open.properties, ...p.properties])];
-      if (props.length !== open.properties.length) open.properties = patch.properties = props;
-      if (p.note && p.note !== open.note) open.note = patch.note = open.note ? `${open.note}, ${p.note}` : p.note;
-      const attributes = withSources(open.attributes, p.sources);
-      if (attributes) open.attributes = patch.attributes = attributes;
-      if (Object.keys(patch).length) changes.push({ id: open.id, patch });
-      continue;
-    }
-    const done = items.find((i) => i.checked && sameItem(i, p));
-    if (done) {
-      done.checked = false;
-      changes.push({
-        id: done.id,
-        patch: {
-          checked: false,
-          amounts: p.amounts,
-          properties: p.properties,
-          note: p.note,
-          attributes: { ...done.attributes, sources: p.sources ?? [] },
-        },
-      });
-      continue;
-    }
-    position = generateKeyBetween(position, null);
-    const id = crypto.randomUUID();
-    const patch: ItemPatch = {
-      listId,
-      name: p.name,
-      catalogItemId: p.catalogItemId,
-      categoryId: p.categoryId,
-      amounts: p.amounts,
-      properties: p.properties,
-      note: p.note,
-      position,
-      ...(p.sources?.length ? { attributes: { sources: p.sources } } : {}),
-      ...(p.optional ? { optional: true } : {}),
-    };
-    changes.push({ id, patch });
-    // Same thing twice in one batch ("Milch, Milch") must merge as well.
-    items.push({ ...(patch as ItemRow), id, checked: false, attributes: patch.attributes ?? {} });
-  }
-  await sync.mutateItems(changes);
+  const existing = await db.items.where('listId').equals(listId).toArray();
+  const changes = planAdd(listId, existing, parsed, () => crypto.randomUUID());
+  await sync.mutateItems(changes.map(({ id, patch }) => ({ id, patch })));
 }
 
 export function catalogToParsed(c: CatalogItem): ParsedItem {

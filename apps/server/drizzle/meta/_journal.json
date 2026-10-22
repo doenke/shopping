@@ -22,6 +22,13 @@
       "when": 1792706958750,
       "tag": "0002_guests",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792708571404,
+      "tag": "0003_api_tokens",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@ import { CATEGORIES, type Me } from '@shopping/shared';
 import { useEffect, useState } from 'react';
 import { logout } from '../actions';
 import { useLists } from '../hooks';
+import { TokensCard } from './TokensCard';
 import { sync } from '../sync/engine';
 
 interface MealieState {
@@ -25,7 +26,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = init?.body ? { 'content-type': 'application/json', ...init.headers } : init?.headers;
   const res = await fetch(path, { ...init, headers });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+  if (!res.ok) {
+    const b = body as { detail?: string; error?: string };
+    throw new Error(b.detail ?? b.error ?? `HTTP ${res.status}`);
+  }
   return body as T;
 }
 
@@ -275,6 +279,8 @@ export function Settings({ me }: { me: Me }) {
         )}
       </form>
       )}
+
+      {!me.isGuest && <TokensCard />}
     </section>
   );
 }

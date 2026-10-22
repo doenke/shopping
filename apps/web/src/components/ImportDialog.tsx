@@ -17,7 +17,10 @@ interface RecipeHit {
 async function api<T>(path: string): Promise<T> {
   const res = await fetch(path);
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((body as { error?: string }).error ?? 'Mealie ist gerade nicht erreichbar');
+  if (!res.ok) {
+    const b = body as { detail?: string; error?: string };
+    throw new Error(b.detail ?? b.error ?? 'Mealie ist gerade nicht erreichbar');
+  }
   return body as T;
 }
 

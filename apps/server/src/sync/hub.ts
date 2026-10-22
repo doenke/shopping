@@ -4,14 +4,22 @@ import type { FastifyBaseLogger } from 'fastify';
 import type { WebSocket } from 'ws';
 import type { SyncService } from './service.js';
 
+/** What a connection needs from its transport (WebSocket for apps, SSE for integrations). */
+interface Transport {
+  send(msg: ServerMessage): void;
+  isOpen(): boolean;
+  /** Keep-alive; returns false if the peer did not answer the previous one. */
+  ping(): boolean;
+  close(): void;
+}
+
 interface Connection {
-  socket: WebSocket;
+  transport: Transport;
   userId: string;
-  /** Last sequence delivered to this socket; -1 until the client said hello. */
+  /** Last sequence delivered; -1 until the client said hello. */
   cursor: number;
-  /** Serializes deliveries per socket so deltas arrive in order. */
+  /** Serializes deliveries per connection so deltas arrive in order. */
   chain: Promise<void>;
-  alive: boolean;
 }
 
 export class SyncHub {
@@ -22,40 +30,55 @@ export class SyncHub {
     private readonly sync: SyncService,
     private readonly log: FastifyBaseLogger,
   ) {
-    // Drop sockets that stopped answering (typical for flaky mobile networks).
+    // Drop connections that stopped answering (typical for flaky mobile networks).
     this.heartbeat = setInterval(() => {
-      for (const set of this.byUser.values()) {
-        for (const c of set) {
-          if (!c.alive) {
-            c.socket.terminate();
-            continue;
-          }
-          c.alive = false;
-          c.socket.ping();
-        }
-      }
-    }, 30_000);
+      for (const set of this.byUser.values()) for (const c of set) if (!c.transport.ping()) c.transport.close();
+    }, 25_000);
     this.heartbeat.unref();
   }
 
   close(): void {
     clearInterval(this.heartbeat);
-    for (const set of this.byUser.values()) for (const c of set) c.socket.close(1001);
+    for (const set of this.byUser.values()) for (const c of set) c.transport.close();
   }
 
-  attach(socket: WebSocket, userId: string): void {
-    const conn: Connection = { socket, userId, cursor: -1, chain: Promise.resolve(), alive: true };
+  private register(userId: string, transport: Transport, cursor: number): Connection {
+    const conn: Connection = { transport, userId, cursor, chain: Promise.resolve() };
     let set = this.byUser.get(userId);
     if (!set) this.byUser.set(userId, (set = new Set()));
     set.add(conn);
+    return conn;
+  }
 
-    socket.on('pong', () => (conn.alive = true));
-    socket.on('close', () => {
-      set.delete(conn);
-      if (set.size === 0) this.byUser.delete(userId);
-    });
+  private unregister(conn: Connection): void {
+    const set = this.byUser.get(conn.userId);
+    set?.delete(conn);
+    if (set?.size === 0) this.byUser.delete(conn.userId);
+  }
+
+  /** The app's WebSocket: speaks the full sync protocol (hello, push, ping). */
+  attach(socket: WebSocket, userId: string): void {
+    let alive = true;
+    const conn = this.register(
+      userId,
+      {
+        send: (msg) => socket.readyState === socket.OPEN && socket.send(JSON.stringify(msg)),
+        isOpen: () => socket.readyState === socket.OPEN,
+        ping: () => {
+          if (!alive) return false;
+          alive = false;
+          socket.ping();
+          return true;
+        },
+        close: () => socket.terminate(),
+      },
+      -1,
+    );
+
+    socket.on('pong', () => (alive = true));
+    socket.on('close', () => this.unregister(conn));
     socket.on('message', (data) => {
-      conn.alive = true;
+      alive = true;
       let msg;
       try {
         msg = ClientMessageSchema.parse(JSON.parse(String(data)));
@@ -65,7 +88,7 @@ export class SyncHub {
       }
       switch (msg.t) {
         case 'ping':
-          this.send(conn, { t: 'pong' });
+          conn.transport.send({ t: 'pong' });
           break;
         case 'hello':
           conn.cursor = msg.since;
@@ -75,7 +98,7 @@ export class SyncHub {
           this.sync
             .apply(userId, msg.mutations)
             .then((result) => {
-              this.send(conn, { t: 'ack', mids: result.acked, rejected: result.rejected });
+              conn.transport.send({ t: 'ack', mids: result.acked, rejected: result.rejected });
               this.notify(result.affectedUsers);
             })
             .catch((err) => {
@@ -87,31 +110,44 @@ export class SyncHub {
     });
   }
 
+  /**
+   * A one-way stream (SSE) for integrations like Home Assistant: receives every
+   * change after `since` as a `changes` message. Returns a function to detach.
+   */
+  attachStream(userId: string, since: number, transport: Transport): () => void {
+    const conn = this.register(userId, transport, since);
+    return () => this.unregister(conn);
+  }
+
   /** Sends pending deltas to every connected device of the given users. */
   notify(userIds: Iterable<string>): void {
     for (const id of userIds) for (const conn of this.byUser.get(id) ?? []) this.deliver(conn);
   }
 
+  private readonly catalogListeners = new Set<() => void>();
+
+  /** Called whenever the shared catalog changed (e.g. to drop caches). */
+  onCatalogChange(fn: () => void): void {
+    this.catalogListeners.add(fn);
+  }
+
   broadcast(msg: ServerMessage): void {
-    for (const set of this.byUser.values()) for (const conn of set) this.send(conn, msg);
+    if (msg.t === 'catalog') for (const fn of this.catalogListeners) fn();
+    for (const set of this.byUser.values()) for (const conn of set) conn.transport.send(msg);
   }
 
   private deliver(conn: Connection, force = false): void {
     conn.chain = conn.chain.then(async () => {
-      if (conn.cursor < 0 || conn.socket.readyState !== conn.socket.OPEN) return;
+      if (conn.cursor < 0 || !conn.transport.isOpen()) return;
       try {
         const changes = await this.sync.pull(conn.userId, conn.cursor);
         const empty = changes.lists.length + changes.items.length + changes.removedLists.length === 0 && !changes.me;
         if (empty && !force) return;
         conn.cursor = changes.seq;
-        this.send(conn, { t: 'changes', ...changes });
+        conn.transport.send({ t: 'changes', ...changes });
       } catch (err) {
         this.log.error({ err }, 'delivering changes failed');
       }
     });
-  }
-
-  private send(conn: Connection, msg: ServerMessage): void {
-    if (conn.socket.readyState === conn.socket.OPEN) conn.socket.send(JSON.stringify(msg));
   }
 }
