@@ -99,8 +99,7 @@ Die Reihenfolge der Listen in der Seitenleiste ist pro Nutzer (`list_member.posi
 | `id`, `list_id` | uuid | |
 | `catalog_item_id` | uuid? | Verweis in den Katalog (Icon, Kategorie, Einheiten); `null` = Freitext |
 | `name` | text | Anzeigename (Kopie aus Katalog oder Freitext) |
-| `quantity` | numeric? | z. B. `1.5` |
-| `unit_id` | uuid? | z. B. kg |
+| `amounts` | JSONB | Liste von Mengen `[{q: 1.5, u: "kg"}]`; meist eine, bei nicht umrechenbaren Einheiten mehrere („2 Stk + 200 g“) |
 | `properties` | text[] | strukturierte Eigenschaften: `bio`, `TK`, `laktosefrei`, … |
 | `note` | text? | Freitext-Spezifikation wie bei Bring („die von Oma“) |
 | `category_id` | uuid? | überschreibt Katalog-Kategorie |

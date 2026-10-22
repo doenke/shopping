@@ -1,0 +1,366 @@
+import {
+  Hlc,
+  applyPatch,
+  mergeAmounts,
+  type ChangeSet,
+  type ItemPatch,
+  type ItemRow,
+  type ListPatch,
+  type ListRow,
+  type Mutation,
+} from '@shopping/shared';
+import { MutationSchema } from '@shopping/shared/schemas';
+import { and, eq, gt, inArray, ne, sql } from 'drizzle-orm';
+import type { Db, Tx } from '../db/index.js';
+import { currentSeq } from '../db/seed.js';
+import { listItems, listMembers, lists, users } from '../db/schema.js';
+import { Mutex } from './mutex.js';
+import { toItemRow, toListRow, toMe, toUserInfo } from './rows.js';
+
+export interface ApplyResult {
+  acked: string[];
+  rejected: { mid: string; reason: string }[];
+  /** Users whose view changed and who should receive a delta. */
+  affectedUsers: Set<string>;
+}
+
+class Rejection extends Error {}
+
+const nextSeq = sql`nextval('sync_seq')`;
+
+function sameProperties(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sa = [...a].map((s) => s.toLowerCase()).sort();
+  const sb = [...b].map((s) => s.toLowerCase()).sort();
+  return sa.every((v, i) => v === sb[i]);
+}
+
+export class SyncService {
+  readonly mutex = new Mutex();
+  readonly clock = new Hlc('server');
+
+  constructor(private readonly db: Db) {}
+
+  /** Runs any other write that must be ordered with sync writes (e.g. catalog import). */
+  exclusive<T>(fn: () => Promise<T>): Promise<T> {
+    return this.mutex.run(fn);
+  }
+
+  async apply(userId: string, raw: unknown[]): Promise<ApplyResult> {
+    return this.mutex.run(async () => {
+      const result: ApplyResult = { acked: [], rejected: [], affectedUsers: new Set([userId]) };
+      for (const entry of raw) {
+        const parsed = MutationSchema.safeParse(entry);
+        const mid = typeof entry === 'object' && entry && 'mid' in entry ? String(entry.mid) : 'unknown';
+        if (!parsed.success) {
+          result.rejected.push({ mid, reason: 'invalid' });
+          continue;
+        }
+        const m = parsed.data;
+        this.clock.receive(m.hlc);
+        try {
+          const touchedLists = await this.db.transaction((tx) => this.applyOne(tx, userId, m));
+          result.acked.push(m.mid);
+          if (touchedLists.length) {
+            const members = await this.db
+              .select({ userId: listMembers.userId })
+              .from(listMembers)
+              .where(inArray(listMembers.listId, touchedLists));
+            for (const mem of members) result.affectedUsers.add(mem.userId);
+          }
+        } catch (err) {
+          if (!(err instanceof Rejection)) throw err;
+          result.rejected.push({ mid: m.mid, reason: err.message });
+        }
+      }
+      return result;
+    });
+  }
+
+  private async hasAccess(tx: Tx, userId: string, listId: string): Promise<boolean> {
+    const [row] = await tx
+      .select({ removed: listMembers.removed, deleted: lists.deleted })
+      .from(listMembers)
+      .innerJoin(lists, eq(lists.id, listMembers.listId))
+      .where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId)));
+    return !!row && !row.removed && !row.deleted;
+  }
+
+  /** Applies one mutation; returns the ids of lists whose members must be notified. */
+  private async applyOne(tx: Tx, userId: string, m: Mutation): Promise<string[]> {
+    switch (m.entity) {
+      case 'list':
+        return this.applyList(tx, userId, m.id, m.patch, m.hlc);
+      case 'item':
+        return this.applyItem(tx, userId, m.id, m.patch, m.hlc);
+      case 'me':
+        await this.applyMe(tx, userId, m.patch, m.hlc);
+        return [];
+    }
+  }
+
+  private async applyList(tx: Tx, userId: string, id: string, patch: ListPatch, ts: string): Promise<string[]> {
+    const [existing] = await tx.select().from(lists).where(eq(lists.id, id)).for('update');
+    if (!existing) {
+      if (!patch.name) throw new Rejection('missing_name');
+      const row: ListRow = {
+        id,
+        ownerId: userId,
+        name: patch.name,
+        listType: 'shopping',
+        isTemplate: false,
+        icon: null,
+        color: null,
+        settings: {},
+        archivedAt: null,
+        deleted: false,
+        createdAt: new Date().toISOString(),
+        hlc: {},
+        seq: 0,
+      };
+      applyPatch(row, patch, ts);
+      await tx.insert(lists).values({
+        id,
+        ownerId: userId,
+        name: row.name,
+        listType: row.listType,
+        isTemplate: row.isTemplate,
+        icon: row.icon,
+        color: row.color,
+        settings: row.settings,
+        archivedAt: row.archivedAt,
+        deleted: row.deleted,
+        hlc: row.hlc,
+      });
+      await tx.insert(listMembers).values({ listId: id, userId });
+      // The first shopping list becomes the user's main list.
+      if (!row.isTemplate) {
+        await tx
+          .update(users)
+          .set({ defaultListId: id, seq: nextSeq })
+          .where(and(eq(users.id, userId), sql`${users.defaultListId} IS NULL`));
+      }
+      return [id];
+    }
+
+    if (!(await this.hasAccess(tx, userId, id))) throw new Rejection('forbidden');
+    const { listType: _t, isTemplate: _i, ...mutable } = patch;
+    if (mutable.deleted !== undefined && existing.ownerId !== userId) throw new Rejection('owner_only');
+    const row = toListRow(existing);
+    const applied = applyPatch(row, mutable, ts);
+    if (applied.length === 0) return [];
+    await tx
+      .update(lists)
+      .set({
+        name: row.name,
+        icon: row.icon,
+        color: row.color,
+        settings: row.settings,
+        archivedAt: row.archivedAt,
+        deleted: row.deleted,
+        hlc: row.hlc,
+        seq: nextSeq,
+      })
+      .where(eq(lists.id, id));
+    return [id];
+  }
+
+  private async applyItem(tx: Tx, userId: string, id: string, patch: ItemPatch, ts: string): Promise<string[]> {
+    const [existing] = await tx.select().from(listItems).where(eq(listItems.id, id)).for('update');
+    const listId = existing?.listId ?? patch.listId;
+    if (!listId) throw new Rejection('missing_list');
+    if (!(await this.hasAccess(tx, userId, listId))) throw new Rejection('forbidden');
+
+    const { listId: _l, ...rest } = patch;
+    const effective: Partial<ItemRow> = { ...rest };
+    if (patch.checked !== undefined) {
+      effective.checkedBy = patch.checked ? userId : null;
+      effective.checkedAt = patch.checked ? new Date().toISOString() : null;
+    }
+
+    if (!existing) {
+      if (!patch.name) throw new Rejection('missing_name');
+      const row: ItemRow = {
+        id,
+        listId,
+        catalogItemId: null,
+        name: patch.name,
+        amounts: [],
+        properties: [],
+        note: null,
+        categoryId: null,
+        checked: false,
+        checkedAt: null,
+        checkedBy: null,
+        position: patch.position ?? 'a0',
+        optional: false,
+        attributes: {},
+        createdBy: userId,
+        createdAt: new Date().toISOString(),
+        deleted: false,
+        mergedInto: null,
+        hlc: {},
+        seq: 0,
+      };
+      applyPatch(row, { listId, ...effective }, ts);
+
+      // Two people added the same thing while offline: merge instead of duplicating.
+      if (!row.checked && !row.deleted) {
+        const duplicate = await this.findDuplicate(tx, row);
+        if (duplicate) {
+          const target = toItemRow(duplicate);
+          const mergeTs = this.clock.tick();
+          applyPatch(target, { amounts: mergeAmounts(target.amounts, row.amounts) }, mergeTs);
+          await tx.update(listItems).set({ amounts: target.amounts, hlc: target.hlc, seq: nextSeq }).where(eq(listItems.id, target.id));
+          applyPatch(row, { deleted: true }, mergeTs);
+          row.mergedInto = target.id;
+        }
+      }
+      await tx.insert(listItems).values({ ...row, createdAt: row.createdAt, seq: undefined });
+      return [listId];
+    }
+
+    const row = toItemRow(existing);
+    const applied = applyPatch(row, effective, ts);
+    if (applied.length === 0) return [];
+    const { id: _id, seq: _seq, createdAt: _c, ...fields } = row;
+    await tx
+      .update(listItems)
+      .set({ ...fields, seq: nextSeq })
+      .where(eq(listItems.id, id));
+    return [listId];
+  }
+
+  private async findDuplicate(tx: Tx, row: ItemRow) {
+    const candidates = await tx
+      .select()
+      .from(listItems)
+      .where(
+        and(
+          eq(listItems.listId, row.listId),
+          eq(listItems.checked, false),
+          eq(listItems.deleted, false),
+          ne(listItems.id, row.id),
+          row.catalogItemId
+            ? eq(listItems.catalogItemId, row.catalogItemId)
+            : sql`lower(${listItems.name}) = lower(${row.name}) AND ${listItems.catalogItemId} IS NULL`,
+        ),
+      );
+    return candidates.find((c) => sameProperties(c.properties, row.properties));
+  }
+
+  private async applyMe(tx: Tx, userId: string, patch: { defaultListId?: string | null }, ts: string): Promise<void> {
+    const [user] = await tx.select().from(users).where(eq(users.id, userId)).for('update');
+    if (!user) throw new Rejection('unknown_user');
+    if (patch.defaultListId && !(await this.hasAccess(tx, userId, patch.defaultListId))) throw new Rejection('forbidden');
+    const state = { defaultListId: user.defaultListId, hlc: { ...user.hlc } };
+    if (applyPatch(state, patch, ts).length === 0) return;
+    await tx.update(users).set({ defaultListId: state.defaultListId, hlc: state.hlc, seq: nextSeq }).where(eq(users.id, userId));
+  }
+
+  /** Adds the user to a list (opening its link). Returns false if the list is gone. */
+  join(userId: string, listId: string): Promise<boolean> {
+    return this.mutex.run(async () => {
+      const [list] = await this.db.select({ deleted: lists.deleted }).from(lists).where(eq(lists.id, listId));
+      if (!list || list.deleted) return false;
+      await this.db
+        .insert(listMembers)
+        .values({ listId, userId })
+        .onConflictDoUpdate({
+          target: [listMembers.listId, listMembers.userId],
+          set: { removed: false, seq: nextSeq },
+          setWhere: sql`${listMembers.removed} = true`,
+        });
+      return true;
+    });
+  }
+
+  /** Removes a member; the owner cannot leave their own list. */
+  leave(userId: string, listId: string): Promise<'ok' | 'owner' | 'not_member'> {
+    return this.mutex.run(async () => {
+      const [list] = await this.db.select({ ownerId: lists.ownerId }).from(lists).where(eq(lists.id, listId));
+      if (!list) return 'not_member';
+      if (list.ownerId === userId) return 'owner';
+      const updated = await this.db
+        .update(listMembers)
+        .set({ removed: true, seq: nextSeq })
+        .where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId), eq(listMembers.removed, false)))
+        .returning({ listId: listMembers.listId });
+      if (updated.length) {
+        // Unset the main list if it was this one.
+        await this.db
+          .update(users)
+          .set({ defaultListId: null, seq: nextSeq })
+          .where(and(eq(users.id, userId), eq(users.defaultListId, listId)));
+      }
+      return updated.length ? 'ok' : 'not_member';
+    });
+  }
+
+  async isMember(userId: string, listId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ removed: listMembers.removed })
+      .from(listMembers)
+      .where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId)));
+    return !!row && !row.removed;
+  }
+
+  /** Everything the user has not seen since `since`. */
+  pull(userId: string, since: number): Promise<ChangeSet> {
+    return this.mutex.run(() => this.pullUnlocked(userId, since));
+  }
+
+  async pullUnlocked(userId: string, since: number): Promise<ChangeSet> {
+    const db = this.db;
+    const seq = await currentSeq(db);
+    const memberships = await db.select().from(listMembers).where(eq(listMembers.userId, userId));
+    const active = memberships.filter((m) => !m.removed).map((m) => m.listId);
+    const fresh = new Set(memberships.filter((m) => !m.removed && (since === 0 || m.seq > since)).map((m) => m.listId));
+    const removedLists = memberships.filter((m) => m.removed && m.seq > since).map((m) => m.listId);
+
+    const listRows = active.length
+      ? await db
+          .select()
+          .from(lists)
+          .where(and(inArray(lists.id, active), since === 0 ? undefined : gt(lists.seq, since)))
+      : [];
+    // Newly visible lists are sent in full, regardless of their row sequence.
+    const missing = [...fresh].filter((id) => !listRows.some((l) => l.id === id));
+    if (missing.length) listRows.push(...(await db.select().from(lists).where(inArray(lists.id, missing))));
+
+    const known = active.filter((id) => !fresh.has(id));
+    const itemRows = [
+      ...(fresh.size
+        ? await db
+            .select()
+            .from(listItems)
+            .where(and(inArray(listItems.listId, [...fresh]), eq(listItems.deleted, false)))
+        : []),
+      ...(known.length
+        ? await db
+            .select()
+            .from(listItems)
+            .where(and(inArray(listItems.listId, known), gt(listItems.seq, since)))
+        : []),
+    ];
+
+    const lists_ = listRows.map(toListRow);
+    for (const l of lists_) if (l.deleted) removedLists.push(l.id);
+
+    const memberIds = active.length
+      ? await db.selectDistinct({ userId: listMembers.userId }).from(listMembers).where(inArray(listMembers.listId, active))
+      : [];
+    const ids = [...new Set([userId, ...memberIds.map((m) => m.userId)])];
+    const userRows = await db.select().from(users).where(inArray(users.id, ids));
+    const me = userRows.find((u) => u.id === userId);
+
+    return {
+      lists: lists_.filter((l) => !l.deleted),
+      items: itemRows.map(toItemRow),
+      removedLists,
+      users: userRows.map(toUserInfo),
+      me: me && (since === 0 || me.seq > since) ? toMe(me) : undefined,
+      seq,
+    };
+  }
+}
