@@ -6,47 +6,57 @@
   (Passkey-Login – passt gut zum Handy).
 - In Pocket ID wird ein OIDC-Client „Shopping“ angelegt:
   Callback `https://…/auth/callback`, PKCE an, Scopes `openid profile email groups`.
-- **Zugriffssteuerung passiert in Pocket ID:** Über „Allowed User Groups“
-  des Clients (z. B. eine Gruppe `shopping` oder einfach alle Haushaltsmitglieder).
-  Wer dort durchkommt, darf in der App **alles** – es gibt keine Rollen.
+- **Wer sich anmelden darf, steuert Pocket ID** über „Allowed User Groups“
+  des Clients (z. B. eine Gruppe `shopping`).
 - Die Gruppe `admins` wird aus dem `groups`-Claim gelesen und als
-  `user.is_admin` gespeichert, hat aber vorerst keine Auswirkung. Reserve,
-  falls später z. B. Icon-Freigabe oder Integrationseinstellungen
-  eingeschränkt werden sollen.
+  `user.is_admin` gespeichert, hat aber vorerst keine Auswirkung.
 - Nutzer wird über `sub` identifiziert; Name/Mail/Avatar aus den Claims.
 - Session: HttpOnly-, Secure-, SameSite=Lax-Cookie, langlebig (90 Tage,
   gleitend) – im Supermarkt will sich niemand neu anmelden. Eine abgelaufene
   Session darf die **Offline-Nutzung nie blockieren**: lokale Daten bleiben
   bedienbar, Sync pausiert bis zum Re-Login.
-- Kein eigenes Passwort-System, keine Einladungen, keine Haushaltsverwaltung:
-  eine Instanz = ein Haushalt.
+- Kein eigenes Passwort-System, keine Einladungen, keine Haushaltsverwaltung.
 
-## Gast-Links über den Teilen-Dialog
+## Zugriffsmodell: Listen gehören dem, der sie anlegt – der Link öffnet sie
 
-Für Personen ohne Pocket-ID-Account (Babysitter, Besuch, Nachbarin, die
-etwas mitbringt):
+| Regel | |
+|-------|-|
+| Listen anlegen | **jeder** angemeldete Nutzer |
+| Eine Liste sehen & bearbeiten | ihr **Besitzer** und **jeder, der ihren Link geöffnet hat** |
+| Ohne Link | eine fremde Liste ist unsichtbar – auch für angemeldete Nutzer |
+| Abstufungen | keine: Wer drin ist, darf hinzufügen, ändern, abhaken (ein „nur ansehen“ ergibt bei Einkaufslisten keinen Sinn) |
+
+Gleiches gilt für Vorlagen (und später Packlisten).
+Gemeinsam für alle angemeldeten Nutzer sind nur Katalog, Kategorien,
+Einheiten und Icons.
+
+## Der Link
 
 | Aspekt | Lösung |
 |--------|--------|
-| Link | `https://…/s/<token>` – Token 256 Bit zufällig, nur als Hash gespeichert |
-| Rolle | `view` (nur ansehen) oder `edit` (hinzufügen/abhaken) |
-| Gültigkeit | unbegrenzt, bis Datum, oder bis zum manuellen Widerruf |
-| Mehrere Links pro Liste | ja, jeweils mit Label („Oma“, „Nachbar“) → einzeln widerrufbar |
-| Versand | „Teilen“ in der Liste öffnet den **Teilen-Dialog des Handys** (Web Share API, `navigator.share`) mit Link und kurzem Text → Messenger, Mail-App, SMS … nach Wahl. Am Laptop (ohne Teilen-Dialog): Link wird in die Zwischenablage kopiert. Der Server verschickt selbst **nichts** – kein SMTP nötig |
-| Gast-Erlebnis | gleiche PWA, nur diese eine Liste, offline-fähig und in Echtzeit synchron; beim ersten Öffnen optional Namen eingeben („✓ von Oma“) |
-| Sicherheit | Gast-Session ist an die Liste gebunden, Rate-Limit auf `/s/*`, `noindex`, kein Zugriff auf Katalog, Einstellungen, andere Listen |
+| Form | `https://…/s/<token>` – Token 256 Bit zufällig, nur als Hash gespeichert |
+| Anzahl | **ein** aktiver Link pro Liste |
+| Teilen | „Teilen“ in der Liste öffnet den **Teilen-Dialog des Handys** (Web Share API) mit Link und kurzem Text → Messenger, Mail-App, SMS … Am Laptop wird der Link in die Zwischenablage kopiert. Der Server verschickt nichts. Jeder, der in der Liste ist, darf den Link weitergeben |
+| Öffnen als **angemeldeter Nutzer** | Nutzer wird **Mitglied** (`list_member`): Die Liste erscheint dauerhaft in seiner App, synchron, offline-fähig, auch in HA/MCP über seine Tokens |
+| Öffnen **ohne Account** | Gast-Zugang nur zu dieser Liste (Gast-Session per Cookie, optional Name eingeben → „✓ von Oma“). Hinweis „Mit Pocket ID anmelden“ für Haushaltsmitglieder, die gerade nicht eingeloggt sind |
+| Link erneuern | Besitzer kann den Link neu erzeugen: der alte wird ungültig, **bestehende Mitglieder bleiben drin**, Gast-Sessions des alten Links enden |
+| Mitglieder entfernen | Besitzer sieht die Mitglieder (Avatare) und kann einzelne entfernen |
+| Liste verlassen | jedes Mitglied kann eine Liste für sich ausblenden/verlassen |
+| Sicherheit | Rate-Limit auf `/s/*`, `noindex`, Gäste haben keinen Zugriff auf Katalog-Pflege, Einstellungen oder andere Listen |
 
-## Rechte
+## Rechte im Überblick
 
-| Wer | Darf |
-|-----|------|
-| Angemeldeter Nutzer (Pocket ID) | alles |
-| Link `edit` | eine Liste ansehen, Artikel hinzufügen/ändern/abhaken |
-| Link `view` | eine Liste ansehen |
-| API-Token | je nach Scopes (siehe [07](07-api-und-home-assistant.md)) |
+| | Besitzer | Mitglied (Pocket ID, über Link) | Gast (ohne Account, über Link) |
+|-|----------|----------------------------------|--------------------------------|
+| Artikel hinzufügen, ändern, abhaken | ✅ | ✅ | ✅ |
+| Link teilen | ✅ | ✅ | ✅ |
+| Liste umbenennen, Vorlage anwenden | ✅ | ✅ | ✅ |
+| Link erneuern, Mitglieder entfernen | ✅ | ❌ | ❌ |
+| Liste löschen | ✅ | ❌ (nur verlassen) | ❌ |
+| Liste in HA/MCP/API sichtbar | ✅ | ✅ | – |
 
 ## Maschinen-Zugriff
 
-- **API-Tokens** (persönlich, mit Scopes) für Home Assistant und Skripte –
-  siehe [07](07-api-und-home-assistant.md).
-- **OAuth für MCP** – siehe [08](08-mcp-server.md).
+- **API-Tokens** gehören einem Nutzer und sehen genau dessen Listen
+  (eigene + beigetretene) – siehe [07](07-api-und-home-assistant.md).
+- **OAuth für MCP** – ebenfalls im Namen des Nutzers, siehe [08](08-mcp-server.md).

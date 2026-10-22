@@ -29,8 +29,11 @@ landen als Text in der Bring-Spezifikation, das Lebensmittel als String.
 
 1. In Shopping: *Einstellungen → Integrationen → Mealie* – URL + API-Token
    (Mealie: *Profil → API-Tokens*), Verbindung testen.
-2. Mealie-Einkaufsliste wählen (Quelle). Ziel ist immer die **Hauptliste**
-   (siehe [03](03-datenmodell.md#hauptliste)) – alles landet in einer Liste.
+2. Mealie-Einkaufsliste wählen (Quelle) und **eine** Zielliste – vorbelegt
+   mit der eigenen Hauptliste (siehe [03](03-datenmodell.md#hauptliste)),
+   typischerweise die gemeinsame Einkaufsliste. Alles landet in dieser Liste.
+   Die Integration gehört dem Nutzer, der sie einrichtet; sie kann nur in
+   Listen schreiben, auf die dieser Nutzer Zugriff hat.
 3. Shopping zeigt eine **Webhook-URL** `https://…/hooks/mealie/<secret>` und die
    fertige Apprise-URL zum Kopieren (`jsons://…`). Diese in Mealie unter
    *Haushalt → Benachrichtigungen* eintragen, Events „Einkaufsliste“ aktiv.

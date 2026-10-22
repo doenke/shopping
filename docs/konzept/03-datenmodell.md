@@ -7,14 +7,18 @@ siehe [04](04-sync-und-offline.md)). Jede synchronisierte Tabelle hat
 
 ## Übersicht
 
-Eine Instanz gehört **einem Haushalt**. Es gibt daher keine Haushalts- oder
-Rechtetabellen: Jeder angemeldete Nutzer sieht und darf alles.
+Jeder angemeldete Nutzer darf Listen anlegen. Eine Liste sehen und
+bearbeiten nur ihr **Besitzer** und alle, die den **Link** der Liste
+geöffnet haben (siehe [05](05-auth-und-teilen.md)). Es gibt keine Rollen
+und keine Haushaltsverwaltung.
 
 ```
 user ─┬─ api_token
-      └─ (created_by / checked_by in den Listen)
+      ├─ list (owner)
+      └─ list_member (über Link beigetreten)
 list ─┬─ list_item ── list_item_source
-      └─ share_link (Token, Rolle – für Gäste ohne Login)
+      ├─ list_member
+      └─ share_link (ein aktiver Link pro Liste)
 catalog_item ─┬─ catalog_alias        unit ── unit_alias
               ├─ category             property (Eigenschaften-Vokabular)
               └─ icon (Versionen)
@@ -27,16 +31,20 @@ change_log (server_seq, für Sync)
 
 | Tabelle | Felder (Auszug) |
 |---------|-----------------|
-| `user` | id, oidc_subject, email, display_name, avatar_url, is_admin (aus Pocket-ID-Gruppe `admins`, derzeit ohne Auswirkung) |
+| `user` | id, oidc_subject, email, display_name, avatar_url, `default_list_id` (persönliche Hauptliste), is_admin (aus Pocket-ID-Gruppe `admins`, derzeit ohne Auswirkung) |
+| `list_member` | list_id, user_id, joined_at – entsteht, wenn ein angemeldeter Nutzer den Link öffnet |
+| `guest` | id, share_link_id, display_name? – Gast ohne Account, der den Link geöffnet hat |
 
-Gäste ohne Account kommen über `share_link` (siehe [05](05-auth-und-teilen.md)).
+Zugriff auf eine Liste = `owner_id = user` **oder** Eintrag in `list_member`
+(bzw. Gast-Session über einen gültigen Link). Katalog, Kategorien, Einheiten
+und Icons sind dagegen für alle angemeldeten Nutzer gemeinsam.
 
 ## Listen – generisch von Anfang an
 
 | Feld | Bedeutung |
 |------|-----------|
-| `id`, `name`, `icon`, `color`, `position` | |
-| `is_default` | **Hauptliste** – genau eine Einkaufsliste hat `true` (siehe unten) |
+| `id`, `name`, `icon`, `color` | |
+| `owner_id` | wer die Liste angelegt hat |
 | `list_type` | `shopping` (MVP), später `packing`, `todo`, … |
 | `is_template` | `true` = Vorlage: nicht abhakbar, nur zum Vorbefüllen |
 | `settings` (JSONB) | typspezifisch, z. B. Sortiermodus, Standard-Laden |
@@ -56,16 +64,19 @@ festlegt. Neue Typen = neuer Registry-Eintrag, keine Schema-Migration.
 
 ### Hauptliste
 
-Genau eine Liste vom Typ `shopping` ist die **Hauptliste** (⭐ in der UI,
-umstellbar per „Als Hauptliste festlegen“). Sie ist der Standard überall dort,
-wo keine Liste angegeben wird:
+Jeder Nutzer hat **seine** Hauptliste (`user.default_list_id`, ⭐ in der UI,
+umstellbar per „Als Hauptliste festlegen“). Das kann eine eigene oder eine
+über Link beigetretene Liste sein – typischerweise die gemeinsame
+Haushalts-Einkaufsliste. Sie ist der Standard überall dort, wo keine Liste
+angegeben wird:
 
-- Ziel des Mealie-Eingangskorbs ([06](06-mealie-integration.md))
 - Standard für Home Assistant, Sprachbefehle, API ohne `list` und MCP
+  (jeweils die Hauptliste des Nutzers, dem das Token gehört)
+- Vorgeschlagenes Ziel beim Einrichten des Mealie-Eingangskorbs ([06](06-mealie-integration.md))
 - Start-Ansicht der App
 
-Technisch: partieller Unique-Index `WHERE is_default AND list_type = 'shopping'`.
 Die API bietet den Alias `/api/v1/lists/default`.
+Die Reihenfolge der Listen in der Seitenleiste ist pro Nutzer (`list_member.position` bzw. Besitzer-Einstellung).
 
 ### Vorlagen
 
@@ -164,9 +175,9 @@ last_used_at, use_count) speist „Zuletzt verwendet“, die Autovervollständig
 
 | Tabelle | Inhalt |
 |---------|--------|
-| `integration` | type (`mealie`), config (JSONB, Secrets verschlüsselt), status, last_sync_at |
-| `api_token` | user_id, name, token_hash, scopes, list_ids?, last_used_at, expires_at |
-| `share_link` | list_id, token_hash, role, label, expires_at, revoked_at |
+| `integration` | owner_id, type (`mealie`), target_list_id, config (JSONB, Secrets verschlüsselt), status, last_sync_at |
+| `api_token` | user_id, name, token_hash, scopes, list_ids?, last_used_at, expires_at – sieht nur die Listen seines Nutzers |
+| `share_link` | list_id, token_hash, created_at, revoked_at – genau ein aktiver Link pro Liste, keine Rollen |
 
 ## Änderungsprotokoll
 

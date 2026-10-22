@@ -45,7 +45,10 @@ kein Server-Roundtrip und keine ID-Umschreibung.
 
 ## Echtzeit
 
-- **WebSocket** pro Gerät, Abo auf alle Listen des Nutzers.
+- **WebSocket** pro Gerät, Abo auf alle Listen des Nutzers (eigene + über
+  Link beigetretene). Tritt der Nutzer einer Liste bei, wird sie sofort
+  nachgeladen; wird er entfernt oder verlässt er sie, schickt der Server
+  `removed` und der Client löscht die lokale Kopie.
 - Ziel: Abhaken bei anderen Online-Geräten **< 1 s**.
 - Beim Gegenüber verschwindet der Artikel nicht schlagartig, sondern
   mit kurzer Animation und Hinweis „✓ von Anna“ – sonst wundert man sich,

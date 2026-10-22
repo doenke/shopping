@@ -76,6 +76,15 @@ Mengen/Einheiten und eine Laptop-taugliche Ansicht.
   Ab-/Anwählen einzelner Artikel (optionale Artikel vorab abgewählt).
 - In jeder Liste: „Vorlage hinzufügen“.
 
+## Teilen & Mitglieder
+
+- „Teilen“ (in jeder Liste) → Teilen-Dialog des Handys mit dem Link; am
+  Laptop „Link kopieren“.
+- Wer den Link öffnet und angemeldet ist, bekommt kurz „Einkauf von Sönke –
+  beitreten?“ → Liste erscheint in der Seitenleiste.
+- Listenmenü zeigt die Mitglieder als Avatare. Besitzer: „Link erneuern“,
+  „Mitglied entfernen“, „Liste löschen“. Mitglieder: „Liste verlassen“.
+
 ## Mehrere Nutzer sichtbar machen
 
 - Avatare der gerade aktiven Personen in der Liste („Anna ist im Laden“) –

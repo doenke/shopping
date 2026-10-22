@@ -37,7 +37,7 @@ Assist mit LLM, n8n-AI-Agent …), Listen zu lesen und zu bearbeiten.
 | `import_mealie_mealplan` | Wochenplan übernehmen | `from`, `to`, `list` |
 | `get_history` | Häufig/zuletzt gekaufte Artikel | `limit` |
 
-Ohne Angabe von `list` arbeiten alle Tools mit der **Hauptliste**.
+Ohne Angabe von `list` arbeiten alle Tools mit der **Hauptliste** des Nutzers.
 Listen und Artikel dürfen per Name statt ID angesprochen werden („Einkauf“),
 Mehrdeutigkeiten werden als Fehler mit Kandidaten zurückgegeben.
 Tool-Beschreibungen und Schemas werden aus denselben Zod-Schemas erzeugt
@@ -52,6 +52,8 @@ wie die REST-API.
 
 ## Sicherheit
 
+- Der MCP-Client handelt im Namen des angemeldeten Nutzers und sieht nur
+  dessen Listen (eigene + über Link beigetretene).
 - Scopes wie bei API-Tokens; standardmäßig kein Löschen ganzer Listen per MCP.
 - Alle MCP-Änderungen tragen `source = mcp` und den Client-Namen →
   in der App sichtbar („hinzugefügt von Claude“), rückgängig machbar.

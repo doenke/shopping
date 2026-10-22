@@ -63,9 +63,11 @@ Schreibende Requests akzeptieren `Idempotency-Key`.
 Home Assistant hat mit der **To-do-Plattform** (`todo`-Entitäten) genau das
 richtige Gegenstück. Die Integration:
 
-- **Config Flow:** URL + API-Token eingeben → Listen werden gefunden.
+- **Config Flow:** URL + API-Token eingeben → die Listen des Token-Besitzers
+  (eigene + über Link beigetretene) werden gefunden. Tipp: eigenes Token
+  für HA anlegen und die gemeinsame Einkaufsliste per Link beitreten lassen.
 - **Je Liste eine `todo`-Entität** (`todo.shopping_einkauf`); die
-  Hauptliste ist als Attribut `default: true` markiert und Standardziel der Aktionen mit Features
+  Hauptliste des Token-Besitzers ist als Attribut `default: true` markiert und Standardziel der Aktionen mit Features
   Erstellen, Ändern, Löschen, Verschieben, Beschreibung.
   - `summary` = Name, `description` = „500 g · bio“, `status` = abgehakt.
   - Neu angelegte Artikel laufen durch den Parser: „2 Liter Milch“ wird korrekt strukturiert.
