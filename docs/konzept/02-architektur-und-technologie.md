@@ -29,7 +29,7 @@ Sync-Logik zwischen Server, PWA, API und MCP geteilt werden.
 | Echtzeit | WebSocket (`@fastify/websocket`), SSE als Fallback/für Integrationen | |
 | Frontend | **React + Vite**, PWA via `vite-plugin-pwa` (Workbox) | großes Ökosystem (Drag & Drop, Virtualisierung) |
 | Lokale Datenhaltung | **IndexedDB via Dexie** | vollständige lokale Replik der Listen |
-| OIDC | `openid-client` | zertifizierte Bibliothek, PKCE |
+| OIDC | `openid-client` gegen **Pocket ID** | zertifizierte Bibliothek, PKCE |
 | MCP | offizielles `@modelcontextprotocol/sdk` | Streamable HTTP im selben Server |
 | Mail | SMTP via `nodemailer` | Freigabe-Links verschicken |
 | Bildverarbeitung | `sharp` | Icons skalieren/konvertieren |
@@ -61,7 +61,7 @@ packages/
                     └──────────────┬─────────────────────────────┘
                                    │
                          PostgreSQL (Compose)        Mealie-API
-                         Volume: /data/icons ◄─────  OIDC-Provider
+                         Volume: /data/icons ◄─────  Pocket ID (OIDC)
                                                      SMTP, Bild-KI
 ```
 
@@ -75,12 +75,12 @@ für mehrere Instanzen stünde Postgres `LISTEN/NOTIFY` bereit).
 # docker-compose.yml (Skizze)
 services:
   app:
-    image: ghcr.io/doenke/korb:latest
+    image: ghcr.io/doenke/shopping:latest
     environment:
-      DATABASE_URL: postgres://korb:***@db/korb
+      DATABASE_URL: postgres://shopping:***@db/shopping
       PUBLIC_URL: https://einkauf.example.org
-      OIDC_ISSUER: https://auth.example.org/application/o/korb/
-      OIDC_CLIENT_ID: korb
+      OIDC_ISSUER: https://id.example.org          # Pocket ID
+      OIDC_CLIENT_ID: ***
       OIDC_CLIENT_SECRET: ***
       SMTP_URL: smtp://...
       MEALIE_URL: https://mealie.example.org     # optional, auch per UI
@@ -99,8 +99,8 @@ services:
 ## Android / native App
 
 1. **PWA zuerst.** Chrome auf Android installiert PWAs als echte WebAPK:
-   eigenes Icon, Vollbild, Share-Target („Teilen → Korb“ für Text/Rezeptlinks),
-   Offline, Background Sync, Web Push. Das deckt praktisch alles ab.
+   eigenes Icon, Vollbild, Share-Target („Teilen → Shopping“ für Text),
+   Offline, Background Sync. Das deckt praktisch alles ab.
 2. **Bei Bedarf: Trusted Web Activity** (Bubblewrap) – dieselbe PWA im
    Play Store, null Zusatzcode.
 3. **Erst wenn nötig: Capacitor-Hülle** für Dinge, die das Web nicht kann:

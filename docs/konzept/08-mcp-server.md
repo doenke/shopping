@@ -8,14 +8,15 @@ Assist mit LLM, n8n-AI-Agent …), Listen zu lesen und zu bearbeiten.
 
 - **Streamable HTTP** unter `https://…/mcp` (aktueller MCP-Standard für
   Remote-Server).
-- **Auth nach MCP-Spezifikation (OAuth 2.1):** Korb ist Resource Server und
+- **Auth nach MCP-Spezifikation (OAuth 2.1):** Shopping ist Resource Server und
   veröffentlicht `/.well-known/oauth-protected-resource`. Zwei Varianten:
-  1. Korb agiert selbst als schlanker Authorization Server (Login-Schritt
-     leitet an den OIDC-Provider weiter, Consent-Seite „Claude möchte auf
+  1. Shopping agiert selbst als schlanker Authorization Server (Login-Schritt
+     leitet an Pocket ID weiter, Consent-Seite „Claude möchte auf
      deine Listen zugreifen“, Dynamic Client Registration) – **empfohlen**,
-     funktioniert mit jedem OIDC-Provider.
-  2. Direkt der OIDC-Provider als Authorization Server, falls er die
-     MCP-Anforderungen (DCR) erfüllt.
+     unabhängig davon, was Pocket ID an MCP-Spezialitäten unterstützt.
+  2. Direkt Pocket ID als Authorization Server, falls es die
+     MCP-Anforderungen (u. a. Dynamic Client Registration) erfüllt –
+     beim Bau prüfen.
 - **Fallback:** API-Token als Bearer (für lokale/einfache Clients).
 
 ## Tools
@@ -36,6 +37,7 @@ Assist mit LLM, n8n-AI-Agent …), Listen zu lesen und zu bearbeiten.
 | `import_mealie_mealplan` | Wochenplan übernehmen | `from`, `to`, `list` |
 | `get_history` | Häufig/zuletzt gekaufte Artikel | `limit` |
 
+Ohne Angabe von `list` arbeiten alle Tools mit der **Hauptliste**.
 Listen und Artikel dürfen per Name statt ID angesprochen werden („Einkauf“),
 Mehrdeutigkeiten werden als Fehler mit Kandidaten zurückgegeben.
 Tool-Beschreibungen und Schemas werden aus denselben Zod-Schemas erzeugt
@@ -43,7 +45,7 @@ wie die REST-API.
 
 ## Ressourcen & Prompts
 
-- Ressourcen: `korb://lists/{id}` (Liste als Markdown), `korb://templates`.
+- Ressourcen: `shopping://lists/{id}` (Liste als Markdown), `shopping://templates`.
   Abonnierbar → Client bekommt Änderungen mit.
 - Prompts: „Wocheneinkauf planen“ (Mealplan + Vorlage „Basis“ + Verlauf
   kombinieren), „Liste nach Laden sortieren“.

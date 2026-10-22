@@ -7,37 +7,36 @@ siehe [04](04-sync-und-offline.md)). Jede synchronisierte Tabelle hat
 
 ## Übersicht
 
+Eine Instanz gehört **einem Haushalt**. Es gibt daher keine Haushalts- oder
+Rechtetabellen: Jeder angemeldete Nutzer sieht und darf alles.
+
 ```
-user ─┬─ household_member ── household ─┬─ list ─┬─ list_item ── list_item_source
-      │                                 │        ├─ list_share (user, Rolle)
-      │                                 │        └─ share_link (Token, Rolle)
-      │                                 ├─ catalog_item (haushaltseigene Ergänzungen)
-      │                                 ├─ item_history („Zuletzt verwendet“, Vorschläge)
-      │                                 └─ integration (Mealie …)
-      └─ api_token
+user ─┬─ api_token
+      └─ (created_by / checked_by in den Listen)
+list ─┬─ list_item ── list_item_source
+      └─ share_link (Token, Rolle – für Gäste ohne Login)
 catalog_item ─┬─ catalog_alias        unit ── unit_alias
               ├─ category             property (Eigenschaften-Vokabular)
               └─ icon (Versionen)
+item_history („Zuletzt verwendet“, Vorschläge)
+integration (Mealie)
 change_log (server_seq, für Sync)
 ```
 
-## Haushalte & Nutzer
+## Nutzer
 
 | Tabelle | Felder (Auszug) |
 |---------|-----------------|
-| `user` | id, oidc_issuer, oidc_subject, email, display_name, avatar_url, locale |
-| `household` | id, name |
-| `household_member` | household_id, user_id, role (`owner`/`member`) |
+| `user` | id, oidc_subject, email, display_name, avatar_url, is_admin (aus Pocket-ID-Gruppe `admins`, derzeit ohne Auswirkung) |
 
-Listen gehören einem **Haushalt**; alle Mitglieder sehen sie. Einzelne
-Listen können zusätzlich an Personen außerhalb freigegeben werden
-(`list_share`) oder per Link (`share_link`, siehe [05](05-auth-und-teilen.md)).
+Gäste ohne Account kommen über `share_link` (siehe [05](05-auth-und-teilen.md)).
 
 ## Listen – generisch von Anfang an
 
 | Feld | Bedeutung |
 |------|-----------|
-| `id`, `household_id`, `name`, `icon`, `color`, `position` | |
+| `id`, `name`, `icon`, `color`, `position` | |
+| `is_default` | **Hauptliste** – genau eine Einkaufsliste hat `true` (siehe unten) |
 | `list_type` | `shopping` (MVP), später `packing`, `todo`, … |
 | `is_template` | `true` = Vorlage: nicht abhakbar, nur zum Vorbefüllen |
 | `settings` (JSONB) | typspezifisch, z. B. Sortiermodus, Standard-Laden |
@@ -54,6 +53,19 @@ Listen können zusätzlich an Personen außerhalb freigegeben werden
 Der Code behandelt `list_type` über eine kleine Registry
 (`packages/shared/listTypes/*`), die Felder, Abhak-Verhalten und Katalog
 festlegt. Neue Typen = neuer Registry-Eintrag, keine Schema-Migration.
+
+### Hauptliste
+
+Genau eine Liste vom Typ `shopping` ist die **Hauptliste** (⭐ in der UI,
+umstellbar per „Als Hauptliste festlegen“). Sie ist der Standard überall dort,
+wo keine Liste angegeben wird:
+
+- Ziel des Mealie-Eingangskorbs ([06](06-mealie-integration.md))
+- Standard für Home Assistant, Sprachbefehle, API ohne `list` und MCP
+- Start-Ansicht der App
+
+Technisch: partieller Unique-Index `WHERE is_default AND list_type = 'shopping'`.
+Die API bietet den Alias `/api/v1/lists/default`.
 
 ### Vorlagen
 
@@ -133,7 +145,7 @@ Aliase (`unit_alias`): „Stück“, „St.“, „Päckchen“, „Esslöffel�
 
 ## Eigenschaften
 
-`property`-Vokabular pro Haushalt (Name, Kurzlabel, optional Farbe):
+`property`-Vokabular (Name, Kurzlabel, optional Farbe):
 `bio`, `TK`, `vegan`, `laktosefrei`, `glutenfrei`, `groß`, `klein`,
 `reif`, `Angebot` … Frei erweiterbar; beim Tippen „Milch laktosefrei“
 erkennt der Parser bekannte Eigenschaften (siehe [09](09-lebensmittel-datenbank.md)).
@@ -144,7 +156,7 @@ Siehe [09](09-lebensmittel-datenbank.md) und [10](10-icons-plan.md).
 
 ## Verlauf & Vorschläge
 
-`item_history` (household_id, catalog_item_id/name, quantity, unit, properties,
+`item_history` (catalog_item_id/name, quantity, unit, properties,
 last_used_at, use_count) speist „Zuletzt verwendet“, die Autovervollständigung
 (gewichtet nach Häufigkeit) und die Priorisierung der Icon-Generierung.
 
@@ -152,13 +164,13 @@ last_used_at, use_count) speist „Zuletzt verwendet“, die Autovervollständig
 
 | Tabelle | Inhalt |
 |---------|--------|
-| `integration` | household_id, type (`mealie`), config (JSONB, Secrets verschlüsselt), status, last_sync_at |
+| `integration` | type (`mealie`), config (JSONB, Secrets verschlüsselt), status, last_sync_at |
 | `api_token` | user_id, name, token_hash, scopes, list_ids?, last_used_at, expires_at |
 | `share_link` | list_id, token_hash, role, label, expires_at, revoked_at |
 
 ## Änderungsprotokoll
 
-`change_log(server_seq bigserial, household_id, list_id, entity, entity_id, op, patch JSONB, hlc, actor)`
+`change_log(server_seq bigserial, list_id, entity, entity_id, op, patch JSONB, hlc, actor)`
 
 Grundlage für Delta-Sync (`since=server_seq`), SSE-Events und Webhooks.
 Wird nach z. B. 90 Tagen kompaktiert; ältere Clients machen dann einen Voll-Sync.

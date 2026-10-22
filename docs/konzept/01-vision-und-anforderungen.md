@@ -16,13 +16,15 @@ zuverlässig funktionieren.
 |----|-------------|-----------|
 | A1 | Bring!-ähnliche Bedienung: Kacheln mit Icons, Kategorien, „Zuletzt verwendet“ | [12](12-ux-und-oberflaeche.md) |
 | A2 | Mengen, Einheiten und Eigenschaften pro Artikel (z. B. „500 g Hack, gemischt, bio“) | [03](03-datenmodell.md), [09](09-lebensmittel-datenbank.md) |
-| A3 | Login per OIDC | [05](05-auth-und-teilen.md) |
+| A3 | Login per OIDC (Pocket ID) | [05](05-auth-und-teilen.md) |
 | A4 | Liste per Link (z. B. per Mail verschickt) zugänglich, ohne Account | [05](05-auth-und-teilen.md) |
 | A5 | Abhaken wird nahezu in Echtzeit bei allen anderen Nutzern sichtbar | [04](04-sync-und-offline.md) |
 | A6 | Voll offline-fähig, robust bei schlechtem Netz | [04](04-sync-und-offline.md) |
 | A7 | PWA, gut am Handy (Fokus Android) **und** am Laptop | [02](02-architektur-und-technologie.md), [12](12-ux-und-oberflaeche.md) |
 | A8 | Native Mealie-Übernahme (ersetzt den heutigen n8n-Flow mealie2bring) | [06](06-mealie-integration.md) |
 | A9 | Lebensmittel-Datenbank, initial aus Mealie-Zutaten befüllt | [09](09-lebensmittel-datenbank.md) |
+| A10 | Eine Liste ist als **Hauptliste** markiert: Ziel für Mealie, Home Assistant, MCP und Start-Ansicht der App | [03](03-datenmodell.md) |
+| A11 | Kategorien wie bei Bring! | [09](09-lebensmittel-datenbank.md) |
 
 ### Soll (kurz nach MVP)
 
@@ -38,16 +40,17 @@ zuverlässig funktionieren.
 | ID | Anforderung |
 |----|-------------|
 | C1 | Weitere Listentypen, z. B. Packlisten, To-dos |
-| C2 | Laden-spezifische Sortierung der Kategorien („Gangreihenfolge“) |
+| C2 | Laden-spezifische Sortierung der Kategorien – nur falls die Bring!-Kategorien nicht reichen |
 | C3 | Native Android-Hülle (TWA/Capacitor) für Homescreen-Widget, Play Store |
-| C4 | Push-Benachrichtigungen („Liste wurde geändert“, „Ich gehe einkaufen“) |
 
 ## Nicht-Ziele
 
 - Kein iOS-Fokus (die PWA läuft dort trotzdem, wird aber nicht gezielt optimiert).
+- **Keine Benachrichtigungen** – weder Push noch Mail-Hinweise („Liste geändert“, „Ich gehe einkaufen“). Die App ist still.
 - Keine Preise, Angebote, Prospekte, Werbung.
 - Kein Rezept-Management – das bleibt Mealie.
-- Kein Multi-Tenant-SaaS; Zielgröße: ein Server, eine Handvoll Haushalte.
+- Kein Mehr-Haushalts-Betrieb: **eine Instanz = ein Haushalt**. Wer sich anmelden darf, darf alles.
+- Keine Übernahme bestehender Bring!-Daten – Start bei null.
 
 ## Qualitätsziele
 

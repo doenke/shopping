@@ -9,7 +9,7 @@ beschrieben (`/api/v1/openapi.json`, Doku unter `/api/docs`).
 | Client | Verfahren |
 |--------|-----------|
 | PWA | Session-Cookie (OIDC) |
-| Home Assistant, n8n, Skripte | `Authorization: Bearer korb_pat_…` – persönliches API-Token |
+| Home Assistant, n8n, Skripte | `Authorization: Bearer shopping_pat_…` – persönliches API-Token |
 | MCP-Clients | OAuth 2.1 (siehe [08](08-mcp-server.md)) oder API-Token |
 
 Tokens werden in der App unter *Profil → API-Tokens* erstellt, mit
@@ -21,7 +21,7 @@ Tokens werden in der App unter *Profil → API-Tokens* erstellt, mit
 ```
 GET    /api/v1/lists                          ?type=shopping&templates=false
 POST   /api/v1/lists                          {name, type, fromTemplateId?}
-GET    /api/v1/lists/{id}                     inkl. Artikel
+GET    /api/v1/lists/{id}                     inkl. Artikel; {id} = `default` → Hauptliste
 PATCH  /api/v1/lists/{id}
 DELETE /api/v1/lists/{id}
 
@@ -52,18 +52,20 @@ Schreibende Requests akzeptieren `Idempotency-Key`.
 - **SSE** `GET /api/v1/events?lists=…` – Ereignisse `item.added`,
   `item.updated`, `item.checked`, `item.unchecked`, `item.removed`,
   `list.updated`. Einfach zu konsumieren, funktioniert durch jeden Proxy.
-- **Ausgehende Webhooks** (konfigurierbar, HMAC-signiert) – z. B. an n8n:
-  „Liste leer → Matrix-Nachricht“, „Milch hinzugefügt“ …
+- **Ausgehende Webhooks** (optional, HMAC-signiert) – für eigene
+  Automationen, z. B. in n8n. Die App selbst verschickt keine
+  Benachrichtigungen.
 
 ## Home Assistant
 
-### Custom Integration „Korb“ (HACS)
+### Custom Integration „Shopping“ (HACS)
 
 Home Assistant hat mit der **To-do-Plattform** (`todo`-Entitäten) genau das
 richtige Gegenstück. Die Integration:
 
 - **Config Flow:** URL + API-Token eingeben → Listen werden gefunden.
-- **Je Liste eine `todo`-Entität** (`todo.korb_einkauf`) mit Features
+- **Je Liste eine `todo`-Entität** (`todo.shopping_einkauf`); die
+  Hauptliste ist als Attribut `default: true` markiert und Standardziel der Aktionen mit Features
   Erstellen, Ändern, Löschen, Verschieben, Beschreibung.
   - `summary` = Name, `description` = „500 g · bio“, `status` = abgehakt.
   - Neu angelegte Artikel laufen durch den Parser: „2 Liter Milch“ wird korrekt strukturiert.
@@ -71,34 +73,32 @@ richtige Gegenstück. Die Integration:
   sofort sichtbar (`iot_class: cloud_push` bzw. `local_push`).
 - **Sensoren:** offene Artikel pro Liste (für Dashboards/Automationen).
 - **Eigene Aktionen (Services):**
-  - `korb.add_item` (name, quantity, unit, properties, note, list)
-  - `korb.apply_template` (template, list)
-  - `korb.import_mealie_recipe` (recipe, servings)
-  - `korb.clear_checked`
+  - `shopping.add_item` (name, quantity, unit, properties, note, list)
+  - `shopping.apply_template` (template, list)
+  - `shopping.import_mealie_recipe` (recipe, servings)
+  - `shopping.clear_checked`
 - **Sprachsteuerung gratis:** HA Assist versteht für To-do-Entitäten bereits
   „Füge Milch zur Einkaufsliste hinzu“ und „Was steht auf der Einkaufsliste?“.
 
 ### Beispiel-Automationen
 
 ```yaml
-# Wenn jemand das Haus verlässt und die Liste nicht leer ist → Benachrichtigung
-trigger: { platform: state, entity_id: person.anna, to: not_home }
-condition: "{{ states('sensor.korb_einkauf_offen') | int > 0 }}"
-action:
-  service: notify.mobile_app_anna
-  data: { message: "Noch {{ states('sensor.korb_einkauf_offen') }} Sachen auf der Einkaufsliste" }
-```
-
-```yaml
 # Kaffeemaschine meldet "Bohnen leer" → auf die Liste
 trigger: { platform: state, entity_id: binary_sensor.kaffeemaschine_bohnen_leer, to: "on" }
 action:
-  service: korb.add_item
-  data: { list: Einkauf, name: Kaffeebohnen, quantity: 1, unit: kg }
+  service: shopping.add_item
+  data: { name: Kaffeebohnen, quantity: 1, unit: kg }   # ohne list → Hauptliste
+```
+
+```yaml
+# Dashboard-Taste "Grillen" → Vorlage in die Hauptliste übernehmen
+action:
+  service: shopping.apply_template
+  data: { template: Grillabend }
 ```
 
 ### Ausbaustufe
 
 Ohne Custom Integration geht es zunächst auch mit HA-Bordmitteln
 (`rest_command` + `rest`-Sensor), die Custom Integration ist aber das Ziel.
-Sie lebt in eigenem Repo (`korb-homeassistant`), damit HACS sie einbinden kann.
+Sie lebt in eigenem Repo (`shopping-homeassistant`), damit HACS sie einbinden kann.

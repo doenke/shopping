@@ -42,7 +42,7 @@ Mengen/Einheiten und eine Laptop-taugliche Ansicht.
 ```
 ┌──────────────┬──────────────────────────────────┬──────────────────────┐
 │ Listen       │ Einkauf                ☁✓        │ Katalog / Mealie     │
-│ ● Einkauf  12│ 🔍 Hinzufügen… (Strg+K)           │ 🔍 Suche             │
+│ ⭐ Einkauf 12│ 🔍 Hinzufügen… (Strg+K)           │ 🔍 Suche             │
 │ ○ Drogerie  3│                                  │ Obst & Gemüse        │
 │ ○ Getränke   │ Obst & Gemüse                    │ 🍎 🍌 🥕 🥦 🍋 …      │
 │              │  🥔 Kartoffeln   2 kg  festk.  ⋯ │                      │
@@ -62,6 +62,13 @@ Mengen/Einheiten und eine Laptop-taugliche Ansicht.
 - Drag & Drop von Katalog/„Zuletzt verwendet“ in die Liste und zwischen Listen.
 - Mehrfachauswahl (z. B. 5 Artikel in die Drogerie-Liste verschieben).
 
+## Hauptliste
+
+- Die App startet immer in der Hauptliste (⭐).
+- Umstellen über das Listenmenü: „Als Hauptliste festlegen“.
+- Was aus Mealie, Home Assistant oder per MCP ohne Listenangabe kommt,
+  landet hier.
+
 ## Vorlagen in der UI
 
 - Eigene Rubrik in der Seitenleiste, Raute-Symbol ◇, keine Checkboxen.
@@ -71,9 +78,13 @@ Mengen/Einheiten und eine Laptop-taugliche Ansicht.
 
 ## Mehrere Nutzer sichtbar machen
 
-- Avatare der gerade aktiven Personen in der Liste („Anna ist im Laden“).
+- Avatare der gerade aktiven Personen in der Liste („Anna ist im Laden“) –
+  nur sichtbar, wenn man selbst in die App schaut.
 - Fremd abgehakte Artikel: kurze Animation + „✓ von Anna“.
 - Neu von anderen hinzugefügt: dezenter Punkt an der Kachel bis zum Ansehen.
+
+**Keine Benachrichtigungen:** kein Push, keine Mails, keine Badges auf dem
+App-Icon. Alles oben passiert nur innerhalb der geöffneten App.
 
 ## Gestaltung
 

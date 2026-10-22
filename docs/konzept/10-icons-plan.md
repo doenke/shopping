@@ -29,7 +29,7 @@ Das größte Risiko generierter Icons ist ein Stil-Flickenteppich. Deshalb:
 
 ### Phase 2 – Kategorie-Icons + Fallback
 
-- Ein Icon pro Kategorie (~17), dient als Fallback für Artikel ohne eigenes Icon.
+- Ein Icon pro Kategorie (14, wie bei Bring!), dient als Fallback für Artikel ohne eigenes Icon.
 - Letzter Fallback: Anfangsbuchstabe auf Kategoriefarbe (so wie ein Avatar).
 - Damit ist die App ab Tag 1 vollständig bebildert.
 
@@ -38,8 +38,7 @@ Das größte Risiko generierter Icons ist ein Stil-Flickenteppich. Deshalb:
 - Reihenfolge nach Nutzung: erst die häufigsten Artikel aus `item_history`
   und den Mealie-Einkaufslisten, dann der Rest des Katalogs.
 - Batches à 25–50 Artikel. Pro Artikel 2–4 Kandidaten.
-- Grobe Kosten: ~1.000 Artikel × 3 Kandidaten ≈ 3.000 Bilder; je nach Modell
-  ein- bis niedriger zweistelliger Eurobetrag, lokal (SDXL/FLUX) nur Strom.
+- Umfang und Tempo: siehe „Generierung mit Tagesbudget“ unten.
 
 ### Phase 4 – Laufender Betrieb
 
@@ -57,28 +56,48 @@ catalog_item ──► Prompt-Builder ──► Bild-KI (+ Anker-Referenzen) ─
                      Exporte 192² / 96² WebP, (optional Vektorisierung)
                                                                       │
                                                                       ▼
-                     Automatische Checks ──► Review-Queue (Admin-UI) ──► freigegeben
+                     Automatische Checks ──► Review-Queue (App) ───────► freigegeben
                      (Transparenz, Rand frei,     Kandidaten nebeneinander,  icon.status=approved
                       Füllgrad, Farbanzahl,       auf hell & dunkel, 32–96 px;
                       kein Text per OCR)          Freigeben / Neu / Prompt anpassen
 ```
 
-### Modellwahl
+### Modellwahl: erst kostenlos, langsam – dann notfalls bezahlt
 
-Anforderungen: Stil-Referenzbilder, transparenter Hintergrund (oder sauber
-freistellbar), gute Objekttreue bei Lebensmitteln, API-Zugang.
+Rahmen: **keine GPU**, aber **Zeit**. Also: Gratis-Kontingente von
+Cloud-Diensten nutzen und die Generierung über Tage/Wochen strecken.
 
-| Option | Pro | Contra |
-|--------|-----|--------|
-| OpenAI `gpt-image` | sehr gute Prompt-Treue, Referenzbilder, transparenter Hintergrund nativ | Kosten pro Bild, Cloud |
-| Google Gemini / Imagen | gute Konsistenz mit Referenzbildern | Freistellen nötig |
-| FLUX (z. B. via Replicate) + Style-LoRA | sehr konsistent nach LoRA-Training auf Anker-Set | LoRA-Training-Aufwand |
-| Lokal: SDXL/FLUX + LoRA (ComfyUI) | keine laufenden Kosten, volle Kontrolle | GPU nötig, mehr Bastelei |
+Anforderungen an das Modell: Stil-Referenzbilder (wichtig für Konsistenz),
+gute Objekttreue bei Lebensmitteln, API-Zugang, transparenter Hintergrund
+oder sauber freistellbar.
 
-**Empfehlung:** Phase 1 mit einem Cloud-Modell mit Referenzbild-Support
-(schnell iterieren). Wenn der Stil steht, entscheiden, ob für die Masse
-ein LoRA auf das Anker-Set trainiert wird. Der Generator ist im Code eine
-austauschbare Schnittstelle (`IconGenerator`).
+| Option | Kosten | Referenzbilder | Einschätzung |
+|--------|--------|----------------|--------------|
+| **Google Gemini (Bild-Modell) über AI Studio / Gemini API** | Gratis-Kontingent mit Tageslimit (Umfang beim Bau prüfen), danach günstig pro Bild | ✅ | **Erste Wahl**: Referenzbilder + Gratis-Stufe |
+| Cloudflare Workers AI (FLUX schnell o. Ä.) | tägliches Gratis-Kontingent | ❌ nur Text | Fallback; Konsistenz nur über strengen Prompt |
+| OpenAI `gpt-image` | bezahlt, wenige Cent pro Bild | ✅, transparenter Hintergrund nativ | **Bezahl-Option**, falls Gratis nicht reicht oder Qualität fehlt |
+| Replicate / fal (FLUX + Stil-Referenz bzw. LoRA) | bezahlt pro Bild/Training | ✅ | Option, wenn ein trainiertes Stil-LoRA nötig wird |
+
+Konkrete Gratis-Limits ändern sich häufig – sie werden beim Bau geprüft,
+nicht im Konzept festgeschrieben.
+
+### Generierung mit Tagesbudget
+
+- Der Icon-Job hat ein **Tageskontingent** pro Anbieter (z. B. „max. 80
+  Bilder/Tag“) und arbeitet die Warteschlange nach Priorität ab. Ist das
+  Kontingent erschöpft oder meldet der Dienst `429`, pausiert der Job bis
+  zum nächsten Tag.
+- Rechnung: ~600 relevante Artikel × 3 Kandidaten ≈ 1.800 Bilder → bei
+  ~80/Tag gut drei Wochen. Durch Priorisierung sind die häufigen Artikel
+  schon nach wenigen Tagen fertig; der Rest hat ja Kategorie-Fallbacks.
+- Optional **Bezahl-Schalter** mit Kostenobergrenze (z. B. „max. 10 €“),
+  falls es schneller gehen soll oder ein Artikel im Gratis-Modell nicht
+  gelingt („mit Bezahl-Modell neu erzeugen“ in der Review-Ansicht).
+- Phase 1 (Stil finden) geht auch ganz ohne Code direkt in der Weboberfläche
+  von AI Studio bzw. ChatGPT – die Gewinner werden einfach ins Repo gelegt.
+
+Der Generator ist im Code eine austauschbare Schnittstelle
+(`IconGenerator` mit Adaptern je Anbieter), Anbieter-Wechsel ist Konfiguration.
 
 ### Datenhaltung
 

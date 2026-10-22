@@ -18,7 +18,7 @@ Kategorie, Standard-Einheit und macht aus „kartofeln“ den Artikel
 | `typical_properties` | festkochend, mehligkochend, bio |
 | `pantry` | false (Salz, Öl = true → beim Rezeptimport abgewählt) |
 | `icon_id` | aktuelles Icon |
-| `household_id` | `null` = globaler Katalog, sonst haushaltseigene Ergänzung |
+| `source` | `seed` (Grundkatalog), `mealie`, `user` (in der App angelegt) |
 | `mealie_food_id` | Verknüpfung |
 | `list_type` | `shopping` (später `packing` für Packartikel) |
 
@@ -27,19 +27,36 @@ Synonyme, Schreibvarianten, Dialekt: *Erdapfel, Grumbeere, Kartoffel,
 Kartoffeln* → Kartoffeln; *Paradeiser* → Tomaten; *Schlagsahne, Sahne*.
 
 ### `category`
-Name, Farbe (für Kachelhintergrund), Standard-Reihenfolge, Icon.
-Grundstock: Obst & Gemüse · Brot & Backwaren · Milch & Käse · Fleisch &
-Fisch · Kühlregal · Tiefkühl · Nudeln, Reis & Getreide · Konserven ·
-Gewürze & Öle · Backen · Frühstück & Süßes · Snacks · Getränke ·
-Haushalt · Drogerie · Tier · Sonstiges.
+Name, Farbe (für Kachelhintergrund), Reihenfolge, Icon.
 
-Später: `store` + `store_category_order` für die Gangreihenfolge pro Laden.
+**Kategorien wie bei Bring!** – das reicht für den Anfang:
+
+| # | Kategorie | Beispiele |
+|---|-----------|-----------|
+| 1 | Obst & Gemüse | Äpfel, Tomaten, Kräuter |
+| 2 | Brot & Gebäck | Brot, Brötchen, Toast |
+| 3 | Milch & Käse | Milch, Joghurt, Butter, Eier, Käse |
+| 4 | Fleisch & Fisch | Hack, Hähnchen, Lachs, Wurst |
+| 5 | Zutaten & Gewürze | Mehl, Zucker, Öl, Salz, Brühe |
+| 6 | Fertig- & Tiefkühlprodukte | TK-Erbsen, Pizza, Pesto |
+| 7 | Getreideprodukte | Nudeln, Reis, Haferflocken, Müsli |
+| 8 | Snacks & Süßwaren | Schokolade, Chips, Kekse |
+| 9 | Getränke & Tabak | Wasser, Saft, Kaffee, Wein |
+| 10 | Haushalt & Gesundheit | Spülmittel, Müllbeutel, Batterien |
+| 11 | Pflege & Gesundheit | Zahnpasta, Duschgel, Pflaster |
+| 12 | Tierbedarf | Katzenfutter |
+| 13 | Baumarkt & Garten | Blumenerde, Glühbirnen |
+| 14 | Eigene Artikel | Freitext ohne Katalogtreffer |
+
+Die Reihenfolge ist in der App per Drag & Drop änderbar (eine Reihenfolge
+für alle, kein Laden-Profil). Laden-spezifische Sortierung nur, falls das
+später fehlt.
 
 ## Befüllung
 
 1. **Basis aus deiner Mealie-Zutatenliste** (`/api/foods`): Name, Plural,
    Aliase, Label. Labels werden per Mapping-Dialog auf Kategorien gemappt.
-2. **Bereinigung** (einmalig, halbautomatisch, Admin-Ansicht):
+2. **Bereinigung** (einmalig, halbautomatisch, Pflege-Ansicht in der App):
    - Dubletten zusammenführen („Zwiebel“, „Zwiebeln“, „rote Zwiebel“ → Zwiebeln + Eigenschaft „rot“ ?)
    - Rezept-only-Zutaten markieren, die man nicht einkauft („Wasser“ → ausblenden)
    - Fehlende Kategorien zuordnen – Vorschläge per LLM (Batch, ein Durchlauf, vom Menschen bestätigt)
@@ -51,7 +68,7 @@ Später: `store` + `store_category_order` für die Gangreihenfolge pro Laden.
    zurück nach Mealie als Food angelegt werden.
 
 Der Abgleich mit Mealie läuft regelmäßig; neue Foods erscheinen automatisch,
-Korb-eigene Änderungen (Kategorie, Icon) werden nicht überschrieben.
+Shopping-eigene Änderungen (Kategorie, Icon) werden nicht überschrieben.
 
 ## Eingabe-Parser
 
