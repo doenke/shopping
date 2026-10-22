@@ -48,7 +48,7 @@ Noch nicht dabei (folgende Phasen): REST-API-Tokens, Home Assistant, MCP, Icons.
    - „Public Client“ / PKCE aktiv (dann kein Client-Secret nötig)
    - Zugriff über „Allowed User Groups“ steuern
 2. `.env.example` nach `.env` und `docker-compose.example.yml` nach `docker-compose.yml` kopieren, `.env` ausfüllen.
-3. `docker compose up -d` – die App lauscht auf `127.0.0.1:3000`. `docker compose ps` zeigt beide
+3. `docker compose up -d` – die App ist auf `127.0.0.1:38417` erreichbar (dorthin zeigt der Reverse Proxy). `docker compose ps` zeigt beide
    Dienste als `healthy`, sobald App und Datenbank laufen (`/healthz` prüft auch die Datenbank).
 4. Reverse Proxy mit HTTPS davor (WebSocket-Upgrade für `/ws` erlauben).
 
