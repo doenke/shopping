@@ -4,6 +4,7 @@ import {
   type CatalogItem,
   type ItemPatch,
   type ItemRow,
+  type ItemSource,
   type ListRow,
   type ParsedItem,
 } from '@shopping/shared';
@@ -20,11 +21,22 @@ async function lastPosition(listId: string): Promise<string | null> {
   return items.reduce<string | null>((max, i) => (max === null || i.position > max ? i.position : max), null);
 }
 
+/** A parsed item plus where it came from (recipe, template …). */
+export type NewItem = ParsedItem & { sources?: ItemSource[]; optional?: boolean };
+
+function withSources(attributes: Record<string, unknown>, add: ItemSource[] | undefined): Record<string, unknown> | null {
+  if (!add?.length) return null;
+  const current = Array.isArray(attributes.sources) ? (attributes.sources as ItemSource[]) : [];
+  const merged = [...current];
+  for (const s of add) if (!merged.some((m) => m.type === s.type && m.label === s.label)) merged.push(s);
+  return merged.length === current.length ? null : { ...attributes, sources: merged };
+}
+
 /**
  * Adds parsed items to a list like Bring! does: an item that is already open
  * gets the new amount added, a recently bought one comes back, anything else is new.
  */
-export async function addItems(listId: string, parsed: ParsedItem[]): Promise<void> {
+export async function addItems(listId: string, parsed: NewItem[]): Promise<void> {
   const items = (await db.items.where('listId').equals(listId).toArray()).filter((i) => !i.deleted);
   let position = await lastPosition(listId);
   const changes: { id: string; patch: ItemPatch }[] = [];
@@ -32,35 +44,47 @@ export async function addItems(listId: string, parsed: ParsedItem[]): Promise<vo
     const open = items.find((i) => !i.checked && sameItem(i, p));
     if (open) {
       const patch: ItemPatch = {};
-      if (p.amounts.length) patch.amounts = mergeAmounts(open.amounts, p.amounts);
+      if (p.amounts.length) open.amounts = patch.amounts = mergeAmounts(open.amounts, p.amounts);
       const props = [...new Set([...open.properties, ...p.properties])];
-      if (props.length !== open.properties.length) patch.properties = props;
-      if (p.note && p.note !== open.note) patch.note = open.note ? `${open.note}, ${p.note}` : p.note;
+      if (props.length !== open.properties.length) open.properties = patch.properties = props;
+      if (p.note && p.note !== open.note) open.note = patch.note = open.note ? `${open.note}, ${p.note}` : p.note;
+      const attributes = withSources(open.attributes, p.sources);
+      if (attributes) open.attributes = patch.attributes = attributes;
       if (Object.keys(patch).length) changes.push({ id: open.id, patch });
       continue;
     }
     const done = items.find((i) => i.checked && sameItem(i, p));
     if (done) {
+      done.checked = false;
       changes.push({
         id: done.id,
-        patch: { checked: false, amounts: p.amounts, properties: p.properties, note: p.note },
+        patch: {
+          checked: false,
+          amounts: p.amounts,
+          properties: p.properties,
+          note: p.note,
+          attributes: { ...done.attributes, sources: p.sources ?? [] },
+        },
       });
       continue;
     }
     position = generateKeyBetween(position, null);
-    changes.push({
-      id: crypto.randomUUID(),
-      patch: {
-        listId,
-        name: p.name,
-        catalogItemId: p.catalogItemId,
-        categoryId: p.categoryId,
-        amounts: p.amounts,
-        properties: p.properties,
-        note: p.note,
-        position,
-      },
-    });
+    const id = crypto.randomUUID();
+    const patch: ItemPatch = {
+      listId,
+      name: p.name,
+      catalogItemId: p.catalogItemId,
+      categoryId: p.categoryId,
+      amounts: p.amounts,
+      properties: p.properties,
+      note: p.note,
+      position,
+      ...(p.sources?.length ? { attributes: { sources: p.sources } } : {}),
+      ...(p.optional ? { optional: true } : {}),
+    };
+    changes.push({ id, patch });
+    // Same thing twice in one batch ("Milch, Milch") must merge as well.
+    items.push({ ...(patch as ItemRow), id, checked: false, attributes: patch.attributes ?? {} });
   }
   await sync.mutateItems(changes);
 }
@@ -81,9 +105,20 @@ export async function deleteItem(id: string): Promise<void> {
   await sync.mutateItem(id, { deleted: true });
 }
 
-export async function createList(name: string): Promise<string> {
+export async function createList(name: string, isTemplate = false): Promise<string> {
   const id = crypto.randomUUID();
-  await sync.mutateList(id, { name, listType: 'shopping', isTemplate: false });
+  await sync.mutateList(id, { name, listType: 'shopping', isTemplate });
+  return id;
+}
+
+/** "Als Vorlage speichern": copies the open items of a list into a new template. */
+export async function saveAsTemplate(list: ListRow, name: string): Promise<string> {
+  const id = await createList(name, true);
+  const items = (await db.items.where('listId').equals(list.id).toArray()).filter((i) => !i.deleted && !i.checked);
+  await addItems(
+    id,
+    items.map((i) => ({ name: i.name, catalogItemId: i.catalogItemId, categoryId: i.categoryId, amounts: i.amounts, properties: i.properties, note: i.note })),
+  );
   return id;
 }
 

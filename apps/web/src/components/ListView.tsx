@@ -58,7 +58,14 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView({ 
     <section className="listview">
       <AddBar ref={addRef} listId={list.id} index={index} boost={boost} />
 
-      {open.length === 0 && (
+      {list.isTemplate && (
+        <p className="template-hint">
+          ◇ Vorlage – hier wird nichts abgehakt. Sie füllt neue Listen vor („Neue Liste“ oder „Vorlage übernehmen“). Antippen
+          bearbeitet einen Artikel.
+        </p>
+      )}
+
+      {open.length === 0 && !list.isTemplate && (
         <div className="empty">
           <p className="empty__title">Alles erledigt 🎉</p>
           <p>Tippe oben, was ihr braucht – oder hol etwas aus „Zuletzt verwendet“ zurück.</p>
@@ -75,8 +82,10 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView({ 
                 <Tile
                   key={item.id}
                   item={item}
-                  badge={remote ? `✓ ${users.get(remote.by)?.displayName ?? ''}`.trim() : undefined}
+                  fading={!!remote}
+                  badge={remote ? `✓ ${users.get(remote.by)?.displayName ?? ''}`.trim() : list.isTemplate && item.optional ? 'optional' : undefined}
                   onTap={() => {
+                    if (list.isTemplate) return setEditing(item.id);
                     if (remote) return;
                     void setChecked(item, true);
                     setUndo(item);
@@ -89,7 +98,7 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView({ 
         </div>
       ))}
 
-      {recent.length > 0 && (
+      {recent.length > 0 && !list.isTemplate && (
         <div className="group group--recent">
           <div className="group__head">
             <button type="button" className="group__toggle" onClick={() => setShowRecent((s) => !s)} aria-expanded={showRecent}>
@@ -126,7 +135,7 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView({ 
         </div>
       )}
 
-      {editItem && <ItemEditor key={editItem.id} item={editItem} users={users} onClose={() => setEditing(null)} />}
+      {editItem && <ItemEditor key={editItem.id} item={editItem} users={users} isTemplate={list.isTemplate} onClose={() => setEditing(null)} />}
     </section>
   );
 });

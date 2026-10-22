@@ -25,6 +25,12 @@ export interface ListRow {
   seq: number;
 }
 
+/** Where (part of) an item came from, kept in `attributes.sources`. */
+export interface ItemSource {
+  type: 'mealie_recipe' | 'mealie_list' | 'mealie_mealplan' | 'template' | 'api' | 'mcp';
+  label: string;
+}
+
 export interface ItemRow {
   id: string;
   listId: string;
@@ -53,6 +59,7 @@ export interface UserInfo {
   id: string;
   displayName: string;
   avatarUrl: string | null;
+  isGuest: boolean;
 }
 
 export interface Me extends UserInfo {

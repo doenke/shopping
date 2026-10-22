@@ -151,3 +151,19 @@ async function waitFor(cond: () => boolean, timeout = 3000): Promise<void> {
     await new Promise((r) => setTimeout(r, 10));
   }
 }
+
+describe('templates', () => {
+  it('cannot be checked', async () => {
+    const t1 = randomUUID();
+    const item = randomUUID();
+    await push(anna, [annaClient.list(t1, { name: 'Grillabend', isTemplate: true })]);
+    const r = await push(anna, [annaClient.item(item, { listId: t1, name: 'Würstchen', position: 'a0', optional: true })]);
+    expect(r.rejected).toEqual([]);
+    const c = await push(anna, [annaClient.item(item, { checked: true })]);
+    expect(c.rejected[0]?.reason).toBe('template_not_checkable');
+    const cs = await pull(anna);
+    expect(cs.lists.find((l) => l.id === t1)).toMatchObject({ isTemplate: true });
+    // A template never becomes the main list.
+    expect(cs.me?.defaultListId).not.toBe(t1);
+  });
+});

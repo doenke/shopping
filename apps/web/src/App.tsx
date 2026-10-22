@@ -1,7 +1,10 @@
 import { parseInput, type ListRow, type Me } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, createList, deleteList, leaveList, renameList, setMainList, shareList } from './actions';
+import { addItems, createList, deleteList, leaveList, renameList, saveAsTemplate, setMainList, shareList } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
+import { ImportDialog } from './components/ImportDialog';
+import { MembersDialog } from './components/MembersDialog';
+import { TemplateDialog } from './components/TemplateDialog';
 import { ListView } from './components/ListView';
 import { Login } from './components/Login';
 import { Settings } from './components/Settings';
@@ -47,9 +50,17 @@ function Shell({ me }: { me: Me }) {
   const extraWide = useMediaQuery('(min-width: 1250px)');
   const [drawer, setDrawer] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
+  const guest = me.isGuest;
+  const [templateDialog, setTemplateDialog] = useState<'new' | 'apply' | null>(null);
+  const shoppingLists = lists.filter((l) => !l.isTemplate);
+  const templates = lists.filter((l) => l.isTemplate);
+  const mainList = shoppingLists.find((l) => l.id === me.defaultListId) ?? shoppingLists[0];
+  const listId = route.page === 'list' ? (route.listId ?? mainList?.id) : undefined;
   const addRef = useRef<HTMLInputElement>(null);
 
-  const listId = route.page === 'list' ? (route.listId ?? me.defaultListId ?? lists[0]?.id) : undefined;
+
   const list = lists.find((l) => l.id === listId);
   const items = useItems(list?.id);
 
@@ -57,11 +68,11 @@ function Shell({ me }: { me: Me }) {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const text = params.get('share_text') ?? params.get('share_title');
-    const target = me.defaultListId ?? lists[0]?.id;
+    const target = mainList?.id;
     if (!text || !target) return;
     history.replaceState(null, '', '/');
     void addItems(target, parseInput(text, catalog.index));
-  }, [me.defaultListId, lists, catalog.index]);
+  }, [mainList?.id, catalog.index]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -82,10 +93,15 @@ function Shell({ me }: { me: Me }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const newList = async () => {
-    const name = prompt('Name der neuen Liste', 'Einkauf');
+  const newList = () => {
+    setTemplateDialog('new');
+    setDrawer(false);
+  };
+
+  const newTemplate = async () => {
+    const name = prompt('Name der Vorlage', 'Wocheneinkauf Basis');
     if (!name?.trim()) return;
-    const id = await createList(name.trim());
+    const id = await createList(name.trim(), true);
     navigate({ page: 'list', listId: id });
     setDrawer(false);
   };
@@ -97,7 +113,7 @@ function Shell({ me }: { me: Me }) {
         <strong>Shopping</strong>
       </div>
       <ul>
-        {lists.map((l) => (
+        {shoppingLists.map((l) => (
           <li key={l.id}>
             <a
               href={`#/list/${l.id}`}
@@ -113,9 +129,30 @@ function Shell({ me }: { me: Me }) {
           </li>
         ))}
       </ul>
-      <button type="button" className="btn btn--ghost" onClick={() => void newList()}>
-        + Neue Liste
-      </button>
+      {!guest && (
+        <button type="button" className="btn btn--ghost" onClick={() => void newList()}>
+          + Neue Liste
+        </button>
+      )}
+      {!guest && <h3 className="sidebar__section">Vorlagen</h3>}
+      <ul>
+        {templates.map((l) => (
+          <li key={l.id}>
+            <a
+              href={`#/list/${l.id}`}
+              className={l.id === list?.id && route.page === 'list' ? 'active' : ''}
+              onClick={() => setDrawer(false)}
+            >
+              <span>◇ {l.name}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+      {!guest && (
+        <button type="button" className="btn btn--ghost" onClick={() => void newTemplate()}>
+          + Neue Vorlage
+        </button>
+      )}
       <span className="spacer" />
       <a href="#/settings" className={route.page === 'settings' ? 'active' : ''} onClick={() => setDrawer(false)}>
         ⚙ Einstellungen
@@ -135,13 +172,23 @@ function Shell({ me }: { me: Me }) {
             </button>
           )}
           <h1 className="topbar__title">{route.page === 'settings' ? 'Einstellungen' : (list?.name ?? 'Shopping')}</h1>
-          <SyncBadge />
+          <SyncBadge guest={me.isGuest} />
           {route.page === 'list' && list && (
             <div className="menu">
               <button type="button" className="icon-btn" aria-label="Listenmenü" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
                 ⋮
               </button>
-              {menu && <ListMenu list={list} me={me} onClose={() => setMenu(false)} />}
+              {menu && (
+                <ListMenu
+                  list={list}
+                  me={me}
+                  hasTemplates={templates.length > 0}
+                  onClose={() => setMenu(false)}
+                  onImport={() => setImporting(true)}
+                  onApplyTemplate={() => setTemplateDialog('apply')}
+                  onMembers={() => setShowMembers(true)}
+                />
+              )}
             </div>
           )}
         </header>
@@ -166,6 +213,15 @@ function Shell({ me }: { me: Me }) {
         </main>
       </div>
 
+      {templateDialog && (
+        <TemplateDialog
+          templates={templates}
+          targetList={templateDialog === 'apply' ? list : undefined}
+          onClose={() => setTemplateDialog(null)}
+        />
+      )}
+      {showMembers && list && <MembersDialog list={list} me={me} onClose={() => setShowMembers(false)} />}
+      {importing && list && <ImportDialog listId={list.id} onClose={() => setImporting(false)} />}
       {extraWide && route.page === 'list' && list && <CatalogPanel listId={list.id} catalog={catalog.items} items={items ?? []} />}
     </div>
   );
@@ -180,7 +236,18 @@ function OpenCount({ listId }: { listId: string }) {
 /** Kept outside the menu so the lock survives closing it. */
 let wakeLock: WakeLockSentinel | null = null;
 
-function ListMenu({ list, me, onClose }: { list: ListRow; me: Me; onClose: () => void }) {
+interface ListMenuProps {
+  list: ListRow;
+  me: Me;
+  hasTemplates: boolean;
+  onClose: () => void;
+  onImport: () => void;
+  onApplyTemplate: () => void;
+  onMembers: () => void;
+}
+
+function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, onMembers }: ListMenuProps) {
+  const guest = me.isGuest;
   const isOwner = list.ownerId === me.id;
 
   useEffect(() => {
@@ -208,13 +275,60 @@ function ListMenu({ list, me, onClose }: { list: ListRow; me: Me; onClose: () =>
         type="button"
         role="menuitem"
         onClick={() => {
+          onMembers();
+          onClose();
+        }}
+      >
+        Wer ist dabei?
+      </button>
+      {!list.isTemplate && !guest && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onImport();
+            onClose();
+          }}
+        >
+          Aus Mealie hinzufügen …
+        </button>
+      )}
+      {!list.isTemplate && hasTemplates && !guest && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onApplyTemplate();
+            onClose();
+          }}
+        >
+          Vorlage übernehmen …
+        </button>
+      )}
+      {!list.isTemplate && !guest && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            const name = prompt('Name der Vorlage', list.name);
+            if (name?.trim()) void saveAsTemplate(list, name.trim()).then((id) => navigate({ page: 'list', listId: id }));
+            onClose();
+          }}
+        >
+          Als Vorlage speichern
+        </button>
+      )}
+      <button
+        type="button"
+        role="menuitem"
+        onClick={() => {
           void shareList(list);
           onClose();
         }}
       >
         Teilen …
       </button>
-      {list.id !== me.defaultListId && (
+      {list.id !== me.defaultListId && !list.isTemplate && !guest && (
         <button
           type="button"
           role="menuitem"
@@ -257,7 +371,7 @@ function ListMenu({ list, me, onClose }: { list: ListRow; me: Me; onClose: () =>
           Link erneuern
         </button>
       )}
-      {!isOwner && (
+      {!isOwner && !guest && (
         <button
           type="button"
           role="menuitem"

@@ -713,3 +713,174 @@ a {
     animation: none;
   }
 }
+
+/* ---- Phase 2 ---- */
+
+.input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.input--date {
+  width: auto;
+  flex: 1;
+  min-width: 130px;
+}
+.row--center {
+  align-items: center;
+  margin: 10px 0;
+}
+.field__row--wrap {
+  flex-wrap: wrap;
+}
+.field__row--wrap .field {
+  min-width: 200px;
+}
+.sheet--tall .sheet__body {
+  min-height: 60vh;
+}
+.sheet__header h2 {
+  margin: 0;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 8px 0 12px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.tab {
+  flex: 1;
+  min-height: 40px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  cursor: pointer;
+}
+.tab--on {
+  background: var(--surface);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+.pick-list,
+.checklist {
+  list-style: none;
+  margin: 10px 0;
+  padding: 0;
+}
+.pick-list button {
+  width: 100%;
+  padding: 12px 8px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.checklist label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.checklist input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+}
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.stepper button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.copy {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+}
+.copy code {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+.hint {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+}
+.card h3 {
+  margin: 20px 0 6px;
+  font-size: 1rem;
+}
+.sources {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.template-hint {
+  margin: 4px 2px 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.sidebar__section {
+  margin: 14px 12px 2px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-text);
+  font-weight: 700;
+}
+.link.danger {
+  color: var(--danger);
+}
+.login__guest {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(300px, 100%);
+  margin-top: 8px;
+}
+.login__guest input {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.login__or {
+  margin: 12px 0 0;
+  color: var(--muted);
+}

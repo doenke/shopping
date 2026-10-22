@@ -83,3 +83,63 @@ describe('sharing by link', () => {
     expect(safeNext(undefined)).toBe('/');
   });
 });
+
+describe('guests and members', () => {
+  const list2 = randomUUID();
+  let token: string;
+  let guestCookie: string;
+
+  beforeAll(async () => {
+    await t.app.inject({
+      method: 'POST',
+      url: '/api/v1/sync/push',
+      headers: { cookie: owner.cookie },
+      payload: { mutations: [client.list(list2, { name: 'Grillen' })] },
+    });
+    const url = (await t.app.inject({ method: 'GET', url: `/api/v1/lists/${list2}/share-link`, headers: { cookie: owner.cookie } })).json().url;
+    token = url.split('/s/')[1];
+  });
+
+  it('lets someone without account join as guest of exactly this list', async () => {
+    const res = await t.app.inject({ method: 'POST', url: '/auth/guest', payload: { token, name: 'Oma' } });
+    expect(res.json()).toEqual({ ok: true, listId: list2 });
+    guestCookie = `sid=${res.cookies.find((c) => c.name === 'sid')!.value}`;
+    const cs: ChangeSet = (await t.app.inject({ method: 'GET', url: '/api/v1/sync/pull', headers: { cookie: guestCookie } })).json();
+    expect(cs.lists.map((l) => l.id)).toEqual([list2]);
+    expect(cs.me).toMatchObject({ displayName: 'Oma', defaultListId: list2, isGuest: true });
+  });
+
+  it('lets the guest work on the list but nothing else', async () => {
+    const guest = new FakeClient('guest');
+    const push = async (m: unknown) =>
+      (await t.app.inject({ method: 'POST', url: '/api/v1/sync/push', headers: { cookie: guestCookie }, payload: { mutations: [m] } })).json();
+    expect((await push(guest.item(randomUUID(), { listId: list2, name: 'Kohle', position: 'a0' }))).rejected).toEqual([]);
+    expect((await push(guest.list(randomUUID(), { name: 'Eigene' }))).rejected[0].reason).toBe('guest');
+    const mealie = await t.app.inject({ method: 'GET', url: '/api/v1/integrations/mealie', headers: { cookie: guestCookie } });
+    expect(mealie.statusCode).toBe(403);
+  });
+
+  it('shows members with owner and guest flags', async () => {
+    const res = await t.app.inject({ method: 'GET', url: `/api/v1/lists/${list2}/members`, headers: { cookie: owner.cookie } });
+    expect(res.json().map((m: { displayName: string; isOwner: boolean; isGuest: boolean }) => [m.displayName, m.isOwner, m.isGuest])).toEqual([
+      ['Owner', true, false],
+      ['Oma', false, true],
+    ]);
+  });
+
+  it('ends guest access when the link is renewed', async () => {
+    const r = await t.app.inject({ method: 'POST', url: `/api/v1/lists/${list2}/share-link/renew`, headers: { cookie: owner.cookie } });
+    expect(r.json().guestsRemoved).toBe(1);
+    const me = await t.app.inject({ method: 'GET', url: '/api/v1/me', headers: { cookie: guestCookie } });
+    expect(me.statusCode).toBe(401);
+  });
+
+  it('lets only the owner remove members', async () => {
+    await t.app.inject({ method: 'GET', url: (await t.app.inject({ method: 'GET', url: `/api/v1/lists/${list2}/share-link`, headers: { cookie: owner.cookie } })).json().url.replace('http://localhost:3000', ''), headers: { cookie: member.cookie } });
+    const denied = await t.app.inject({ method: 'DELETE', url: `/api/v1/lists/${list2}/members/${owner.id}`, headers: { cookie: member.cookie } });
+    expect(denied.statusCode).toBe(403);
+    const ok = await t.app.inject({ method: 'DELETE', url: `/api/v1/lists/${list2}/members/${member.id}`, headers: { cookie: owner.cookie } });
+    expect(ok.json()).toEqual({ ok: true });
+    expect((await pull(member)).lists.find((l) => l.id === list2)).toBeUndefined();
+  });
+});

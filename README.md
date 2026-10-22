@@ -4,9 +4,9 @@ Selbst gehostete, offline-fähige Einkaufslisten-App im Stil von Bring!,
 mit nativer Mealie-Anbindung, Login über Pocket ID, REST-API für Home Assistant und
 eingebautem MCP-Server.
 
-> Status: **Phase 1 (Fundament)** umgesetzt – siehe [Roadmap](docs/konzept/13-roadmap-und-entscheidungen.md).
+> Status: **Phase 1 und 2** umgesetzt – siehe [Roadmap](docs/konzept/13-roadmap-und-entscheidungen.md).
 
-## Was Phase 1 kann
+## Was die App kann
 
 - Login über **Pocket ID** (OIDC mit PKCE), langlebige Sessions
 - Einkaufslisten mit **Hauptliste** ⭐, Artikel mit **Menge, Einheit, Eigenschaften, Notiz**
@@ -21,8 +21,25 @@ eingebautem MCP-Server.
 - **Teilen per Link** über den Teilen-Dialog des Handys: Wer den Link angemeldet öffnet,
   ist dabei (Besitzer kann den Link erneuern, Mitglieder können die Liste verlassen)
 
-Noch nicht dabei (folgende Phasen): Gastzugang ohne Account, Mitglieder entfernen,
-Mealie-Eingangskorb, Rezept-Import, Vorlagen, REST-API-Tokens, Home Assistant, MCP, Icons.
+- **Gäste ohne Account**: Link öffnen, Namen eingeben, nur diese Liste; Link erneuern wirft Gäste raus.
+  „Wer ist dabei?“ zeigt Mitglieder, der Besitzer kann Leute entfernen.
+- **Mealie-Eingangskorb** (ersetzt den n8n-Flow „mealie2bring“): Was in Mealie auf der
+  Einkaufsliste landet, kommt strukturiert (Menge, Einheit, Kategorie, „für Chili“) in die
+  Zielliste und wird in Mealie abgehakt – per Notifier sofort, sonst alle 15 Minuten
+- **Rezept und Wochenplan aus Mealie**: Portionen anpassen, Zutaten-Checkliste,
+  Vorrat (Salz, Öl …) vorab abgewählt, gleiche Zutaten zusammengefasst
+- **Vorlagen** (◇): nicht abhakbar, „Neue Liste“ aus Vorlage, „Vorlage übernehmen“ mit
+  Auswahl, „Als Vorlage speichern“, optionale Artikel
+
+Noch nicht dabei (folgende Phasen): REST-API-Tokens, Home Assistant, MCP, Icons.
+
+### Mealie-Eingangskorb einrichten
+
+1. *Einstellungen → Mealie*: Adresse und API-Token eintragen, speichern.
+2. *Eingangskorb einschalten*, Mealie-Einkaufsliste und Zielliste wählen, speichern.
+3. Die angezeigte Apprise-URL in Mealie unter *Haushalt → Benachrichtigungen* als
+   Notifier eintragen, Ereignis *Einkaufsliste* aktivieren.
+4. Den n8n-Flow „mealie2bring“ abschalten.
 
 ## Betrieb
 

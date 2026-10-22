@@ -5,6 +5,7 @@ import {
   type ChangeSet,
   type ItemPatch,
   type ItemRow,
+  type ItemSource,
   type ListPatch,
   type ListRow,
   type Mutation,
@@ -33,6 +34,16 @@ function sameProperties(a: string[], b: string[]): boolean {
   const sa = [...a].map((s) => s.toLowerCase()).sort();
   const sb = [...b].map((s) => s.toLowerCase()).sort();
   return sa.every((v, i) => v === sb[i]);
+}
+
+/** Keeps the "für Lasagne, Chili" origin info when two items are merged. */
+function mergeSources(a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> {
+  const sa = Array.isArray(a.sources) ? (a.sources as ItemSource[]) : [];
+  const sb = Array.isArray(b.sources) ? (b.sources as ItemSource[]) : [];
+  if (sb.length === 0) return a;
+  const merged = [...sa];
+  for (const src of sb) if (!merged.some((m) => m.type === src.type && m.label === src.label)) merged.push(src);
+  return { ...a, sources: merged };
 }
 
 export class SyncService {
@@ -103,6 +114,8 @@ export class SyncService {
     const [existing] = await tx.select().from(lists).where(eq(lists.id, id)).for('update');
     if (!existing) {
       if (!patch.name) throw new Rejection('missing_name');
+      const [creator] = await tx.select({ isGuest: users.isGuest }).from(users).where(eq(users.id, userId));
+      if (creator?.isGuest) throw new Rejection('guest');
       const row: ListRow = {
         id,
         ownerId: userId,
@@ -170,6 +183,11 @@ export class SyncService {
     const listId = existing?.listId ?? patch.listId;
     if (!listId) throw new Rejection('missing_list');
     if (!(await this.hasAccess(tx, userId, listId))) throw new Rejection('forbidden');
+    if (patch.checked) {
+      // Templates only pre-fill new lists; nothing on them can be checked.
+      const [list] = await tx.select({ isTemplate: lists.isTemplate }).from(lists).where(eq(lists.id, listId));
+      if (list?.isTemplate) throw new Rejection('template_not_checkable');
+    }
 
     const { listId: _l, ...rest } = patch;
     const effective: Partial<ItemRow> = { ...rest };
@@ -210,8 +228,15 @@ export class SyncService {
         if (duplicate) {
           const target = toItemRow(duplicate);
           const mergeTs = this.clock.tick();
-          applyPatch(target, { amounts: mergeAmounts(target.amounts, row.amounts) }, mergeTs);
-          await tx.update(listItems).set({ amounts: target.amounts, hlc: target.hlc, seq: nextSeq }).where(eq(listItems.id, target.id));
+          applyPatch(
+            target,
+            { amounts: mergeAmounts(target.amounts, row.amounts), attributes: mergeSources(target.attributes, row.attributes) },
+            mergeTs,
+          );
+          await tx
+            .update(listItems)
+            .set({ amounts: target.amounts, attributes: target.attributes, hlc: target.hlc, seq: nextSeq })
+            .where(eq(listItems.id, target.id));
           applyPatch(row, { deleted: true }, mergeTs);
           row.mergedInto = target.id;
         }
@@ -294,6 +319,12 @@ export class SyncService {
           .where(and(eq(users.id, userId), eq(users.defaultListId, listId)));
       }
       return updated.length ? 'ok' : 'not_member';
+    });
+  }
+
+  setDefaultList(userId: string, listId: string): Promise<void> {
+    return this.mutex.run(async () => {
+      await this.db.update(users).set({ defaultListId: listId, seq: nextSeq }).where(eq(users.id, userId));
     });
   }
 

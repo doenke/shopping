@@ -29,6 +29,8 @@ export const users = pgTable('users', {
   displayName: text('display_name').notNull(),
   avatarUrl: text('avatar_url'),
   isAdmin: boolean('is_admin').notNull().default(false),
+  /** Guests come in through a list link without an account and only see that list. */
+  isGuest: boolean('is_guest').notNull().default(false),
   defaultListId: uuid('default_list_id'),
   hlc: jsonb('hlc').$type<FieldClock>().notNull().default({}),
   seq: seq(),

@@ -54,7 +54,7 @@ export function toItemRow(r: ItemRecord): ItemRow {
 }
 
 export function toUserInfo(r: UserRecord): UserInfo {
-  return { id: r.id, displayName: r.displayName, avatarUrl: r.avatarUrl };
+  return { id: r.id, displayName: r.displayName, avatarUrl: r.avatarUrl, isGuest: r.isGuest };
 }
 
 export function toMe(r: UserRecord): Me {

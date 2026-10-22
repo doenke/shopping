@@ -15,12 +15,14 @@ interface TileProps {
   item: Pick<ItemRow, 'name' | 'categoryId' | 'amounts' | 'properties' | 'note'>;
   variant?: 'open' | 'done' | 'suggestion';
   badge?: string;
+  /** Checked by someone else: fades out before it moves away. */
+  fading?: boolean;
   onTap: () => void;
   onLongPress?: () => void;
 }
 
 /** Bring!-style tile: tap to check (or add), long press / right click for details. */
-export function Tile({ item, variant = 'open', badge, onTap, onLongPress }: TileProps) {
+export function Tile({ item, variant = 'open', badge, fading = false, onTap, onLongPress }: TileProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressed = useRef(false);
   const spec = itemSpecification(item);
@@ -40,7 +42,7 @@ export function Tile({ item, variant = 'open', badge, onTap, onLongPress }: Tile
   return (
     <button
       type="button"
-      className={`tile tile--${variant}${badge ? ' tile--remote' : ''}`}
+      className={`tile tile--${variant}${fading ? ' tile--remote' : ''}`}
       style={{ '--cat': cat.color } as React.CSSProperties}
       onPointerDown={start}
       onPointerUp={cancel}

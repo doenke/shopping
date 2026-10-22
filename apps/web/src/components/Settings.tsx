@@ -1,6 +1,7 @@
 import { CATEGORIES, type Me } from '@shopping/shared';
 import { useEffect, useState } from 'react';
 import { logout } from '../actions';
+import { useLists } from '../hooks';
 import { sync } from '../sync/engine';
 
 interface MealieState {
@@ -8,22 +9,57 @@ interface MealieState {
   hasToken: boolean;
   labelMapping: Record<string, string>;
   labels: string[];
+  inbox: {
+    enabled: boolean;
+    mealieListId: string | null;
+    targetListId: string | null;
+    webhookUrl: string | null;
+    appriseUrl: string | null;
+  };
   status: string | null;
   lastSyncAt: string | null;
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, { ...init, headers: { 'content-type': 'application/json', ...init?.headers } });
+  // Only send a JSON content type with a body – Fastify rejects an empty JSON body.
+  const headers = init?.body ? { 'content-type': 'application/json', ...init.headers } : init?.headers;
+  const res = await fetch(path, { ...init, headers });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
   return body as T;
 }
 
+function Copy({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <div className="copy">
+      <code>{text}</code>
+      <button
+        type="button"
+        className="btn"
+        onClick={() => {
+          void navigator.clipboard?.writeText(text).then(() => {
+            setDone(true);
+            setTimeout(() => setDone(false), 1500);
+          });
+        }}
+      >
+        {done ? 'Kopiert ✓' : 'Kopieren'}
+      </button>
+    </div>
+  );
+}
+
 export function Settings({ me }: { me: Me }) {
+  const lists = useLists().filter((l) => !l.isTemplate);
   const [mealie, setMealie] = useState<MealieState | null>(null);
   const [url, setUrl] = useState('');
   const [token, setToken] = useState('');
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [inboxEnabled, setInboxEnabled] = useState(false);
+  const [mealieListId, setMealieListId] = useState('');
+  const [targetListId, setTargetListId] = useState('');
+  const [mealieLists, setMealieLists] = useState<{ id: string; name: string }[]>([]);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -33,12 +69,21 @@ export function Settings({ me }: { me: Me }) {
       setMealie(m);
       setUrl(m.url ?? '');
       setMapping(m.labelMapping);
+      setInboxEnabled(m.inbox.enabled);
+      setMealieListId(m.inbox.mealieListId ?? '');
+      setTargetListId(m.inbox.targetListId ?? me.defaultListId ?? '');
+      if (m.hasToken) {
+        api<{ id: string; name: string }[]>('/api/v1/integrations/mealie/shopping-lists')
+          .then(setMealieLists)
+          .catch(() => setMealieLists([]));
+      }
     } catch {
       setMessage({ kind: 'error', text: 'Einstellungen brauchen eine Verbindung zum Server.' });
     }
   };
 
   useEffect(() => {
+    if (me.isGuest) return;
     void load();
   }, []);
 
@@ -58,7 +103,16 @@ export function Settings({ me }: { me: Me }) {
     run(async () => {
       await api('/api/v1/integrations/mealie', {
         method: 'PUT',
-        body: JSON.stringify({ url, ...(token ? { token } : {}), labelMapping: Object.fromEntries(Object.entries(mapping).filter(([, v]) => v)) }),
+        body: JSON.stringify({
+          url,
+          ...(token ? { token } : {}),
+          labelMapping: Object.fromEntries(Object.entries(mapping).filter(([, v]) => v)),
+          inbox: {
+            enabled: inboxEnabled && !!mealieListId && !!targetListId,
+            ...(mealieListId ? { mealieListId } : {}),
+            ...(targetListId ? { targetListId } : {}),
+          },
+        }),
       });
       setToken('');
       await load();
@@ -79,6 +133,13 @@ export function Settings({ me }: { me: Me }) {
       return `${r.created} neu, ${r.linked} verknüpft, ${r.updated} aktualisiert.`;
     });
 
+  const runInbox = () =>
+    run(async () => {
+      const r = await api<{ added: number; skipped: number }>('/api/v1/integrations/mealie/inbox/run', { method: 'POST' });
+      await load();
+      return r.added ? `${r.added} Artikel übernommen.` : 'Nichts Neues in Mealie.';
+    });
+
   return (
     <section className="settings">
       <h1>Einstellungen</h1>
@@ -90,41 +151,37 @@ export function Settings({ me }: { me: Me }) {
           {me.email && <> ({me.email})</>}
         </p>
         <button className="btn" type="button" onClick={() => void logout()}>
-          Abmelden
+          {me.isGuest ? 'Gastzugang beenden' : 'Abmelden'}
         </button>
       </div>
 
-      <div className="card">
+      {me.isGuest && <p className="muted">Du bist als Gast dabei und siehst nur die geteilte Liste.</p>}
+
+      {!me.isGuest && (
+      <form
+        className="card"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
         <h2>Mealie</h2>
-        <p className="muted">
-          Phase 1: Lebensmittel aus Mealie in den Katalog übernehmen. Der Eingangskorb für Einkaufslisten folgt in Phase 2.
-        </p>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void save();
-          }}
-        >
-          <label className="field">
-            <span>Adresse</span>
-            <input type="url" placeholder="https://mealie.example.org" value={url} onChange={(e) => setUrl(e.target.value)} required />
-          </label>
-          <label className="field">
-            <span>API-Token {mealie?.hasToken && <small>(gespeichert – leer lassen, um ihn zu behalten)</small>}</span>
-            <input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Mealie → Profil → API-Tokens" />
-          </label>
-          <div className="row">
-            <button className="btn btn--primary" type="submit" disabled={busy}>
-              Speichern
-            </button>
-            <button className="btn" type="button" disabled={busy || !mealie?.hasToken} onClick={() => void test()}>
-              Verbindung testen
-            </button>
-            <button className="btn" type="button" disabled={busy || !mealie?.hasToken} onClick={() => void importCatalog()}>
-              Lebensmittel importieren
-            </button>
-          </div>
-        </form>
+        <label className="field">
+          <span>Adresse</span>
+          <input type="url" placeholder="https://mealie.example.org" value={url} onChange={(e) => setUrl(e.target.value)} required />
+        </label>
+        <label className="field">
+          <span>API-Token {mealie?.hasToken && <small>(gespeichert – leer lassen, um ihn zu behalten)</small>}</span>
+          <input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Mealie → Profil → API-Tokens" />
+        </label>
+        <div className="row">
+          <button className="btn btn--primary" type="submit" disabled={busy}>
+            Speichern
+          </button>
+          <button className="btn" type="button" disabled={busy || !mealie?.hasToken} onClick={() => void test()}>
+            Verbindung testen
+          </button>
+        </div>
         {message && <p className={message.kind === 'ok' ? 'success' : 'error'}>{message.text}</p>}
         {mealie?.status && (
           <p className="muted">
@@ -133,28 +190,91 @@ export function Settings({ me }: { me: Me }) {
           </p>
         )}
 
-        {mealie && mealie.labels.length > 0 && (
+        {mealie?.hasToken && (
           <>
-            <h3>Mealie-Labels → Kategorien</h3>
-            <p className="muted">Wird beim nächsten Import angewendet. Von Hand geänderte Kategorien bleiben erhalten.</p>
-            <div className="mapping">
-              {mealie.labels.map((label) => (
-                <label key={label} className="mapping__row">
-                  <span>{label}</span>
-                  <select value={mapping[label] ?? ''} onChange={(e) => setMapping({ ...mapping, [label]: e.target.value })}>
-                    <option value="">automatisch</option>
-                    {CATEGORIES.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
+            <h3>Eingangskorb</h3>
+            <p className="muted">
+              Was in Mealie auf der gewählten Einkaufsliste landet, wird hierher übernommen und in Mealie abgehakt – wie bisher der
+              n8n-Flow nach Bring!.
+            </p>
+            <label className="check">
+              <input type="checkbox" checked={inboxEnabled} onChange={(e) => setInboxEnabled(e.target.checked)} /> Eingangskorb einschalten
+            </label>
+            <div className="field__row field__row--wrap">
+              <label className="field spacer">
+                <span>Mealie-Liste</span>
+                <select value={mealieListId} onChange={(e) => setMealieListId(e.target.value)}>
+                  <option value="">– wählen –</option>
+                  {mealieLists.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field spacer">
+                <span>landet in</span>
+                <select value={targetListId} onChange={(e) => setTargetListId(e.target.value)}>
+                  <option value="">– wählen –</option>
+                  {lists.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.id === me.defaultListId ? '⭐ ' : ''}
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
+            <div className="row">
+              <button className="btn btn--primary" type="submit" disabled={busy}>
+                Speichern
+              </button>
+              <button className="btn" type="button" disabled={busy || !mealie.inbox.enabled} onClick={() => void runInbox()}>
+                Jetzt abgleichen
+              </button>
+            </div>
+            {mealie.inbox.enabled && mealie.inbox.appriseUrl && (
+              <div className="hint">
+                <p>
+                  Damit Artikel sofort ankommen: In Mealie unter <em>Haushalt → Benachrichtigungen</em> einen Notifier anlegen, diese
+                  Apprise-URL eintragen und das Ereignis <em>Einkaufsliste</em> aktivieren. Ohne Notifier wird alle 15 Minuten abgeglichen.
+                </p>
+                <Copy text={mealie.inbox.appriseUrl} />
+                <p className="muted">Danach kann der n8n-Flow „mealie2bring“ abgeschaltet werden.</p>
+              </div>
+            )}
+
+            <h3>Lebensmittel</h3>
+            <p className="muted">Übernimmt die Mealie-Zutaten in den Katalog (Namen, Plural, Aliase, Kategorie über Labels).</p>
+            <button className="btn" type="button" disabled={busy} onClick={() => void importCatalog()}>
+              Lebensmittel importieren
+            </button>
+
+            {mealie.labels.length > 0 && (
+              <>
+                <h3>Mealie-Labels → Kategorien</h3>
+                <p className="muted">Wird beim nächsten Import angewendet. Von Hand geänderte Kategorien bleiben erhalten.</p>
+                <div className="mapping">
+                  {mealie.labels.map((label) => (
+                    <label key={label} className="mapping__row">
+                      <span>{label}</span>
+                      <select value={mapping[label] ?? ''} onChange={(e) => setMapping({ ...mapping, [label]: e.target.value })}>
+                        <option value="">automatisch</option>
+                        {CATEGORIES.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
-      </div>
+      </form>
+      )}
     </section>
   );
 }

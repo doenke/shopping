@@ -5,7 +5,7 @@ import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import websocket from '@fastify/websocket';
 import { CATEGORIES } from '@shopping/shared';
-import { and, eq, gt, sql } from 'drizzle-orm';
+import { eq, gt, sql } from 'drizzle-orm';
 import Fastify, { type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { authRoutes } from './auth/routes.js';
@@ -13,11 +13,11 @@ import { sessionUser } from './auth/session.js';
 import type { Config } from './config.js';
 import { SecretBox } from './crypto.js';
 import type { Db } from './db/index.js';
-import { catalogItems, integrations, users } from './db/schema.js';
+import { catalogItems, users } from './db/schema.js';
 import { currentSeq } from './db/seed.js';
-import { MealieClient, MealieError } from './mealie/client.js';
+import { mealieRoutes } from './mealie/routes.js';
+import { MealieService } from './mealie/service.js';
 import { sharingRoutes } from './sharing/routes.js';
-import { importFoods } from './mealie/import.js';
 import { SyncHub } from './sync/hub.js';
 import { toCatalogItem, toMe } from './sync/rows.js';
 import { SyncService } from './sync/service.js';
@@ -25,6 +25,7 @@ import { SyncService } from './sync/service.js';
 declare module 'fastify' {
   interface FastifyRequest {
     userId: string;
+    isGuest: boolean;
   }
 }
 
@@ -33,19 +34,6 @@ export interface AppOptions {
   db: Db;
   /** Injected in tests. */
   fetchImpl?: typeof fetch;
-}
-
-const MealieSettingsSchema = z.object({
-  url: z.string().url(),
-  token: z.string().min(10).optional(),
-  labelMapping: z.record(z.string(), z.enum(CATEGORIES.map((c) => c.id) as [string, ...string[]])).optional(),
-});
-
-interface MealieConfig {
-  url?: string;
-  token?: string;
-  labelMapping?: Record<string, string>;
-  labels?: string[];
 }
 
 export async function buildApp({ config, db, fetchImpl }: AppOptions) {
@@ -67,12 +55,19 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   app.get('/healthz', async () => ({ ok: true }));
 
   const requireUser = async (request: FastifyRequest, reply: import('fastify').FastifyReply) => {
-    const userId = await sessionUser(db, request, reply, secure);
-    if (!userId) return reply.code(401).send({ error: 'unauthorized' });
-    request.userId = userId;
+    const principal = await sessionUser(db, request, reply, secure);
+    if (!principal) return reply.code(401).send({ error: 'unauthorized' });
+    request.userId = principal.userId;
+    request.isGuest = principal.isGuest;
   };
 
-  await app.register(sharingRoutes, { config, db, sync, hub, secrets, requireUser });
+  /** Everything beyond working on a shared list is for real accounts only. */
+  const requireAccount = async (request: FastifyRequest, reply: import('fastify').FastifyReply) => {
+    await requireUser(request, reply);
+    if (!reply.sent && request.isGuest) return reply.code(403).send({ error: 'guest' });
+  };
+
+  await app.register(sharingRoutes, { config, db, sync, hub, secrets, requireUser, requireAccount });
 
   // ---- Sync ---------------------------------------------------------------
 
@@ -113,7 +108,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
       });
     });
 
-    api.patch('/api/v1/catalog/:id', async (request, reply) => {
+    api.patch('/api/v1/catalog/:id', { preHandler: requireAccount }, async (request, reply) => {
       const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
       const body = z
         .object({
@@ -133,89 +128,11 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
       hub.broadcast({ t: 'catalog', seq: updated[0].seq });
       return toCatalogItem(updated[0]);
     });
-
-    // ---- Mealie -----------------------------------------------------------
-
-    const loadMealie = async (userId: string) => {
-      const [row] = await db
-        .select()
-        .from(integrations)
-        .where(and(eq(integrations.ownerId, userId), eq(integrations.type, 'mealie')));
-      return row;
-    };
-
-    const mealieClient = (cfg: MealieConfig) => {
-      if (!cfg.url || !cfg.token) throw new MealieError('Mealie ist noch nicht eingerichtet');
-      return new MealieClient(cfg.url, secrets.open(cfg.token), fetchImpl);
-    };
-
-    api.get('/api/v1/integrations/mealie', async (request) => {
-      const row = await loadMealie(request.userId);
-      const cfg = (row?.config ?? {}) as MealieConfig;
-      return {
-        url: cfg.url ?? null,
-        hasToken: !!cfg.token,
-        labelMapping: cfg.labelMapping ?? {},
-        labels: cfg.labels ?? [],
-        status: row?.status ?? null,
-        lastSyncAt: row?.lastSyncAt ?? null,
-      };
-    });
-
-    api.put('/api/v1/integrations/mealie', async (request) => {
-      const body = MealieSettingsSchema.parse(request.body);
-      const row = await loadMealie(request.userId);
-      const prev = (row?.config ?? {}) as MealieConfig;
-      const next: MealieConfig = {
-        ...prev,
-        url: body.url.replace(/\/$/, ''),
-        token: body.token ? secrets.seal(body.token) : prev.token,
-        labelMapping: body.labelMapping ?? prev.labelMapping ?? {},
-      };
-      await db
-        .insert(integrations)
-        .values({ ownerId: request.userId, type: 'mealie', config: next as Record<string, unknown> })
-        .onConflictDoUpdate({ target: [integrations.ownerId, integrations.type], set: { config: next as Record<string, unknown> } });
-      return { ok: true };
-    });
-
-    api.post('/api/v1/integrations/mealie/test', async (request, reply) => {
-      const row = await loadMealie(request.userId);
-      try {
-        const client = mealieClient((row?.config ?? {}) as MealieConfig);
-        const [about, self] = await Promise.all([client.about(), client.self()]);
-        return { ok: true, version: about.version, user: self.fullName ?? self.username ?? null };
-      } catch (err) {
-        if (err instanceof MealieError) return reply.code(400).send({ ok: false, error: err.message });
-        throw err;
-      }
-    });
-
-    api.post('/api/v1/integrations/mealie/import-catalog', async (request, reply) => {
-      const row = await loadMealie(request.userId);
-      const cfg = (row?.config ?? {}) as MealieConfig;
-      try {
-        const foods = await mealieClient(cfg).foods();
-        const result = await sync.exclusive(() => importFoods(db, foods, cfg.labelMapping ?? {}));
-        await db
-          .update(integrations)
-          .set({
-            config: { ...cfg, labels: result.labels } as Record<string, unknown>,
-            status: `${foods.length} Lebensmittel abgeglichen`,
-            lastSyncAt: new Date(),
-          })
-          .where(eq(integrations.id, row!.id));
-        hub.broadcast({ t: 'catalog', seq: await currentSeq(db) });
-        return result;
-      } catch (err) {
-        if (err instanceof MealieError) {
-          if (row) await db.update(integrations).set({ status: `Fehler: ${err.message}` }).where(eq(integrations.id, row.id));
-          return reply.code(400).send({ error: err.message });
-        }
-        throw err;
-      }
-    });
   });
+
+  const mealie = new MealieService(db, secrets, sync, hub, app.log, fetchImpl);
+  await app.register(mealieRoutes, { config, db, sync, hub, secrets, mealie, requireUser: requireAccount });
+  app.addHook('onClose', async () => mealie.stop());
 
   // ---- Web app ------------------------------------------------------------
 
@@ -245,5 +162,5 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
     app.log.warn('Kein Web-Build gefunden – es läuft nur die API.');
   }
 
-  return { app, sync, hub };
+  return { app, sync, hub, mealie };
 }

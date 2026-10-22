@@ -16,7 +16,7 @@ und keine Haushaltsverwaltung.
 user ─┬─ api_token
       ├─ list (owner)
       └─ list_member (über Link beigetreten)
-list ─┬─ list_item ── list_item_source
+list ─┬─ list_item (Herkunft in attributes.sources)
       ├─ list_member
       └─ share_link (ein aktiver Link pro Liste)
 catalog_item ─┬─ catalog_alias        unit ── unit_alias
@@ -118,15 +118,12 @@ Die Formatierung (Dezimalkomma, Brüche „½“, Plural) liegt in `packages/sha
 
 ### Herkunft & Zusammenführen
 
-`list_item_source` merkt sich, woher Teilmengen kommen:
+`attributes.sources` merkt sich, woher ein Artikel kommt (umgesetzt als JSON statt eigener Tabelle):
 
 | Feld | Beispiel |
 |------|----------|
-| `list_item_id` | Zwiebeln |
-| `source_type` | `mealie_recipe`, `mealie_list`, `template`, `manual`, `api`, `mcp` |
-| `source_ref` | Mealie-Rezept-ID / Item-ID |
-| `source_label` | „Chili con Carne“ |
-| `quantity`, `unit_id` | 2 Stk |
+| `type` | `mealie_recipe`, `mealie_list`, `mealie_mealplan`, `template`, `api`, `mcp` |
+| `label` | „Chili con Carne“ |
 
 Kommt derselbe Katalogartikel ein zweites Mal auf eine Liste (offen, nicht
 abgehakt), wird **zusammengeführt** statt dupliziert:
@@ -134,7 +131,7 @@ abgehakt), wird **zusammengeführt** statt dupliziert:
 - gleiche oder umrechenbare Einheit (g ↔ kg, ml ↔ l, EL ↔ TL) → addieren und
   in sinnvolle Einheit normalisieren (1200 g → 1,2 kg);
 - nicht umrechenbar (2 Stk + 200 g) → Anzeige „2 Stk + 200 g“, Teilmengen
-  bleiben in `list_item_source` erhalten;
+  bleiben als mehrere Mengen erhalten;
 - unterschiedliche Eigenschaften (bio vs. nicht bio) → zwei Einträge.
 
 In der Detailansicht sieht man dann: *Zwiebeln 3 Stk – Chili (2), Salat (1)*.

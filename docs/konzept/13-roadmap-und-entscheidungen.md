@@ -40,11 +40,21 @@ Bewusst noch offen aus Phase 1: Kategorien-Reihenfolge per Drag & Drop
 (derzeit feste Bring!-Reihenfolge), Pflege-Ansicht für den Katalog (Dubletten,
 Ausblenden).
 
-### Phase 2 – Bring ablösen
-- Mealie-Eingangskorb (Webhook + Abgleich) → n8n-Flow „mealie2bring“ abschalten
+### Phase 2 – Bring ablösen ✅ umgesetzt
+- Mealie-Eingangskorb (Webhook + Abgleich alle 15 min) → n8n-Flow „mealie2bring“ abschalten
 - Rezept- und Wochenplan-Import
 - Vorlagen
 - Gastzugang per Link ohne Account, Mitglieder anzeigen/entfernen
+
+Umsetzungsdetails:
+- Der Webhook ist nur ein Anstoß: Shopping liest die Mealie-Liste immer komplett neu.
+  Jeder Mealie-Artikel bekommt eine feste ID, so entsteht auch bei doppelten Webhooks
+  oder gescheitertem Abhaken in Mealie nie ein Duplikat.
+- Herkunft („für Chili con Carne“) steht in `attributes.sources` und bleibt beim
+  Zusammenführen erhalten.
+- Beim Skalieren von Rezepten werden Stück und Packungen aufgerundet (¾ Dose → 1 Dose).
+- Gäste sind eigene Nutzer (`is_guest`), dürfen nur in ihrer Liste arbeiten, keine Listen
+  anlegen und nicht an Einstellungen/Integrationen.
 
 ### Phase 3 – Offen machen
 - REST-API mit Tokens, OpenAPI, SSE

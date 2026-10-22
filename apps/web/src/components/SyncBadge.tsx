@@ -1,12 +1,12 @@
 import { useSyncStatus } from '../hooks';
 
 /** Small, unobtrusive sync state: ✓ synced · ↻ pending · offline. */
-export function SyncBadge() {
+export function SyncBadge({ guest = false }: { guest?: boolean }) {
   const { state, pending } = useSyncStatus();
   let label: string;
   let cls: string;
   if (state === 'unauthorized') {
-    label = 'Bitte neu anmelden';
+    label = guest ? 'Zugang beendet – bitte neuen Link geben lassen' : 'Bitte neu anmelden';
     cls = 'warn';
   } else if (state === 'offline' || (state === 'connecting' && pending > 0)) {
     label = pending ? `Offline · ${pending} ausstehend` : 'Offline';
@@ -27,5 +27,5 @@ export function SyncBadge() {
       <span className="sync__label">{label}</span>
     </span>
   );
-  return state === 'unauthorized' ? <a href="/auth/login">{content}</a> : content;
+  return state === 'unauthorized' && !guest ? <a href="/auth/login">{content}</a> : content;
 }

@@ -1,4 +1,4 @@
-import { CATEGORIES, formatAmount, SUGGESTED_PROPERTIES, UNITS, type Amount, type ItemRow, type UserInfo } from '@shopping/shared';
+import { CATEGORIES, formatAmount, SUGGESTED_PROPERTIES, UNITS, type Amount, type ItemRow, type ItemSource, type UserInfo } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { deleteItem, updateItem } from '../actions';
 import { sync } from '../sync/engine';
@@ -6,6 +6,7 @@ import { sync } from '../sync/engine';
 interface Props {
   item: ItemRow;
   users: Map<string, UserInfo>;
+  isTemplate?: boolean;
   onClose: () => void;
 }
 
@@ -14,7 +15,7 @@ function parseQuantity(s: string): number | null {
   return s.trim() && Number.isFinite(n) && n > 0 ? n : null;
 }
 
-export function ItemEditor({ item, users, onClose }: Props) {
+export function ItemEditor({ item, users, isTemplate = false, onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const first = item.amounts[0];
   const [name, setName] = useState(item.name);
@@ -25,6 +26,7 @@ export function ItemEditor({ item, users, onClose }: Props) {
   const [note, setNote] = useState(item.note ?? '');
   const [categoryId, setCategoryId] = useState(item.categoryId ?? 'eigene');
   const [forAll, setForAll] = useState(false);
+  const [optional, setOptional] = useState(item.optional);
 
   useEffect(() => {
     ref.current?.showModal();
@@ -42,6 +44,7 @@ export function ItemEditor({ item, users, onClose }: Props) {
       properties,
       note: note.trim() || null,
       categoryId,
+      ...(isTemplate ? { optional } : {}),
     });
     if (forAll && item.catalogItemId && categoryId !== item.categoryId) {
       await fetch(`/api/v1/catalog/${item.catalogItemId}`, {
@@ -55,6 +58,7 @@ export function ItemEditor({ item, users, onClose }: Props) {
   };
 
   const allProps = [...new Set([...SUGGESTED_PROPERTIES, ...item.properties, ...properties])];
+  const sources = Array.isArray(item.attributes.sources) ? (item.attributes.sources as ItemSource[]) : [];
   const checkedBy = item.checkedBy ? users.get(item.checkedBy)?.displayName : undefined;
   const createdBy = item.createdBy ? users.get(item.createdBy)?.displayName : undefined;
 
@@ -132,6 +136,15 @@ export function ItemEditor({ item, users, onClose }: Props) {
             </label>
           )}
         </label>
+
+        {isTemplate && (
+          <label className="check field">
+            <input type="checkbox" checked={optional} onChange={(e) => setOptional(e.target.checked)} /> optional – beim Übernehmen erst
+            einmal abgewählt
+          </label>
+        )}
+
+        {sources.length > 0 && <p className="sources">Für: {sources.map((s) => s.label).join(', ')}</p>}
 
         <p className="sheet__meta">
           {createdBy && <>Hinzugefügt von {createdBy}. </>}
