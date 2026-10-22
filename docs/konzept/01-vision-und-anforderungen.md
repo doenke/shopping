@@ -17,7 +17,7 @@ zuverlässig funktionieren.
 | A1 | Bring!-ähnliche Bedienung: Kacheln mit Icons, Kategorien, „Zuletzt verwendet“ | [12](12-ux-und-oberflaeche.md) |
 | A2 | Mengen, Einheiten und Eigenschaften pro Artikel (z. B. „500 g Hack, gemischt, bio“) | [03](03-datenmodell.md), [09](09-lebensmittel-datenbank.md) |
 | A3 | Login per OIDC (Pocket ID) | [05](05-auth-und-teilen.md) |
-| A4 | Liste per Link (z. B. per Mail verschickt) zugänglich, ohne Account | [05](05-auth-und-teilen.md) |
+| A4 | Liste per Gast-Link zugänglich, ohne Account – verschickt über den Teilen-Dialog des Handys | [05](05-auth-und-teilen.md) |
 | A5 | Abhaken wird nahezu in Echtzeit bei allen anderen Nutzern sichtbar | [04](04-sync-und-offline.md) |
 | A6 | Voll offline-fähig, robust bei schlechtem Netz | [04](04-sync-und-offline.md) |
 | A7 | PWA, gut am Handy (Fokus Android) **und** am Laptop | [02](02-architektur-und-technologie.md), [12](12-ux-und-oberflaeche.md) |

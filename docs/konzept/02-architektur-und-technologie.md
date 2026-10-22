@@ -5,7 +5,7 @@
 | Kriterium | Docker-Container | PHP + MySQL Webspace |
 |-----------|------------------|----------------------|
 | Echtzeit-Sync (WebSocket/SSE) | ✅ dauerhafte Verbindungen problemlos | ❌ meist nur Polling; SSE hält PHP-Worker belegt |
-| Hintergrundjobs (Mealie-Abgleich, Icon-Generierung, Mails) | ✅ Worker im selben Prozess | ⚠️ nur per Cron, eingeschränkt |
+| Hintergrundjobs (Mealie-Abgleich, Icon-Generierung) | ✅ Worker im selben Prozess | ⚠️ nur per Cron, eingeschränkt |
 | MCP-Server (Streamable HTTP) | ✅ | ⚠️ machbar, aber fragil |
 | OIDC | ✅ | ✅ |
 | Betrieb | Reverse Proxy + Compose (läuft bei dir schon für Mealie/n8n) | sehr einfach |
@@ -31,7 +31,6 @@ Sync-Logik zwischen Server, PWA, API und MCP geteilt werden.
 | Lokale Datenhaltung | **IndexedDB via Dexie** | vollständige lokale Replik der Listen |
 | OIDC | `openid-client` gegen **Pocket ID** | zertifizierte Bibliothek, PKCE |
 | MCP | offizielles `@modelcontextprotocol/sdk` | Streamable HTTP im selben Server |
-| Mail | SMTP via `nodemailer` | Freigabe-Links verschicken |
 | Bildverarbeitung | `sharp` | Icons skalieren/konvertieren |
 
 Monorepo-Aufteilung (pnpm workspaces):
@@ -57,12 +56,12 @@ packages/
        │            │   ├─ /api/v1/events  SSE für HA & Co.      │
   Home Assistant ──►│   ├─ /mcp         MCP (Streamable HTTP)    │
   n8n, Skripte      │   ├─ /hooks/mealie/<secret>  Webhook-Ziel   │
-  KI-Assistenten ──►│   └─ Jobs: Mealie-Abgleich, Icons, Mail    │
+  KI-Assistenten ──►│   └─ Jobs: Mealie-Abgleich, Icons          │
                     └──────────────┬─────────────────────────────┘
                                    │
                          PostgreSQL (Compose)        Mealie-API
                          Volume: /data/icons ◄─────  Pocket ID (OIDC)
-                                                     SMTP, Bild-KI
+                                                     Bild-KI
 ```
 
 Ein einziger App-Container plus Postgres. Keine weitere Infrastruktur
@@ -82,7 +81,6 @@ services:
       OIDC_ISSUER: https://id.example.org          # Pocket ID
       OIDC_CLIENT_ID: ***
       OIDC_CLIENT_SECRET: ***
-      SMTP_URL: smtp://...
       MEALIE_URL: https://mealie.example.org     # optional, auch per UI
     volumes: [ ./data:/data ]
     depends_on: [ db ]

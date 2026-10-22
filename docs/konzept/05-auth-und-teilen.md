@@ -21,7 +21,7 @@
 - Kein eigenes Passwort-System, keine Einladungen, keine Haushaltsverwaltung:
   eine Instanz = ein Haushalt.
 
-## Zugriff per Link (z. B. per Mail)
+## Gast-Links über den Teilen-Dialog
 
 Für Personen ohne Pocket-ID-Account (Babysitter, Besuch, Nachbarin, die
 etwas mitbringt):
@@ -32,7 +32,7 @@ etwas mitbringt):
 | Rolle | `view` (nur ansehen) oder `edit` (hinzufügen/abhaken) |
 | Gültigkeit | unbegrenzt, bis Datum, oder bis zum manuellen Widerruf |
 | Mehrere Links pro Liste | ja, jeweils mit Label („Oma“, „Nachbar“) → einzeln widerrufbar |
-| Versand | „Per Mail teilen“: Server verschickt **eine** Mail mit dem Link (SMTP) – auf ausdrückliche Aktion hin, keine weiteren Mails danach. Alternativ Link kopieren / Android-Teilen-Dialog |
+| Versand | „Teilen“ in der Liste öffnet den **Teilen-Dialog des Handys** (Web Share API, `navigator.share`) mit Link und kurzem Text → Messenger, Mail-App, SMS … nach Wahl. Am Laptop (ohne Teilen-Dialog): Link wird in die Zwischenablage kopiert. Der Server verschickt selbst **nichts** – kein SMTP nötig |
 | Gast-Erlebnis | gleiche PWA, nur diese eine Liste, offline-fähig und in Echtzeit synchron; beim ersten Öffnen optional Namen eingeben („✓ von Oma“) |
 | Sicherheit | Gast-Session ist an die Liste gebunden, Rate-Limit auf `/s/*`, `noindex`, kein Zugriff auf Katalog, Einstellungen, andere Listen |
 

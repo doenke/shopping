@@ -81,8 +81,8 @@ nicht antwortet“**: Der Browser meldet `online`, Anfragen hängen aber
 | Verlauf („Zuletzt verwendet“) | IndexedDB | klein |
 
 Damit funktioniert offline **alles**: Listen anschauen, abhaken, Artikel aus
-dem Katalog suchen und hinzufügen, Vorlagen anwenden. Nur Mealie-Import und
-Teilen per Mail brauchen Netz (werden aber ebenfalls gequeued).
+dem Katalog suchen und hinzufügen, Vorlagen anwenden. Nur der Mealie-Import und das
+Erzeugen eines neuen Gast-Links brauchen Netz (werden aber ebenfalls gequeued).
 
 `navigator.storage.persist()` wird angefragt, damit Android den Speicher nicht
 bei Platzmangel räumt.

@@ -14,7 +14,7 @@ eingebautem MCP-Server.
 | 02 | [Architektur & Technologie](docs/konzept/02-architektur-und-technologie.md) | Docker vs. PHP-Webspace, Stack, Deployment |
 | 03 | [Datenmodell](docs/konzept/03-datenmodell.md) | Tabellen, Listentypen, Vorlagen, Mengen/Einheiten |
 | 04 | [Sync & Offline](docs/konzept/04-sync-und-offline.md) | Offline-first, Echtzeit-Abhaken, schlechtes Netz im Supermarkt |
-| 05 | [Login & Teilen](docs/konzept/05-auth-und-teilen.md) | Pocket ID, Gäste per Mail-Link |
+| 05 | [Login & Teilen](docs/konzept/05-auth-und-teilen.md) | Pocket ID, Gast-Links über den Teilen-Dialog |
 | 06 | [Mealie-Integration](docs/konzept/06-mealie-integration.md) | Ersatz für den n8n-Flow, Rezepte, Wochenplan |
 | 07 | [API & Home Assistant](docs/konzept/07-api-und-home-assistant.md) | REST, Echtzeit-Events, HA-Integration |
 | 08 | [MCP-Server](docs/konzept/08-mcp-server.md) | Tools, Ressourcen, Auth |

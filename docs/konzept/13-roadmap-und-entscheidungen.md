@@ -11,6 +11,7 @@
 | Sync | Offline-first, eigene Outbox + Delta-Sync, Feld-LWW mit HLC, WebSocket |
 | Login | **Pocket ID** (OIDC); Zugriff wird über Gruppen in Pocket ID gesteuert, in der App darf jeder alles; Gruppe `admins` wird gelesen, aber vorerst nicht genutzt |
 | Nutzerkreis | **Nur ein Haushalt** – keine Haushalts-/Rechteverwaltung; Gäste nur per Link |
+| Gast-Links | werden über den Teilen-Dialog des Handys verschickt; der Server versendet keine Mails (kein SMTP) |
 | Listentypen | generisch über `list_type` + `is_template`, Start nur mit `shopping` |
 | Hauptliste | eine Einkaufsliste ist als Hauptliste markiert; Ziel für Mealie, HA, MCP und Startansicht |
 | Mealie | **v2**; Mealie-Liste bleibt **Eingangskorb wie heute** (übernehmen + in Mealie abhaken, kein Rückkanal); alles landet in der Hauptliste; plus Rezept-/Wochenplan-Import |
@@ -36,7 +37,7 @@
 - Mealie-Eingangskorb (Webhook + Abgleich) → n8n-Flow „mealie2bring“ abschalten
 - Rezept- und Wochenplan-Import
 - Vorlagen
-- Teilen per Link/Mail
+- Gast-Links über den Teilen-Dialog des Handys
 
 ### Phase 3 – Offen machen
 - REST-API mit Tokens, OpenAPI, SSE
@@ -57,4 +58,3 @@ Nichts Blockierendes. Beim Bau zu klären:
 
 - Ob Pocket ID die MCP-OAuth-Anforderungen direkt erfüllt (sonst übernimmt Shopping die Rolle, siehe [08](08-mcp-server.md)).
 - Aktuelle Gratis-Limits der Bild-Dienste.
-- Für „Per Mail teilen“: welcher SMTP-Server (vorhandener Mailserver?).
