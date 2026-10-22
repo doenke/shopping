@@ -19,7 +19,9 @@ import { currentSeq } from './db/seed.js';
 import { ApiError, problemHandler } from './api/errors.js';
 import { apiRoutes } from './api/routes.js';
 import { ShoppingApi } from './api/service.js';
+import { mcpRoutes } from './mcp/server.js';
 import { mealieRoutes } from './mealie/routes.js';
+import { oauthRoutes } from './oauth/routes.js';
 import { MealieService } from './mealie/service.js';
 import { sharingRoutes } from './sharing/routes.js';
 import { SyncHub } from './sync/hub.js';
@@ -158,6 +160,8 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   const mealie = new MealieService(db, secrets, sync, hub, app.log, fetchImpl);
   const api = new ShoppingApi(db, sync, hub, mealie);
   await app.register(apiRoutes, { config, api, sync, hub, requireUser });
+  await app.register(oauthRoutes, { config, db });
+  await app.register(mcpRoutes, { api, requireUser });
   await app.register(mealieRoutes, { config, db, sync, hub, secrets, mealie, requireUser: requireAccount });
   app.addHook('onClose', async () => mealie.stop());
 

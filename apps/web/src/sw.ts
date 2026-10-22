@@ -8,7 +8,7 @@ declare const self: ServiceWorkerGlobalScope;
 // App shell: everything the build produced is cached, so the app starts without network.
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
-registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/(api|auth|ws|s)\//, /^\/(healthz|ws)$/] }));
+registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/(api|auth|ws|s|oauth|mcp|\.well-known)\//, /^\/(healthz|ws|mcp)$/] }));
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting();

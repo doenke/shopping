@@ -11,7 +11,11 @@ const FLOW_COOKIE = 'oidc_flow';
 
 /** Only local paths are allowed as return target (no open redirects). */
 export function safeNext(next: unknown): string {
-  return typeof next === 'string' && /^\/s\/[A-Za-z0-9_-]{10,100}$/.test(next) ? next : '/';
+  if (typeof next !== 'string') return '/';
+  // A list link, or the OAuth consent page of an MCP client.
+  if (/^\/s\/[A-Za-z0-9_-]{10,100}$/.test(next)) return next;
+  if (/^\/oauth\/authorize\?[^\s\\]*$/.test(next) && next.length < 3000) return next;
+  return '/';
 }
 
 interface Profile {

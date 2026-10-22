@@ -67,5 +67,7 @@ export async function resolvePrincipal(db: Db, request: FastifyRequest, reply: F
 /** Which scope a request needs: Mealie features need "mealie", reads "read", everything else "write". */
 export function requiredScope(request: FastifyRequest): Scope {
   if (request.url.startsWith('/api/v1/integrations/mealie') || /\/import\/mealie/.test(request.url)) return 'mealie';
+  // MCP checks scopes per tool.
+  if (request.url.split('?')[0] === '/mcp') return 'read';
   return request.method === 'GET' || request.method === 'HEAD' ? 'read' : 'write';
 }

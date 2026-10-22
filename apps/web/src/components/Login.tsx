@@ -7,8 +7,10 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const params = new URLSearchParams(location.search);
   const failed = params.get('login');
-  // Set when someone opened a list link without being logged in.
-  const next = /^\/s\/[A-Za-z0-9_-]+$/.test(params.get('next') ?? '') ? params.get('next')! : null;
+  // Set when someone opened a list link (or an AI assistant wants access) without being logged in.
+  const rawNext = params.get('next') ?? '';
+  const next = /^\/s\/[A-Za-z0-9_-]+$/.test(rawNext) || /^\/oauth\/authorize\?\S*$/.test(rawNext) ? rawNext : null;
+  const isListLink = !!next?.startsWith('/s/');
 
   useEffect(() => {
     fetch('/auth/config')
@@ -51,7 +53,8 @@ export function Login() {
       <img src="/icon.svg" alt="" width={88} height={88} />
       <h1>Shopping</h1>
       <p className="muted">Eure Einkaufsliste – auch ohne Netz im Supermarkt.</p>
-      {next && <p>Jemand hat eine Einkaufsliste mit dir geteilt.</p>}
+      {isListLink && <p>Jemand hat eine Einkaufsliste mit dir geteilt.</p>}
+      {next && !isListLink && <p>Ein KI-Assistent möchte auf deine Listen zugreifen – bitte zuerst anmelden.</p>}
       {failed && <p className="error">Die Anmeldung hat nicht geklappt. Bitte noch einmal versuchen.</p>}
       {error && <p className="error">{error}</p>}
       {cfg?.oidc && (
@@ -59,7 +62,7 @@ export function Login() {
           Mit Pocket ID anmelden
         </a>
       )}
-      {next && (
+      {isListLink && (
         <form
           className="login__guest"
           onSubmit={(e) => {
