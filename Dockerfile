@@ -24,6 +24,8 @@ COPY --from=build /out/node_modules ./node_modules
 COPY --from=build /app/apps/server/dist ./dist
 COPY --from=build /app/apps/server/drizzle ./drizzle
 COPY --from=build /app/apps/web/dist ./web
+# Fails the build if the image library has no binary for this platform (musl, amd64/arm64).
+RUN node -e "require('sharp')"
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD wget -qO- "http://127.0.0.1:${PORT}/healthz" || exit 1

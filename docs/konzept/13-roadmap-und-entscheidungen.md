@@ -73,9 +73,27 @@ Umsetzungsdetails:
   Server getestet.
 - Ausgehende Webhooks und `Idempotency-Key` sind noch nicht umgesetzt.
 
-### Phase 4 – Icons (kann parallel ab Phase 1 laufen)
-- Stil finden (Anker-Set) – geht ohne Code, direkt in der Weboberfläche
+### Phase 4 – Icons ✅ umgesetzt (Pipeline; die Icons selbst entstehen im Betrieb)
+- Stil finden (Anker-Set) direkt in der App, alternativ eigene Bilder hochladen
 - Kategorie-Icons, Review-Ansicht, Generierung mit Tagesbudget
+
+Umsetzungsdetails:
+- Gratis-Anbieter ist **Cloudflare Workers AI mit FLUX.2 [klein]** (Stand Oktober 2026):
+  Tageskontingent von 10.000 Neurons, bis zu 4 Referenzbilder pro Anfrage, rund 50 Neurons
+  pro 512er-Icon mit Referenzen. Die Gemini-Bild-API hat inzwischen kein Gratis-Kontingent
+  mehr. Bezahl-Option: OpenAI gpt-image mit Monats-Kostengrenze.
+- FLUX kann keine Transparenz: Es zeichnet auf Magenta (#FF00FF), Shopping stellt frei
+  (Flutfüllung vom Rand, weiche Kanten, Farbsaum entfernt, Bodenschatten mit entfernt).
+- Bilder liegen in PostgreSQL statt im Dateisystem: kein zusätzliches Volume, das Backup
+  per `pg_dump` enthält sie. Abgelehnte Entwürfe verlieren ihre Bilddaten.
+- Englische Bildmotive für den Grundkatalog sind fest hinterlegt; Artikel aus Mealie
+  bekommen ihr Motiv von einem kleinen Textmodell (Cloudflare), in der Prüfung änderbar.
+- Ab 4 Stil-Referenzen (★) beginnt die Massenerzeugung: erst Kategorien, dann Artikel nach
+  Häufigkeit auf den Listen. Neue Katalogartikel werden automatisch eingeplant.
+- Auslieferung unter `/icons/item/{id}.webp?v=…` (öffentlich, unveränderlich gecacht),
+  die PWA lädt alle freigegebenen Icons im Hintergrund vor und hat sie offline.
+- Automatische Prüfungen: Hintergrund sauber, Motiv nicht angeschnitten, nicht zu klein.
+  Eine OCR-Prüfung auf Schrift gibt es nicht; das erledigt der Blick in der Prüfansicht.
 
 ### Phase 5 – Ausbau (bei Bedarf)
 - Packlisten (zweiter Listentyp)

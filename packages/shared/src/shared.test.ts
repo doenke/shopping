@@ -18,6 +18,7 @@ const catalog: CatalogItem[] = seedCatalog().map((s, i) => ({
   pantry: s.pantry,
   source: 'seed',
   mealieFoodId: null,
+  icon: null,
   hidden: false,
   seq: 0,
 }));

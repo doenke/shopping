@@ -2,6 +2,7 @@ import { parseInput, type ListRow, type Me } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { addItems, createList, deleteList, leaveList, renameList, saveAsTemplate, setMainList, shareList } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
+import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
 import { MembersDialog } from './components/MembersDialog';
 import { TemplateDialog } from './components/TemplateDialog';
@@ -10,7 +11,8 @@ import { Login } from './components/Login';
 import { Settings } from './components/Settings';
 import { SyncBadge } from './components/SyncBadge';
 import { setMeta } from './db';
-import { navigate, useCatalog, useItems, useLists, useMe, useMediaQuery, useRemoteChecks, useRoute, useUsers } from './hooks';
+import { IconContext } from './icons';
+import { navigate, useCatalog, useIcons, useItems, useLists, useMe, useMediaQuery, useRemoteChecks, useRoute, useUsers } from './hooks';
 import { sync } from './sync/engine';
 
 export function App() {
@@ -44,6 +46,7 @@ function Shell({ me }: { me: Me }) {
   const route = useRoute();
   const lists = useLists();
   const catalog = useCatalog();
+  const icons = useIcons(catalog.items);
   const users = useUsers();
   const remoteChecks = useRemoteChecks();
   const wide = useMediaQuery('(min-width: 900px)');
@@ -154,6 +157,11 @@ function Shell({ me }: { me: Me }) {
         </button>
       )}
       <span className="spacer" />
+      {!guest && (
+        <a href="#/icons" className={route.page === 'icons' ? 'active' : ''} onClick={() => setDrawer(false)}>
+          🖼 Icons
+        </a>
+      )}
       <a href="#/settings" className={route.page === 'settings' ? 'active' : ''} onClick={() => setDrawer(false)}>
         ⚙ Einstellungen
       </a>
@@ -161,6 +169,7 @@ function Shell({ me }: { me: Me }) {
   );
 
   return (
+    <IconContext.Provider value={icons}>
     <div className={`shell${wide ? ' shell--wide' : ''}${extraWide && route.page === 'list' && list ? ' shell--catalog' : ''}`}>
       {wide ? sidebar : drawer && <div className="drawer" onClick={() => setDrawer(false)}>{sidebar}</div>}
 
@@ -171,7 +180,7 @@ function Shell({ me }: { me: Me }) {
               ☰
             </button>
           )}
-          <h1 className="topbar__title">{route.page === 'settings' ? 'Einstellungen' : (list?.name ?? 'Shopping')}</h1>
+          <h1 className="topbar__title">{route.page === 'settings' ? 'Einstellungen' : route.page === 'icons' ? 'Icons' : (list?.name ?? 'Shopping')}</h1>
           <SyncBadge guest={me.isGuest} />
           {route.page === 'list' && list && (
             <div className="menu">
@@ -196,6 +205,8 @@ function Shell({ me }: { me: Me }) {
         <main className="content">
           {route.page === 'settings' ? (
             <Settings me={me} />
+          ) : route.page === 'icons' && !guest ? (
+            <IconReview catalog={catalog.items} />
           ) : list && items ? (
             <ListView ref={addRef} key={list.id} list={list} items={items} index={catalog.index} users={users} remoteChecks={remoteChecks} />
           ) : route.page === 'list' && route.listId && !list ? (
@@ -224,6 +235,7 @@ function Shell({ me }: { me: Me }) {
       {importing && list && <ImportDialog listId={list.id} onClose={() => setImporting(false)} />}
       {extraWide && route.page === 'list' && list && <CatalogPanel listId={list.id} catalog={catalog.items} items={items ?? []} />}
     </div>
+    </IconContext.Provider>
   );
 }
 

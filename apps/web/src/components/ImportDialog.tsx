@@ -223,7 +223,7 @@ export function ImportDialog({ listId, onClose }: Props) {
                 <li key={i}>
                   <label>
                     <input type="checkbox" checked={selected.has(i)} onChange={() => toggle(i)} />
-                    <ItemIcon name={c.name} categoryId={c.categoryId} size="sm" />
+                    <ItemIcon name={c.name} categoryId={c.categoryId} catalogItemId={c.catalogItemId} size="sm" />
                     <span className="spacer">
                       {c.name}
                       <small className="muted"> {itemSpecification(c)}</small>

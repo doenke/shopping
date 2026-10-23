@@ -3,7 +3,10 @@ import { sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  customType,
+  date,
   index,
+  integer,
   jsonb,
   pgSequence,
   pgTable,
@@ -140,6 +143,10 @@ export const catalogItems = pgTable(
     /** Category was changed by hand and must not be overwritten by imports. */
     categoryLocked: boolean('category_locked').notNull().default(false),
     hidden: boolean('hidden').notNull().default(false),
+    /** English description of the picture for the icon generator, e.g. "group of three potatoes". */
+    iconSubject: text('icon_subject'),
+    /** Version token of the approved icon (changes the URL, so caches never serve an old one). */
+    icon: text('icon'),
     seq: seq(),
   },
   (t) => [uniqueIndex('catalog_items_mealie_idx').on(t.mealieFoodId), index('catalog_items_seq_idx').on(t.seq)],
@@ -195,3 +202,84 @@ export const oauthClients = pgTable('oauth_clients', {
   redirectUris: jsonb('redirect_uris').$type<string[]>().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => 'bytea',
+});
+
+/** Household-wide settings (not per user), e.g. the icon generator. */
+export const appSettings = pgTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').$type<Record<string, unknown>>().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type IconTarget = 'item' | 'category';
+export type IconStatus = 'candidate' | 'approved' | 'rejected' | 'retired';
+
+/** Generated icons: candidates waiting for review, the approved one, rejected ones (without image data). */
+export const icons = pgTable(
+  'icons',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetType: text('target_type').$type<IconTarget>().notNull(),
+    /** Catalog item id or category id. */
+    targetId: text('target_id').notNull(),
+    status: text('status').$type<IconStatus>().notNull().default('candidate'),
+    /** Approved icons marked as style reference ("anchor set"). */
+    isAnchor: boolean('is_anchor').notNull().default(false),
+    provider: text('provider').notNull(),
+    model: text('model').notNull(),
+    prompt: text('prompt').notNull(),
+    seed: integer('seed'),
+    referenceSet: text('reference_set'),
+    checks: jsonb('checks').$type<Record<string, boolean>>().notNull().default({}),
+    /** 512 px master (WebP with alpha). */
+    image: bytea('image'),
+    /** 192 px WebP served to the app. */
+    thumb: bytea('thumb'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    reviewedBy: uuid('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => [index('icons_target_idx').on(t.targetType, t.targetId), index('icons_status_idx').on(t.status)],
+);
+
+export type IconJobStatus = 'queued' | 'done' | 'failed';
+
+export const iconJobs = pgTable(
+  'icon_jobs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetType: text('target_type').$type<IconTarget>().notNull(),
+    targetId: text('target_id').notNull(),
+    priority: integer('priority').notNull().default(0),
+    candidates: integer('candidates').notNull().default(2),
+    paid: boolean('paid').notNull().default(false),
+    /** Optional extra instructions from the review ("rounder", "only one"). */
+    hint: text('hint'),
+    status: text('status').$type<IconJobStatus>().notNull().default('queued'),
+    attempts: integer('attempts').notNull().default(0),
+    error: text('error'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // At most one open job per target.
+    uniqueIndex('icon_jobs_open_idx').on(t.targetType, t.targetId).where(sql`status = 'queued'`),
+    index('icon_jobs_status_idx').on(t.status, t.priority),
+  ],
+);
+
+/** Images generated per day and provider, for the daily budget and the cost cap. */
+export const iconUsage = pgTable(
+  'icon_usage',
+  {
+    day: date('day').notNull(),
+    provider: text('provider').notNull(),
+    images: integer('images').notNull().default(0),
+    /** Estimated cost in tenths of a cent. */
+    costMilli: integer('cost_milli').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.provider] })],
+);

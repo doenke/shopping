@@ -79,6 +79,8 @@ export interface CatalogItem {
   source: 'seed' | 'mealie' | 'user';
   mealieFoodId: string | null;
   hidden: boolean;
+  /** Version token of the approved icon, null = category icon / letter. */
+  icon: string | null;
   seq: number;
 }
 

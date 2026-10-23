@@ -100,7 +100,7 @@ export function TemplateDialog({ templates, targetList, onClose }: Props) {
               <li key={i.id}>
                 <label>
                   <input type="checkbox" checked={selected.has(i.id)} onChange={() => toggle(i.id)} />
-                  <ItemIcon name={i.name} categoryId={i.categoryId} size="sm" />
+                  <ItemIcon name={i.name} categoryId={i.categoryId} catalogItemId={i.catalogItemId} size="sm" />
                   <span className="spacer">
                     {i.name}
                     <small className="muted"> {itemSpecification(i)}</small>

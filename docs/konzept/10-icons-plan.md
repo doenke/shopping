@@ -73,8 +73,8 @@ oder sauber freistellbar.
 
 | Option | Kosten | Referenzbilder | Einschätzung |
 |--------|--------|----------------|--------------|
-| **Google Gemini (Bild-Modell) über AI Studio / Gemini API** | Gratis-Kontingent mit Tageslimit (Umfang beim Bau prüfen), danach günstig pro Bild | ✅ | **Erste Wahl**: Referenzbilder + Gratis-Stufe |
-| Cloudflare Workers AI (FLUX schnell o. Ä.) | tägliches Gratis-Kontingent | ❌ nur Text | Fallback; Konsistenz nur über strengen Prompt |
+| **Cloudflare Workers AI, FLUX.2 [klein]** | tägliches Gratis-Kontingent (10.000 Neurons ≈ 150–200 Icons) | ✅ bis 4 | **Umgesetzt, erste Wahl** |
+| Google Gemini (Bild-Modell) | API inzwischen nur noch bezahlt | ✅ | nicht umgesetzt |
 | OpenAI `gpt-image` | bezahlt, wenige Cent pro Bild | ✅, transparenter Hintergrund nativ | **Bezahl-Option**, falls Gratis nicht reicht oder Qualität fehlt |
 | Replicate / fal (FLUX + Stil-Referenz bzw. LoRA) | bezahlt pro Bild/Training | ✅ | Option, wenn ein trainiertes Stil-LoRA nötig wird |
 
@@ -99,13 +99,14 @@ nicht im Konzept festgeschrieben.
 Der Generator ist im Code eine austauschbare Schnittstelle
 (`IconGenerator` mit Adaptern je Anbieter), Anbieter-Wechsel ist Konfiguration.
 
-### Datenhaltung
+### Datenhaltung (umgesetzt)
 
-`icon`: id, catalog_item_id, version, status (`candidate`/`approved`/`rejected`),
-model, prompt, seed, reference_set_version, created_at, Dateipfade.
-Dateien unter `/data/icons/{catalog_item_id}/{version}/`.
-Freigegebene Icons werden zu einem versionierten **Icon-Bündel** gepackt, das
-die PWA offline cached und per Delta aktualisiert.
+`icons`: id, Ziel (Artikel oder Kategorie), status (`candidate`/`approved`/`rejected`/`retired`),
+Stil-Referenz ja/nein, Anbieter, Modell, Prompt, Seed, verwendete Referenzen, Prüfergebnisse,
+512er-Master und 192er-Kachelbild als WebP **in PostgreSQL** (kein eigenes Volume, steckt im Backup).
+Dazu `icon_jobs` (Warteschlange mit Priorität) und `icon_usage` (Bilder und Kosten pro Tag).
+Statt eines Bündels: versionierte URLs, die PWA lädt alle freigegebenen Icons im Hintergrund
+in den Cache des Service Workers.
 
 ### Rechtliches
 

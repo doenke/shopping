@@ -2,6 +2,7 @@ import { CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type Me, ty
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { db } from './db';
+import { buildIconIndex, warmIconCache, type IconIndex } from './icons';
 import { sync, type RemoteCheck } from './sync/engine';
 
 export function useSyncStatus() {
@@ -39,6 +40,15 @@ export function useCatalog(): { items: CatalogItem[]; byId: Map<string, CatalogI
   return useMemo(() => ({ items, byId: new Map(items.map((i) => [i.id, i])), index: new CatalogIndex(items) }), [items]);
 }
 
+export function useIcons(catalog: CatalogItem[]): IconIndex {
+  const categories = useLiveQuery(async () => (await db.meta.get('categoryIcons'))?.value as Record<string, string> | undefined);
+  const index = useMemo(() => buildIconIndex(catalog, categories), [catalog, categories]);
+  useEffect(() => {
+    if (index.items.size || Object.keys(index.categories).length) void warmIconCache(index);
+  }, [index]);
+  return index;
+}
+
 /** Items someone else just checked; shown for a moment with "✓ von …" before they move away. */
 export function useRemoteChecks(ttl = 2500): Map<string, RemoteCheck> {
   const [checks, setChecks] = useState(new Map<string, RemoteCheck>());
@@ -59,11 +69,12 @@ export function useRemoteChecks(ttl = 2500): Map<string, RemoteCheck> {
   return checks;
 }
 
-export type Route = { page: 'list'; listId?: string } | { page: 'settings' };
+export type Route = { page: 'list'; listId?: string } | { page: 'settings' } | { page: 'icons' };
 
 function parseRoute(): Route {
   const hash = location.hash.replace(/^#\/?/, '');
   if (hash === 'settings') return { page: 'settings' };
+  if (hash === 'icons') return { page: 'icons' };
   const m = /^list\/([0-9a-f-]{36})$/.exec(hash);
   return { page: 'list', listId: m?.[1] };
 }
@@ -79,7 +90,7 @@ export function useRoute(): Route {
 }
 
 export function navigate(route: Route): void {
-  location.hash = route.page === 'settings' ? '#/settings' : route.listId ? `#/list/${route.listId}` : '#/';
+  location.hash = route.page !== 'list' ? `#/${route.page}` : route.listId ? `#/list/${route.listId}` : '#/';
 }
 
 export function useMediaQuery(query: string): boolean {

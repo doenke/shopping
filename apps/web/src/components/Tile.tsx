@@ -1,9 +1,22 @@
 import { getCategory, itemSpecification, type ItemRow } from '@shopping/shared';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+import { iconUrl, useIconIndex } from '../icons';
 
-export function ItemIcon({ name, categoryId, size = 'md' }: { name: string; categoryId: string | null; size?: 'sm' | 'md' }) {
+interface ItemIconProps {
+  name: string;
+  categoryId: string | null;
+  catalogItemId?: string | null;
+  size?: 'sm' | 'md';
+}
+
+/** Generated icon of the item, else of its category, else the first letter on the category colour. */
+export function ItemIcon({ name, categoryId, catalogItemId, size = 'md' }: ItemIconProps) {
   const cat = getCategory(categoryId);
-  // Until generated icons exist: first letter on the category colour (see docs/konzept/10-icons-plan.md).
+  const url = iconUrl(useIconIndex(), catalogItemId, categoryId);
+  const [broken, setBroken] = useState<string | null>(null);
+  if (url && broken !== url) {
+    return <img className={`item-icon item-icon--img item-icon--${size}`} src={url} alt="" loading="lazy" decoding="async" draggable={false} onError={() => setBroken(url)} />;
+  }
   return (
     <span className={`item-icon item-icon--${size}`} style={{ '--cat': cat.color } as React.CSSProperties} aria-hidden>
       {name.trim().charAt(0).toUpperCase()}
@@ -12,7 +25,7 @@ export function ItemIcon({ name, categoryId, size = 'md' }: { name: string; cate
 }
 
 interface TileProps {
-  item: Pick<ItemRow, 'name' | 'categoryId' | 'amounts' | 'properties' | 'note'>;
+  item: Pick<ItemRow, 'name' | 'categoryId' | 'amounts' | 'properties' | 'note'> & { catalogItemId?: string | null };
   variant?: 'open' | 'done' | 'suggestion';
   badge?: string;
   /** Checked by someone else: fades out before it moves away. */
@@ -59,7 +72,7 @@ export function Tile({ item, variant = 'open', badge, fading = false, onTap, onL
       }}
       aria-label={[item.name, spec].filter(Boolean).join(', ')}
     >
-      <ItemIcon name={item.name} categoryId={item.categoryId} />
+      <ItemIcon name={item.name} categoryId={item.categoryId} catalogItemId={item.catalogItemId} />
       <span className="tile__name">{item.name}</span>
       {spec && <span className="tile__spec">{spec}</span>}
       {badge && <span className="tile__badge">{badge}</span>}

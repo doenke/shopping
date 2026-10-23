@@ -73,6 +73,7 @@ export function toCatalogItem(r: CatalogRecord): CatalogItem {
     source: r.source,
     mealieFoodId: r.mealieFoodId,
     hidden: r.hidden,
+    icon: r.icon,
     seq: r.seq,
   };
 }

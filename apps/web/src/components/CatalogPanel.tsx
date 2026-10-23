@@ -31,7 +31,7 @@ export function CatalogPanel({ listId, catalog, items }: Props) {
         {shown.map((c) => (
           <Tile
             key={c.id}
-            item={{ name: c.name, categoryId: c.categoryId, amounts: [], properties: [], note: null }}
+            item={{ name: c.name, categoryId: c.categoryId, catalogItemId: c.id, amounts: [], properties: [], note: null }}
             variant={onList.has(c.id) ? 'open' : 'suggestion'}
             onTap={() => void addItems(listId, [catalogToParsed(c)])}
           />

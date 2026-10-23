@@ -1,6 +1,7 @@
 import { CATEGORIES, formatAmount, SUGGESTED_PROPERTIES, UNITS, type Amount, type ItemRow, type ItemSource, type UserInfo } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { deleteItem, updateItem } from '../actions';
+import { useMe } from '../hooks';
 import { sync } from '../sync/engine';
 
 interface Props {
@@ -27,6 +28,8 @@ export function ItemEditor({ item, users, isTemplate = false, onClose }: Props) 
   const [categoryId, setCategoryId] = useState(item.categoryId ?? 'eigene');
   const [forAll, setForAll] = useState(false);
   const [optional, setOptional] = useState(item.optional);
+  const [reported, setReported] = useState<'idle' | 'done' | 'error'>('idle');
+  const me = useMe();
 
   useEffect(() => {
     ref.current?.showModal();
@@ -150,6 +153,28 @@ export function ItemEditor({ item, users, isTemplate = false, onClose }: Props) 
           {createdBy && <>Hinzugefügt von {createdBy}. </>}
           {item.checked && checkedBy && <>Gekauft von {checkedBy}.</>}
         </p>
+
+        {item.catalogItemId && me && !me.isGuest && (
+          <p className="sheet__meta">
+            {reported === 'idle' ? (
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  fetch(`/api/v1/catalog/${item.catalogItemId}/icon-report`, { method: 'POST' })
+                    .then((res) => setReported(res.ok ? 'done' : 'error'))
+                    .catch(() => setReported('error'));
+                }}
+              >
+                Icon gefällt mir nicht
+              </button>
+            ) : reported === 'done' ? (
+              'Danke – neue Entwürfe kommen in die Icon-Prüfung.'
+            ) : (
+              'Das ging gerade nicht (offline?).'
+            )}
+          </p>
+        )}
 
         <footer className="sheet__actions">
           <button

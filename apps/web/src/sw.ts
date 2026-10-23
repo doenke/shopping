@@ -1,6 +1,8 @@
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching';
+import { ExpirationPlugin } from 'workbox-expiration';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
+import { CacheFirst } from 'workbox-strategies';
 import { ShoppingDb } from './db';
 
 declare const self: ServiceWorkerGlobalScope;
@@ -8,7 +10,16 @@ declare const self: ServiceWorkerGlobalScope;
 // App shell: everything the build produced is cached, so the app starts without network.
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
-registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/(api|auth|ws|s|oauth|mcp|\.well-known)\//, /^\/(healthz|ws|mcp)$/] }));
+registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/(api|auth|ws|s|oauth|mcp|icons|\.well-known)\//, /^\/(healthz|ws|mcp)$/] }));
+
+// Icons: versioned URLs, so the cached copy is always right. Kept for offline use in the shop.
+registerRoute(
+  ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/icons/'),
+  new CacheFirst({
+    cacheName: 'icons',
+    plugins: [new ExpirationPlugin({ maxEntries: 3000, purgeOnQuotaError: true })],
+  }),
+);
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting();

@@ -19,6 +19,8 @@ import { currentSeq } from './db/seed.js';
 import { ApiError, problemHandler } from './api/errors.js';
 import { apiRoutes } from './api/routes.js';
 import { ShoppingApi } from './api/service.js';
+import { iconRoutes } from './icons/routes.js';
+import { IconService } from './icons/service.js';
 import { mcpRoutes } from './mcp/server.js';
 import { mealieRoutes } from './mealie/routes.js';
 import { oauthRoutes } from './oauth/routes.js';
@@ -54,6 +56,8 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   const sync = new SyncService(db);
   const hub = new SyncHub(sync, app.log);
   app.addHook('onClose', async () => hub.close());
+  const icons = new IconService(db, secrets, sync, hub, app.log, fetchImpl);
+  app.addHook('onClose', async () => icons.stop());
 
   app.setErrorHandler(problemHandler);
   await app.register(cookie, { secret: config.SECRET_KEY });
@@ -94,6 +98,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   };
 
   await app.register(tokenRoutes, { db, requireAccount });
+  await app.register(iconRoutes, { icons, requireAccount });
   await app.register(sharingRoutes, { config, db, sync, hub, secrets, requireUser, requireAccount });
 
   // ---- Sync ---------------------------------------------------------------
@@ -131,7 +136,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
           .select()
           .from(catalogItems)
           .where(since ? gt(catalogItems.seq, since) : undefined);
-        return { items: rows.map(toCatalogItem), categories: CATEGORIES, seq };
+        return { items: rows.map(toCatalogItem), categories: CATEGORIES, categoryIcons: await icons.categoryIcons(), seq };
       });
     });
 
@@ -184,7 +189,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
     app.setNotFoundHandler((request, reply) => {
       // Client-side routes get the app shell; missing files (e.g. old asset hashes) get a real 404.
       const path = request.url.split('?')[0]!;
-      if (request.method === 'GET' && !/^\/(api|auth|ws)\b/.test(path) && !/\.[a-z0-9]+$/i.test(path)) {
+      if (request.method === 'GET' && !/^\/(api|auth|ws|icons)\b/.test(path) && !/\.[a-z0-9]+$/i.test(path)) {
         return reply.header('Cache-Control', 'no-cache').sendFile('index.html');
       }
       return reply.code(404).send({ error: 'not_found' });
@@ -193,5 +198,5 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
     app.log.warn('Kein Web-Build gefunden – es läuft nur die API.');
   }
 
-  return { app, sync, hub, mealie, api };
+  return { app, sync, hub, mealie, api, icons };
 }

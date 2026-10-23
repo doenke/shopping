@@ -438,10 +438,11 @@ export class SyncEngine {
       const since = (await getMeta<number>('catalogSeq')) ?? 0;
       const res = await fetch(`/api/v1/catalog?since=${since}`, { signal: AbortSignal.timeout(20_000) });
       if (!res.ok) return;
-      const data = (await res.json()) as { items: import('@shopping/shared').CatalogItem[]; seq: number };
+      const data = (await res.json()) as { items: import('@shopping/shared').CatalogItem[]; categoryIcons?: Record<string, string>; seq: number };
       await db.transaction('rw', [db.catalog, db.meta], async () => {
         await db.catalog.bulkPut(data.items);
         await setMeta('catalogSeq', data.seq);
+        await setMeta('categoryIcons', data.categoryIcons ?? {});
       });
     } catch {
       // Offline: the cached catalog keeps working.

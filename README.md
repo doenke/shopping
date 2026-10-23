@@ -4,7 +4,7 @@ Selbst gehostete, offline-fähige Einkaufslisten-App im Stil von Bring!,
 mit nativer Mealie-Anbindung, Login über Pocket ID, REST-API für Home Assistant und
 eingebautem MCP-Server.
 
-> Status: **Phase 1 bis 3** umgesetzt – siehe [Roadmap](docs/konzept/13-roadmap-und-entscheidungen.md).
+> Status: **Phase 1 bis 4** umgesetzt – siehe [Roadmap](docs/konzept/13-roadmap-und-entscheidungen.md).
 
 ## Was die App kann
 
@@ -17,7 +17,8 @@ eingebautem MCP-Server.
 - **Echtzeit**: Abhaken erscheint bei anderen in ~0,1 s, mit „✓ von Anna“
 - PWA zum Installieren auf Android; am Laptop drei Spalten mit Katalog zum Durchklicken
 - Lebensmittel-Katalog (Grundkatalog + **Import aus Mealie**, Labels → Kategorien)
-- Kategorien wie bei Bring!, Kacheln mit Buchstaben-Platzhalter bis zu den generierten Icons
+- Kategorien wie bei Bring!, **generierte Icons** im einheitlichen Stil (Kategorie-Icon bzw.
+  Anfangsbuchstabe, solange ein Artikel noch keins hat), offline verfügbar
 - **Teilen per Link** über den Teilen-Dialog des Handys: Wer den Link angemeldet öffnet,
   ist dabei (Besitzer kann den Link erneuern, Mitglieder können die Liste verlassen)
 - **Gäste ohne Account**: Link öffnen, Namen eingeben, nur diese Liste; Link erneuern wirft Gäste raus.
@@ -36,7 +37,20 @@ eingebautem MCP-Server.
   Einkaufsliste hinzu“), Live-Updates per Push, Sensor „offene Artikel“, Aktionen
 - **MCP-Server** für Claude & Co. mit OAuth-Anmeldung über Pocket ID
 
-Noch nicht dabei: generierte Icons (Phase 4).
+### Icons erzeugen
+
+1. Kostenloses Cloudflare-Konto anlegen, unter *AI → Workers AI → REST API* die Account-ID
+   ablesen und ein API-Token (Vorlage „Workers AI“) erstellen.
+2. In der App *🖼 Icons → Bild-KI einrichten*: Account-ID und Token eintragen, speichern.
+3. **Stil finden:** „Nächsten Auftrag jetzt erzeugen“ – für zwölf typische Artikel entstehen je
+   drei Entwürfe. Passende als Stil-Referenz ★ nehmen, bei Bedarf den Stiltext anpassen oder
+   eigene Bilder (z. B. aus ChatGPT/AI Studio) hochladen.
+4. Ab vier Stil-Referenzen „Automatisch im Hintergrund“ einschalten: Kategorien zuerst, dann die
+   Artikel nach Häufigkeit, bis zum Tageslimit (Standard 150 Bilder/Tag). Entwürfe kommen in die
+   Prüfung; nichts erscheint in der App ohne Freigabe.
+5. Optional einen OpenAI-Key für „Mit Bezahl-Modell neu“ (mit Monatsgrenze in €).
+
+In der App kann jeder über das Artikel-Menü „Icon gefällt mir nicht“ melden.
 
 ### Mealie-Eingangskorb einrichten
 
