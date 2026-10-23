@@ -8,9 +8,10 @@ const config = loadConfig();
 const { db, close } = createDb(config.DATABASE_URL);
 await runMigrations(db);
 const seeded = await seedBaseCatalog(db);
-const { app, mealie, icons } = await buildApp({ config, db });
+const { app, mealie, icons, avatars } = await buildApp({ config, db });
 mealie.startScheduler();
 icons.startScheduler();
+avatars.startScheduler();
 if (seeded) app.log.info(`${seeded} Artikel in den Grundkatalog übernommen`);
 await purgeExpiredSessions(db);
 

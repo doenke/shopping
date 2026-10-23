@@ -84,6 +84,7 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView({ 
                   item={item}
                   fading={!!remote}
                   badge={remote ? `✓ ${users.get(remote.by)?.displayName ?? ''}`.trim() : list.isTemplate && item.optional ? 'optional' : undefined}
+                  badgeUser={remote ? users.get(remote.by) : undefined}
                   onTap={() => {
                     if (list.isTemplate) return setEditing(item.id);
                     if (remote) return;

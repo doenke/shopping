@@ -1,3 +1,4 @@
+import { avatarPath } from '../auth/avatar.js';
 import type { CatalogItem, ItemRow, ListRow, Me, UserInfo } from '@shopping/shared';
 import type { catalogItems, listItems, lists, users } from '../db/schema.js';
 
@@ -54,7 +55,7 @@ export function toItemRow(r: ItemRecord): ItemRow {
 }
 
 export function toUserInfo(r: UserRecord): UserInfo {
-  return { id: r.id, displayName: r.displayName, avatarUrl: r.avatarUrl, isGuest: r.isGuest };
+  return { id: r.id, displayName: r.displayName, avatarUrl: avatarPath(r.id, r.avatarVersion), isGuest: r.isGuest };
 }
 
 export function toMe(r: UserRecord): Me {

@@ -8,7 +8,8 @@ eingebautem MCP-Server.
 
 ## Was die App kann
 
-- Login über **Pocket ID** (OIDC mit PKCE), langlebige Sessions
+- Login über **Pocket ID** (OIDC mit PKCE), langlebige Sessions; das **Profilbild** aus Pocket ID
+  erscheint bei Mitgliedern, „✓ von …“ und „Hinzugefügt von“ (lokale Kopie, auch offline)
 - Einkaufslisten mit **Hauptliste** ⭐, Artikel mit **Menge, Einheit, Eigenschaften, Notiz**
 - **Eine Eingabezeile für alles**: „2 kg Kartoffeln“, „500g Hack gemischt bio“, „Milch, Butter, 6 Eier“
 - Doppelte Artikel werden zusammengeführt (1 l + 2 l Milch = 3 l)

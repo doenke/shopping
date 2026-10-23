@@ -10,11 +10,11 @@ declare const self: ServiceWorkerGlobalScope;
 // App shell: everything the build produced is cached, so the app starts without network.
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
-registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/(api|auth|ws|s|oauth|mcp|icons|\.well-known)\//, /^\/(healthz|ws|mcp)$/] }));
+registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/(api|auth|ws|s|oauth|mcp|icons|avatars|\.well-known)\//, /^\/(healthz|ws|mcp)$/] }));
 
-// Icons: versioned URLs, so the cached copy is always right. Kept for offline use in the shop.
+// Icons and profile pictures: versioned URLs, so the cached copy is always right. Kept for offline use in the shop.
 registerRoute(
-  ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/icons/'),
+  ({ url }) => url.origin === self.location.origin && (url.pathname.startsWith('/icons/') || url.pathname.startsWith('/avatars/')),
   new CacheFirst({
     cacheName: 'icons',
     plugins: [new ExpirationPlugin({ maxEntries: 3000, purgeOnQuotaError: true })],

@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { avatarPath } from '../auth/avatar.js';
 import { createSession, destroyUserSessions, sessionUser } from '../auth/session.js';
 import type { Config } from '../config.js';
 import type { SecretBox } from '../crypto.js';
@@ -92,12 +93,12 @@ export async function sharingRoutes(app: FastifyInstance, opts: Options): Promis
     if (!(await sync.isMember(request.userId, id))) return reply.code(404).send({ error: 'not_found' });
     const [list] = await db.select({ ownerId: lists.ownerId }).from(lists).where(eq(lists.id, id));
     const rows = await db
-      .select({ id: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl, isGuest: users.isGuest, joinedAt: listMembers.joinedAt })
+      .select({ id: users.id, displayName: users.displayName, avatarVersion: users.avatarVersion, isGuest: users.isGuest, joinedAt: listMembers.joinedAt })
       .from(listMembers)
       .innerJoin(users, eq(users.id, listMembers.userId))
       .where(and(eq(listMembers.listId, id), eq(listMembers.removed, false)))
       .orderBy(listMembers.joinedAt);
-    return rows.map((r) => ({ ...r, isOwner: r.id === list?.ownerId }));
+    return rows.map(({ avatarVersion, ...r }) => ({ ...r, avatarUrl: avatarPath(r.id, avatarVersion), isOwner: r.id === list?.ownerId }));
   });
 
   app.delete('/api/v1/lists/:id/members/:userId', { preHandler: requireAccount }, async (request, reply) => {

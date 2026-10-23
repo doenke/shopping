@@ -8,6 +8,7 @@ import { CATEGORIES } from '@shopping/shared';
 import { eq, gt, sql } from 'drizzle-orm';
 import Fastify, { type FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { AvatarService } from './auth/avatar.js';
 import { authRoutes } from './auth/routes.js';
 import { tokenRoutes } from './auth/tokens.js';
 import { resolvePrincipal, requiredScope, type Principal } from './auth/principal.js';
@@ -62,7 +63,9 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   app.setErrorHandler(problemHandler);
   await app.register(cookie, { secret: config.SECRET_KEY });
   await app.register(websocket, { options: { maxPayload: 1024 * 1024 } });
-  await app.register(authRoutes, { config, db });
+  const avatars = new AvatarService(db, sync, hub, app.log, fetchImpl);
+  app.addHook('onClose', async () => avatars.stop());
+  await app.register(authRoutes, { config, db, avatars });
 
   // Used by the Docker/Compose health check: healthy only if the database answers.
   app.get('/healthz', async (_request, reply) => {
@@ -107,6 +110,17 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
     api.addHook('preHandler', requireUser);
 
     api.get('/ws', { websocket: true }, (socket, request) => hub.attach(socket, request.userId));
+
+    // Profile pictures of the people on one's lists (only for logged-in users, also guests).
+    api.get('/avatars/:file', async (request, reply) => {
+      const { file } = z.object({ file: z.string().regex(/^[0-9a-f-]{36}\.webp$/) }).parse(request.params);
+      const { v } = z.object({ v: z.string().optional() }).parse(request.query);
+      const avatar = await avatars.get(file.slice(0, 36));
+      if (!avatar) throw new ApiError(404, 'not_found', 'Kein Profilbild');
+      reply.header('Content-Type', 'image/webp');
+      reply.header('Cache-Control', v === avatar.version ? 'private, max-age=31536000, immutable' : 'private, no-cache');
+      return reply.send(avatar.data);
+    });
 
     api.get('/api/v1/me', async (request) => {
       const [u] = await db.select().from(users).where(eq(users.id, request.userId));
@@ -189,7 +203,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
     app.setNotFoundHandler((request, reply) => {
       // Client-side routes get the app shell; missing files (e.g. old asset hashes) get a real 404.
       const path = request.url.split('?')[0]!;
-      if (request.method === 'GET' && !/^\/(api|auth|ws|icons)\b/.test(path) && !/\.[a-z0-9]+$/i.test(path)) {
+      if (request.method === 'GET' && !/^\/(api|auth|ws|icons|avatars)\b/.test(path) && !/\.[a-z0-9]+$/i.test(path)) {
         return reply.header('Cache-Control', 'no-cache').sendFile('index.html');
       }
       return reply.code(404).send({ error: 'not_found' });
@@ -198,5 +212,5 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
     app.log.warn('Kein Web-Build gefunden – es läuft nur die API.');
   }
 
-  return { app, sync, hub, mealie, api, icons };
+  return { app, sync, hub, mealie, api, icons, avatars };
 }

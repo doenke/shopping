@@ -2,6 +2,7 @@ import { CATEGORIES, formatAmount, SUGGESTED_PROPERTIES, UNITS, type Amount, typ
 import { useEffect, useRef, useState } from 'react';
 import { deleteItem, updateItem } from '../actions';
 import { useMe } from '../hooks';
+import { Avatar } from './Avatar';
 import { sync } from '../sync/engine';
 
 interface Props {
@@ -62,8 +63,8 @@ export function ItemEditor({ item, users, isTemplate = false, onClose }: Props) 
 
   const allProps = [...new Set([...SUGGESTED_PROPERTIES, ...item.properties, ...properties])];
   const sources = Array.isArray(item.attributes.sources) ? (item.attributes.sources as ItemSource[]) : [];
-  const checkedBy = item.checkedBy ? users.get(item.checkedBy)?.displayName : undefined;
-  const createdBy = item.createdBy ? users.get(item.createdBy)?.displayName : undefined;
+  const checkedBy = item.checkedBy ? users.get(item.checkedBy) : undefined;
+  const createdBy = item.createdBy ? users.get(item.createdBy) : undefined;
 
   return (
     <dialog ref={ref} className="sheet" onClose={onClose} onClick={(e) => e.target === ref.current && ref.current?.close()}>
@@ -150,8 +151,16 @@ export function ItemEditor({ item, users, isTemplate = false, onClose }: Props) 
         {sources.length > 0 && <p className="sources">Für: {sources.map((s) => s.label).join(', ')}</p>}
 
         <p className="sheet__meta">
-          {createdBy && <>Hinzugefügt von {createdBy}. </>}
-          {item.checked && checkedBy && <>Gekauft von {checkedBy}.</>}
+          {createdBy && (
+            <>
+              Hinzugefügt von <Avatar user={createdBy} size="xs" /> {createdBy.displayName}.{' '}
+            </>
+          )}
+          {item.checked && checkedBy && (
+            <>
+              Gekauft von <Avatar user={checkedBy} size="xs" /> {checkedBy.displayName}.
+            </>
+          )}
         </p>
 
         {item.catalogItemId && me && !me.isGuest && (

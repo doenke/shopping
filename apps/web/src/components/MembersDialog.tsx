@@ -1,6 +1,7 @@
 import type { ListRow, Me } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { shareList } from '../actions';
+import { Avatar } from './Avatar';
 
 interface Member {
   id: string;
@@ -48,9 +49,7 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
           {members?.map((m) => (
             <li key={m.id}>
               <label>
-                <span className="avatar" aria-hidden>
-                  {m.displayName.charAt(0).toUpperCase()}
-                </span>
+                <Avatar user={m} />
                 <span className="spacer">
                   {m.displayName}
                   {m.id === me.id && <small className="muted"> (du)</small>}

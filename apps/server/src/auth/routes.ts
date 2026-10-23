@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { Config } from '../config.js';
 import type { Db } from '../db/index.js';
 import { users } from '../db/schema.js';
+import type { AvatarService } from './avatar.js';
 import { createSession, destroySession } from './session.js';
 
 const FLOW_COOKIE = 'oidc_flow';
@@ -38,8 +39,8 @@ export async function upsertUser(db: Db, p: Profile): Promise<string> {
   return row!.id;
 }
 
-export async function authRoutes(app: FastifyInstance, opts: { config: Config; db: Db }): Promise<void> {
-  const { config, db } = opts;
+export async function authRoutes(app: FastifyInstance, opts: { config: Config; db: Db; avatars: AvatarService }): Promise<void> {
+  const { config, db, avatars } = opts;
   const secure = config.PUBLIC_URL.startsWith('https://');
   const redirectUri = `${config.PUBLIC_URL}/auth/callback`;
 
@@ -114,13 +115,16 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config; d
       claims = { ...info, ...claims };
     }
     const groups = Array.isArray(claims.groups) ? claims.groups.map(String) : [];
+    const picture = typeof claims.picture === 'string' ? claims.picture : null;
     const userId = await upsertUser(db, {
       subject: String(claims.sub),
       email: typeof claims.email === 'string' ? claims.email : null,
       displayName: String(claims.name ?? claims.preferred_username ?? claims.email ?? 'Unbekannt'),
-      avatarUrl: typeof claims.picture === 'string' ? claims.picture : null,
+      avatarUrl: picture,
       isAdmin: groups.includes(config.OIDC_ADMIN_GROUP),
     });
+    // In the background: the login does not wait for the picture.
+    void avatars.refresh(userId, picture, tokens.access_token);
     await createSession(db, userId, reply, secure);
     return reply.redirect(safeNext(flow.next));
   });

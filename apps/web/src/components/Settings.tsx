@@ -2,6 +2,7 @@ import { CATEGORIES, type Me } from '@shopping/shared';
 import { useEffect, useState } from 'react';
 import { logout } from '../actions';
 import { useLists } from '../hooks';
+import { Avatar } from './Avatar';
 import { TokensCard } from './TokensCard';
 import { sync } from '../sync/engine';
 
@@ -150,10 +151,13 @@ export function Settings({ me }: { me: Me }) {
 
       <div className="card">
         <h2>Konto</h2>
-        <p>
-          Angemeldet als <strong>{me.displayName}</strong>
-          {me.email && <> ({me.email})</>}
-        </p>
+        <div className="account">
+          <Avatar user={me} size="md" />
+          <p>
+            Angemeldet als <strong>{me.displayName}</strong>
+            {me.email && <> ({me.email})</>}
+          </p>
+        </div>
         <button className="btn" type="button" onClick={() => void logout()}>
           {me.isGuest ? 'Gastzugang beenden' : 'Abmelden'}
         </button>

@@ -25,12 +25,20 @@ const seq = () =>
     .notNull()
     .default(sql`nextval('sync_seq')`);
 
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => 'bytea',
+});
+
 export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
   oidcSubject: text('oidc_subject').notNull().unique(),
   email: text('email'),
   displayName: text('display_name').notNull(),
+  /** Picture URL from the OIDC provider (claim "picture"); only the server fetches it. */
   avatarUrl: text('avatar_url'),
+  /** Local copy of the picture (128 px WebP), so it works offline and for guests. */
+  avatar: bytea('avatar'),
+  avatarVersion: text('avatar_version'),
   isAdmin: boolean('is_admin').notNull().default(false),
   /** Guests come in through a list link without an account and only see that list. */
   isGuest: boolean('is_guest').notNull().default(false),
@@ -203,9 +211,6 @@ export const oauthClients = pgTable('oauth_clients', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-const bytea = customType<{ data: Buffer; driverData: Buffer }>({
-  dataType: () => 'bytea',
-});
 
 /** Household-wide settings (not per user), e.g. the icon generator. */
 export const appSettings = pgTable('app_settings', {

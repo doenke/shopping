@@ -26,7 +26,7 @@ export async function createTestApp(extra: { fetchImpl?: typeof fetch } = {}) {
     LOG_LEVEL: 'error',
     WEB_DIST: '/nonexistent',
   });
-  const { app, sync, icons } = await buildApp({ config, db, ...extra });
+  const { app, sync, icons, avatars } = await buildApp({ config, db, ...extra });
   await app.ready();
 
   return {
@@ -34,6 +34,7 @@ export async function createTestApp(extra: { fetchImpl?: typeof fetch } = {}) {
     db,
     sync,
     icons,
+    avatars,
     async login(userName: string) {
       const res = await app.inject({ method: 'POST', url: '/auth/dev', payload: { name: userName } });
       const cookie = res.cookies.find((c) => c.name === 'sid')!;

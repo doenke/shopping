@@ -1,6 +1,7 @@
 import { getCategory, itemSpecification, type ItemRow } from '@shopping/shared';
 import { useRef, useState } from 'react';
 import { iconUrl, useIconIndex } from '../icons';
+import { Avatar } from './Avatar';
 
 interface ItemIconProps {
   name: string;
@@ -28,6 +29,8 @@ interface TileProps {
   item: Pick<ItemRow, 'name' | 'categoryId' | 'amounts' | 'properties' | 'note'> & { catalogItemId?: string | null };
   variant?: 'open' | 'done' | 'suggestion';
   badge?: string;
+  /** Shown in front of the badge, e.g. who just checked the item. */
+  badgeUser?: { displayName: string; avatarUrl: string | null };
   /** Checked by someone else: fades out before it moves away. */
   fading?: boolean;
   onTap: () => void;
@@ -35,7 +38,7 @@ interface TileProps {
 }
 
 /** Bring!-style tile: tap to check (or add), long press / right click for details. */
-export function Tile({ item, variant = 'open', badge, fading = false, onTap, onLongPress }: TileProps) {
+export function Tile({ item, variant = 'open', badge, badgeUser, fading = false, onTap, onLongPress }: TileProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressed = useRef(false);
   const spec = itemSpecification(item);
@@ -75,7 +78,12 @@ export function Tile({ item, variant = 'open', badge, fading = false, onTap, onL
       <ItemIcon name={item.name} categoryId={item.categoryId} catalogItemId={item.catalogItemId} />
       <span className="tile__name">{item.name}</span>
       {spec && <span className="tile__spec">{spec}</span>}
-      {badge && <span className="tile__badge">{badge}</span>}
+      {badge && (
+        <span className="tile__badge">
+          {badgeUser && <Avatar user={badgeUser} size="xs" />}
+          {badge}
+        </span>
+      )}
     </button>
   );
 }

@@ -1024,3 +1024,30 @@ details.card > summary::before {
 details.card[open] > summary::before {
   content: '▾ ';
 }
+img.avatar {
+  object-fit: cover;
+  background: var(--surface-2);
+}
+.avatar--xs {
+  width: 16px;
+  height: 16px;
+  font-size: 0.6rem;
+}
+.avatar--md {
+  width: 44px;
+  height: 44px;
+  font-size: 1.1rem;
+}
+.tile__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.account p {
+  margin: 0;
+}
