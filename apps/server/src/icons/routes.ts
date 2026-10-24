@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { ApiError } from '../api/errors.js';
+import { CLAUDE_REVIEW_MODELS, CLAUDE_SVG_MODELS } from './anthropic.js';
 import { CLOUDFLARE_MODELS, OPENAI_MODELS, OPENAI_QUALITIES } from './generators.js';
 import type { IconService } from './service.js';
 
@@ -16,7 +17,7 @@ const Target = z.object({
 
 const SettingsBody = z.object({
   enabled: z.boolean().optional(),
-  provider: z.enum(['cloudflare', 'openai']).optional(),
+  provider: z.enum(['cloudflare', 'openai', 'claude']).optional(),
   candidates: z.number().int().min(1).max(4).optional(),
   style: z.string().max(1000).optional(),
   cloudflare: z
@@ -33,7 +34,16 @@ const SettingsBody = z.object({
       apiKey: z.string().trim().max(300).optional(),
       model: z.enum(OPENAI_MODELS).optional(),
       quality: z.enum(OPENAI_QUALITIES).optional(),
-      monthlyCapMilli: z.number().int().min(0).max(1_000_000).optional(),
+      monthlyCap: z.number().min(0).max(1000).optional(),
+    })
+    .optional(),
+  anthropic: z
+    .object({
+      apiKey: z.string().trim().max(300).optional(),
+      svgModel: z.enum(CLAUDE_SVG_MODELS).optional(),
+      review: z.boolean().optional(),
+      reviewModel: z.enum(CLAUDE_REVIEW_MODELS).optional(),
+      monthlyCap: z.number().min(0).max(1000).optional(),
     })
     .optional(),
 });
@@ -105,6 +115,7 @@ export async function iconRoutes(app: FastifyInstance, { icons, requireAccount }
         hint: z.string().trim().max(300).nullable().optional(),
         subject: z.string().trim().max(300).nullable().optional(),
         paid: z.boolean().optional(),
+        provider: z.enum(['cloudflare', 'openai', 'claude']).optional(),
         candidates: z.number().int().min(1).max(4).optional(),
       }).parse(request.body);
       await icons.regenerate(body.targetType, body.targetId, body);

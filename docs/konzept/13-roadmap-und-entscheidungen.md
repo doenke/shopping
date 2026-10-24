@@ -93,7 +93,13 @@ Umsetzungsdetails:
 - Auslieferung unter `/icons/item/{id}.webp?v=…` (öffentlich, unveränderlich gecacht),
   die PWA lädt alle freigegebenen Icons im Hintergrund vor und hat sie offline.
 - Automatische Prüfungen: Hintergrund sauber, Motiv nicht angeschnitten, nicht zu klein.
-  Eine OCR-Prüfung auf Schrift gibt es nicht; das erledigt der Blick in der Prüfansicht.
+- **Claude** (optional, Anthropic-Key): zeichnet Icons als SVG (Sonnet 5.5; Referenzen sind die
+  SVG-Quellen der Stil-Anker, sonst deren Bilder), prüft jeden Entwurf per Bildverständnis vor
+  (Haiku 5.5: erkennbar, keine Schrift, passt zum Stil – ersetzt die geplante OCR-Prüfung) und
+  beschreibt Mealie-Artikel. SVGs werden vor dem Rendern auf erlaubte Elemente geprüft (keine
+  externen Verweise, kein Text, kein Skript). Kosten werden aus den echten Token-Zahlen
+  verbucht, mit Monatsgrenze. Bei Sicherheits-Ablehnungen springt serverseitig ein anderes
+  Modell ein (`fallbacks: "default"`, nur Sonnet/Opus).
 
 ### Phase 5 – Ausbau (bei Bedarf)
 - Packlisten (zweiter Listentyp)

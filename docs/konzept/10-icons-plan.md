@@ -75,6 +75,7 @@ oder sauber freistellbar.
 |--------|--------|----------------|--------------|
 | **Cloudflare Workers AI, FLUX.2 [klein]** | tägliches Gratis-Kontingent (10.000 Neurons ≈ 150–200 Icons) | ✅ bis 4 | **Umgesetzt, erste Wahl** |
 | Google Gemini (Bild-Modell) | API inzwischen nur noch bezahlt | ✅ | nicht umgesetzt |
+| **Claude (SVG)** | bezahlt, Sonnet 5.5 ≈ 3–4 Cent/Entwurf | ✅ (SVG-Quellen) | **Umgesetzt**, zeichnet Vektor-Icons; dazu KI-Vorprüfung (Haiku) |
 | OpenAI `gpt-image` | bezahlt, wenige Cent pro Bild | ✅, transparenter Hintergrund nativ | **Bezahl-Option**, falls Gratis nicht reicht oder Qualität fehlt |
 | Replicate / fal (FLUX + Stil-Referenz bzw. LoRA) | bezahlt pro Bild/Training | ✅ | Option, wenn ein trainiertes Stil-LoRA nötig wird |
 

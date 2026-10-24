@@ -110,7 +110,7 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config; d
       return reply.redirect('/?login=failed');
     }
     let claims: Record<string, unknown> = { ...tokens.claims() };
-    if (!claims.groups || !claims.email) {
+    if (!claims.groups || !claims.email || !claims.picture) {
       const info = await oidc.fetchUserInfo(cfg, tokens.access_token, String(claims.sub)).catch(() => ({}));
       claims = { ...info, ...claims };
     }

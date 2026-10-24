@@ -63,7 +63,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   app.setErrorHandler(problemHandler);
   await app.register(cookie, { secret: config.SECRET_KEY });
   await app.register(websocket, { options: { maxPayload: 1024 * 1024 } });
-  const avatars = new AvatarService(db, sync, hub, app.log, fetchImpl);
+  const avatars = new AvatarService(db, sync, hub, app.log, fetchImpl, config.OIDC_ISSUER);
   app.addHook('onClose', async () => avatars.stop());
   await app.register(authRoutes, { config, db, avatars });
 

@@ -1051,3 +1051,11 @@ img.avatar {
 .account p {
   margin: 0;
 }
+.review__ai {
+  font-size: 0.8rem;
+  color: var(--ok);
+  max-width: 260px;
+}
+.review__candidate--doubtful .icon-preview {
+  opacity: 0.55;
+}

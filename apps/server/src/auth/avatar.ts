@@ -29,6 +29,8 @@ export class AvatarService {
     private readonly hub: SyncHub,
     private readonly log: FastifyBaseLogger,
     private readonly fetchImpl: typeof fetch = fetch,
+    /** OIDC issuer, for accounts without a stored picture URL (see refreshAll). */
+    private readonly issuer?: string,
   ) {}
 
   private async download(url: string, accessToken?: string): Promise<Buffer | null> {
@@ -85,8 +87,19 @@ export class AvatarService {
 
   /** Existing sessions last 90 days: pictures are also picked up at start and once a day. */
   async refreshAll(): Promise<void> {
-    const rows = await this.db.select({ id: users.id, url: users.avatarUrl }).from(users).where(isNotNull(users.avatarUrl));
-    for (const r of rows) await this.refresh(r.id, r.url);
+    const rows = await this.db
+      .select({ id: users.id, url: users.avatarUrl, subject: users.oidcSubject, isGuest: users.isGuest, version: users.avatarVersion })
+      .from(users);
+    for (const r of rows) {
+      if (r.url) {
+        await this.refresh(r.id, r.url);
+      } else if (this.issuer && !r.isGuest && !r.subject.startsWith('dev:')) {
+        // Accounts from before the picture was used (or whose ID token had no "picture"):
+        // Pocket ID serves every profile picture at a fixed public address. Other providers
+        // answer 404 there, which just means "no picture".
+        await this.refresh(r.id, `${this.issuer.replace(/\/$/, '')}/api/users/${encodeURIComponent(r.subject)}/profile-picture.png`);
+      }
+    }
   }
 
   startScheduler(): void {

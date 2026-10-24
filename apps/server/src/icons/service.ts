@@ -10,7 +10,8 @@ import { currentSeq, stableUuid } from '../db/seed.js';
 import type { SyncHub } from '../sync/hub.js';
 import type { SyncService } from '../sync/service.js';
 import { ApiError } from '../api/errors.js';
-import { CloudflareGenerator, OpenAiGenerator, QuotaExceeded, type IconGenerator } from './generators.js';
+import { ClaudeReviewer, ClaudeSvgGenerator, type ReviewVerdict } from './anthropic.js';
+import { CloudflareGenerator, OpenAiGenerator, QuotaExceeded, type IconGenerator, type ProviderId } from './generators.js';
 import { processIcon, referenceImage } from './image.js';
 import { buildPrompt, DEFAULT_STYLE } from './prompt.js';
 import { ANCHOR_ITEMS, CATEGORY_SUBJECTS, SEED_SUBJECTS } from './subjects.js';
@@ -22,11 +23,14 @@ const TICK_MS = 5 * 60_000;
 export interface IconSettings {
   /** Works through the queue on its own (daily budget permitting). */
   enabled: boolean;
-  provider: 'cloudflare' | 'openai';
+  provider: ProviderId;
   candidates: number;
   style: string;
   cloudflare: { accountId: string | null; token: string | null; model: string; dailyLimit: number; size: number };
-  openai: { apiKey: string | null; model: string; quality: string; monthlyCapMilli: number };
+  /** monthlyCap in € (or $) – stops paid generation for the rest of the month. */
+  openai: { apiKey: string | null; model: string; quality: string; monthlyCap: number };
+  /** Claude: draws SVG icons, pre-reviews pictures, describes items. One cap for all three. */
+  anthropic: { apiKey: string | null; svgModel: string; review: boolean; reviewModel: string; monthlyCap: number };
   pausedUntil: string | null;
   pauseReason: string | null;
 }
@@ -37,15 +41,19 @@ const DEFAULTS: IconSettings = {
   candidates: 2,
   style: DEFAULT_STYLE,
   cloudflare: { accountId: null, token: null, model: 'flux-2-klein-4b', dailyLimit: 150, size: 512 },
-  openai: { apiKey: null, model: 'gpt-image-1-mini', quality: 'medium', monthlyCapMilli: 10_000 },
+  openai: { apiKey: null, model: 'gpt-image-1-mini', quality: 'medium', monthlyCap: 10 },
+  anthropic: { apiKey: null, svgModel: 'claude-sonnet-5-5', review: true, reviewModel: 'claude-haiku-5-5', monthlyCap: 10 },
   pausedUntil: null,
   pauseReason: null,
 };
 
-export type SettingsUpdate = Partial<Omit<IconSettings, 'cloudflare' | 'openai' | 'pausedUntil' | 'pauseReason'>> & {
+export type SettingsUpdate = Partial<Omit<IconSettings, 'cloudflare' | 'openai' | 'anthropic' | 'pausedUntil' | 'pauseReason'>> & {
   cloudflare?: Partial<IconSettings['cloudflare']>;
   openai?: Partial<IconSettings['openai']>;
+  anthropic?: Partial<IconSettings['anthropic']>;
 };
+
+const PROVIDER_NAMES: Record<ProviderId, string> = { cloudflare: 'Cloudflare', openai: 'OpenAI', claude: 'Claude' };
 
 type RunResult = 'idle' | 'done' | 'paused' | 'budget' | 'failed' | 'unconfigured';
 
@@ -78,11 +86,16 @@ export class IconService {
   async settings(): Promise<IconSettings> {
     const [row] = await this.db.select().from(appSettings).where(eq(appSettings.key, 'icons'));
     const v = (row?.value ?? {}) as Partial<IconSettings>;
+    const openai = { ...DEFAULTS.openai, ...v.openai } as IconSettings['openai'] & { monthlyCapMilli?: number };
+    // Older settings stored the cap in thousandths.
+    if (openai.monthlyCapMilli !== undefined && v.openai?.monthlyCap === undefined) openai.monthlyCap = openai.monthlyCapMilli / 1000;
+    delete openai.monthlyCapMilli;
     return {
       ...DEFAULTS,
       ...v,
       cloudflare: { ...DEFAULTS.cloudflare, ...v.cloudflare },
-      openai: { ...DEFAULTS.openai, ...v.openai },
+      openai,
+      anthropic: { ...DEFAULTS.anthropic, ...v.anthropic },
     };
   }
 
@@ -100,6 +113,7 @@ export class IconService {
       ...s,
       cloudflare: { ...s.cloudflare, token: undefined, hasToken: !!s.cloudflare.token },
       openai: { ...s.openai, apiKey: undefined, hasKey: !!s.openai.apiKey },
+      anthropic: { ...s.anthropic, apiKey: undefined, hasKey: !!s.anthropic.apiKey },
     };
   }
 
@@ -110,13 +124,15 @@ export class IconService {
       ...u,
       cloudflare: { ...s.cloudflare, ...u.cloudflare },
       openai: { ...s.openai, ...u.openai },
+      anthropic: { ...s.anthropic, ...u.anthropic },
     };
     // Secrets: empty string removes, undefined keeps.
     if (u.cloudflare?.token !== undefined) next.cloudflare.token = u.cloudflare.token ? this.secrets.seal(u.cloudflare.token) : null;
     if (u.openai?.apiKey !== undefined) next.openai.apiKey = u.openai.apiKey ? this.secrets.seal(u.openai.apiKey) : null;
+    if (u.anthropic?.apiKey !== undefined) next.anthropic.apiKey = u.anthropic.apiKey ? this.secrets.seal(u.anthropic.apiKey) : null;
     if (u.style !== undefined && !u.style.trim()) next.style = DEFAULT_STYLE;
     // New credentials or provider: try again right away instead of waiting for the pause to end.
-    if (u.cloudflare?.token || u.openai?.apiKey || u.provider) {
+    if (u.cloudflare?.token || u.openai?.apiKey || u.anthropic?.apiKey || u.provider) {
       next.pausedUntil = null;
       next.pauseReason = null;
     }
@@ -130,16 +146,25 @@ export class IconService {
     this.log.info({ until, reason }, 'Icon-Erzeugung pausiert');
   }
 
-  generator(s: IconSettings, paid: boolean): IconGenerator | null {
+  /** The generator for a provider, or null when it is not set up. */
+  generator(s: IconSettings, provider: ProviderId): IconGenerator | null {
     const cf = s.cloudflare;
     const oa = s.openai;
-    const cloudflare =
-      cf.accountId && cf.token
-        ? new CloudflareGenerator({ accountId: cf.accountId, token: this.secrets.open(cf.token), model: cf.model, size: cf.size, fetchImpl: this.fetchImpl })
-        : null;
-    const openai = oa.apiKey ? new OpenAiGenerator({ apiKey: this.secrets.open(oa.apiKey), model: oa.model, quality: oa.quality, fetchImpl: this.fetchImpl }) : null;
-    if (paid) return openai;
-    return s.provider === 'openai' ? openai : cloudflare;
+    const an = s.anthropic;
+    switch (provider) {
+      case 'cloudflare':
+        return cf.accountId && cf.token
+          ? new CloudflareGenerator({ accountId: cf.accountId, token: this.secrets.open(cf.token), model: cf.model, size: cf.size, fetchImpl: this.fetchImpl })
+          : null;
+      case 'openai':
+        return oa.apiKey ? new OpenAiGenerator({ apiKey: this.secrets.open(oa.apiKey), model: oa.model, quality: oa.quality, fetchImpl: this.fetchImpl }) : null;
+      case 'claude':
+        return an.apiKey ? new ClaudeSvgGenerator({ apiKey: this.secrets.open(an.apiKey), model: an.svgModel, fetchImpl: this.fetchImpl }) : null;
+    }
+  }
+
+  private claude(s: IconSettings, model = s.anthropic.reviewModel): ClaudeReviewer | null {
+    return s.anthropic.apiKey ? new ClaudeReviewer(this.secrets.open(s.anthropic.apiKey), model, this.fetchImpl) : null;
   }
 
   // ---- budget ------------------------------------------------------------------
@@ -149,26 +174,31 @@ export class IconService {
     const [row] = await this.db
       .select({
         today: sql<number>`coalesce(sum(${iconUsage.images}) FILTER (WHERE ${iconUsage.day} = ${today()}), 0)::int`,
-        monthCost: sql<number>`coalesce(sum(${iconUsage.costMilli}) FILTER (WHERE to_char(${iconUsage.day}, 'YYYY-MM') = ${month}), 0)::int`,
+        monthCost: sql<number>`coalesce(sum(${iconUsage.costMicro}) FILTER (WHERE to_char(${iconUsage.day}, 'YYYY-MM') = ${month}), 0)::int`,
       })
       .from(iconUsage)
       .where(eq(iconUsage.provider, provider));
     return { today: row?.today ?? 0, monthCost: row?.monthCost ?? 0 };
   }
 
-  private async withinBudget(s: IconSettings, gen: IconGenerator): Promise<boolean> {
-    const u = await this.usage(gen.provider);
-    if (gen.paid) return u.monthCost + gen.costMilli <= s.openai.monthlyCapMilli;
-    return u.today < s.cloudflare.dailyLimit;
+  private monthlyCapMicro(s: IconSettings, provider: ProviderId): number {
+    return Math.round((provider === 'openai' ? s.openai.monthlyCap : s.anthropic.monthlyCap) * 1_000_000);
   }
 
-  private async recordUsage(gen: IconGenerator): Promise<void> {
+  /** Free tier: images per day. Paid providers: estimated cost against the monthly cap. */
+  private async withinBudget(s: IconSettings, provider: ProviderId, nextCostMicro: number): Promise<boolean> {
+    const u = await this.usage(provider);
+    if (provider === 'cloudflare') return u.today < s.cloudflare.dailyLimit;
+    return u.monthCost + nextCostMicro <= this.monthlyCapMicro(s, provider);
+  }
+
+  private async recordUsage(provider: ProviderId, images: number, costMicro: number): Promise<void> {
     await this.db
       .insert(iconUsage)
-      .values({ day: today(), provider: gen.provider, images: 1, costMilli: gen.costMilli })
+      .values({ day: today(), provider, images, costMicro })
       .onConflictDoUpdate({
         target: [iconUsage.day, iconUsage.provider],
-        set: { images: sql`${iconUsage.images} + 1`, costMilli: sql`${iconUsage.costMilli} + ${gen.costMilli}` },
+        set: { images: sql`${iconUsage.images} + ${images}`, costMicro: sql`${iconUsage.costMicro} + ${costMicro}` },
       });
   }
 
@@ -176,7 +206,7 @@ export class IconService {
 
   private async anchors() {
     return this.db
-      .select({ id: icons.id, targetType: icons.targetType, targetId: icons.targetId, image: icons.image })
+      .select({ id: icons.id, targetType: icons.targetType, targetId: icons.targetId, image: icons.image, svg: icons.svg })
       .from(icons)
       .where(and(eq(icons.status, 'approved'), eq(icons.isAnchor, true)))
       .orderBy(asc(icons.reviewedAt));
@@ -185,7 +215,7 @@ export class IconService {
   async enqueue(
     targetType: IconTarget,
     targetId: string,
-    opts: { priority?: number; candidates?: number; paid?: boolean; hint?: string | null } = {},
+    opts: { priority?: number; candidates?: number; provider?: ProviderId | null; hint?: string | null } = {},
   ): Promise<void> {
     await this.assertTarget(targetType, targetId);
     const s = await this.settings();
@@ -194,7 +224,8 @@ export class IconService {
       targetId,
       priority: opts.priority ?? 2000,
       candidates: Math.min(4, Math.max(1, opts.candidates ?? s.candidates)),
-      paid: opts.paid ?? false,
+      provider: opts.provider ?? null,
+      paid: !!opts.provider && opts.provider !== 'cloudflare',
       hint: opts.hint ?? null,
     };
     await this.db
@@ -203,7 +234,7 @@ export class IconService {
       .onConflictDoUpdate({
         target: [iconJobs.targetType, iconJobs.targetId],
         targetWhere: sql`status = 'queued'`,
-        set: { priority: sql`greatest(${iconJobs.priority}, ${values.priority})`, candidates: values.candidates, paid: values.paid, hint: values.hint, updatedAt: sql`now()` },
+        set: { priority: sql`greatest(${iconJobs.priority}, ${values.priority})`, candidates: values.candidates, provider: values.provider, paid: values.paid, hint: values.hint, attempts: 0, updatedAt: sql`now()` },
       });
   }
 
@@ -257,7 +288,7 @@ export class IconService {
   }
 
   /** What the picture shows: catalog description, built-in list, a text model, or the German name. */
-  private async subject(targetType: IconTarget, targetId: string, gen: IconGenerator): Promise<{ subject: string; name: string }> {
+  private async subject(targetType: IconTarget, targetId: string, gen: IconGenerator, s: IconSettings): Promise<{ subject: string; name: string }> {
     if (targetType === 'category') {
       return { subject: CATEGORY_SUBJECTS[targetId] ?? 'plain shopping bag', name: getCategory(targetId).name };
     }
@@ -265,6 +296,19 @@ export class IconService {
     if (!item) throw new Error('Artikel nicht gefunden');
     if (item.iconSubject) return { subject: item.iconSubject, name: item.name };
     let subject = SEED_SUBJECTS[item.name];
+    const claude = this.claude(s);
+    if (!subject && claude && (await this.withinBudget(s, 'claude', 1_000))) {
+      subject = await claude
+        .describe(item.name, getCategory(item.categoryId).name)
+        .then(async (r) => {
+          await this.recordUsage('claude', 0, r.costMicro);
+          return r.subject;
+        })
+        .catch((err: Error) => {
+          this.log.warn({ err: err.message }, 'Bildbeschreibung (Claude) fehlgeschlagen');
+          return undefined;
+        });
+    }
     if (!subject && gen instanceof CloudflareGenerator) {
       subject = await gen.describe(item.name, getCategory(item.categoryId).name).catch((err: Error) => {
         if (err instanceof QuotaExceeded) throw err;
@@ -289,37 +333,73 @@ export class IconService {
       .limit(1);
     if (!job) return 'idle';
 
-    const gen = this.generator(s, job.paid);
+    // Older jobs only knew "paid" (= OpenAI).
+    const providerId = (job.provider as ProviderId | null) ?? (job.paid ? 'openai' : s.provider);
+    const gen = this.generator(s, providerId);
     if (!gen) {
-      if (job.paid) {
-        await this.finishJob(job.id, 'failed', 'Kein Bezahl-Anbieter (OpenAI) eingerichtet');
+      if (providerId !== s.provider) {
+        await this.finishJob(job.id, 'failed', `${PROVIDER_NAMES[providerId]} ist nicht eingerichtet`);
         return 'failed';
       }
       return 'unconfigured';
     }
 
     let made = 0;
+    let passed = 0;
+    const verdicts: ReviewVerdict[] = [];
     try {
-      const { subject } = await this.subject(job.targetType, job.targetId, gen);
+      const { subject, name } = await this.subject(job.targetType, job.targetId, gen, s);
       const anchors = (await this.anchors()).filter((a) => !(a.targetType === job.targetType && a.targetId === job.targetId) && a.image);
       // The most recently approved anchors are used, at most as many as the provider takes.
       const refs = anchors.slice(-gen.maxReferences);
       const references = await Promise.all(
         refs.map((a) => (gen.background === 'key' ? referenceImage(a.image!) : sharp(a.image!).resize(448, 448).png().toBuffer())),
       );
-      const referenceSet = refs.map((a) => iconToken(a.id)).join(',') || null;
-      const prompt = buildPrompt({ subject, style: s.style, background: gen.background, withReferences: references.length > 0, hint: job.hint });
+      // SVG anchors are the best reference for SVG drawing; the pictures for everything else.
+      const svgAnchors = anchors.filter((a) => a.svg).slice(-gen.maxReferences);
+      const referenceSvgs = gen.provider === 'claude' && svgAnchors.length ? svgAnchors.map((a) => a.svg!) : undefined;
+      const referenceSet = (referenceSvgs ? svgAnchors : refs).map((a) => iconToken(a.id)).join(',') || null;
+      const prompt =
+        gen.provider === 'claude'
+          ? `Claude SVG: ${subject}${job.hint ? ` · ${job.hint}` : ''}`
+          : buildPrompt({ subject, style: s.style, background: gen.background, withReferences: references.length > 0, hint: job.hint });
+      const reviewer = s.anthropic.review ? this.claude(s) : null;
+      const reviewRefs = await Promise.all(anchors.slice(-3).map((a) => sharp(a.image!).png().toBuffer()));
 
       for (let n = 0; n < job.candidates; n++) {
-        if (!(await this.withinBudget(s, gen))) break;
+        if (!(await this.withinBudget(s, gen.provider, gen.costMicro))) break;
         const seed = randomInt(1, 2 ** 31 - 1);
-        const raw = await gen.generate({ prompt, references, seed });
-        await this.recordUsage(gen);
-        const processed = await processIcon(raw).catch((err: Error) => {
+        const result = await gen.generate({ prompt, references, referenceSvgs, seed, subject, style: s.style, hint: job.hint }).catch((err: Error) => {
+          // A broken SVG is one bad candidate, not a broken provider.
+          if (gen.provider === 'claude' && !(err instanceof QuotaExceeded) && /SVG|Element|Verweis|url\(|Inhalt|JSON/.test(err.message)) {
+            this.log.warn({ err: err.message }, 'SVG unbrauchbar');
+            return null;
+          }
+          throw err;
+        });
+        if (!result) continue;
+        await this.recordUsage(gen.provider, 1, result.costMicro);
+        const processed = await processIcon(result.image).catch((err: Error) => {
           this.log.warn({ err: err.message, target: job.targetId }, 'Icon unbrauchbar');
           return null;
         });
         if (!processed) continue;
+        // AI pre-review: catches unrecognisable pictures, text and broken ones before a person looks.
+        let aiReview: ReviewVerdict | null = null;
+        if (reviewer && (await this.withinBudget(s, 'claude', 2_000))) {
+          aiReview = await reviewer
+            .review(processed.image, { name, subject }, reviewRefs)
+            .then(async (r) => {
+              await this.recordUsage('claude', 0, r.costMicro);
+              return r.verdict;
+            })
+            .catch((err: Error) => {
+              this.log.warn({ err: err.message }, 'KI-Vorprüfung fehlgeschlagen');
+              return null;
+            });
+        }
+        if (aiReview) verdicts.push(aiReview);
+        if (!aiReview || aiReview.ok) passed++;
         await this.db.insert(icons).values({
           targetType: job.targetType,
           targetId: job.targetId,
@@ -329,6 +409,8 @@ export class IconService {
           seed,
           referenceSet,
           checks: { ...processed.checks },
+          aiReview,
+          svg: result.svg ?? null,
           image: processed.image,
           thumb: processed.thumb,
         });
@@ -349,7 +431,16 @@ export class IconService {
       return 'failed';
     }
 
-    if (!made && !(await this.withinBudget(s, gen))) return 'budget';
+    if (!made && !(await this.withinBudget(s, gen.provider, gen.costMicro))) return 'budget';
+    // Everything failed the AI pre-review: one more round, with what was wrong as a hint.
+    if (made && !passed && job.attempts === 0) {
+      const reason = verdicts.map((v) => v.shows).filter(Boolean).slice(0, 2).join('; ');
+      await this.db
+        .update(iconJobs)
+        .set({ attempts: 1, hint: [job.hint, reason ? `clearly recognisable, not like: ${reason}` : null].filter(Boolean).join('. '), updatedAt: sql`now()` })
+        .where(eq(iconJobs.id, job.id));
+      return 'done';
+    }
     await this.finishJob(job.id, made ? 'done' : 'failed', made ? null : 'Kein brauchbares Bild entstanden');
     return made ? 'done' : 'failed';
   }
@@ -460,7 +551,7 @@ export class IconService {
   async regenerate(
     targetType: IconTarget,
     targetId: string,
-    opts: { hint?: string | null; subject?: string | null; paid?: boolean; candidates?: number; priority?: number },
+    opts: { hint?: string | null; subject?: string | null; provider?: ProviderId | null; paid?: boolean; candidates?: number; priority?: number },
   ): Promise<void> {
     await this.assertTarget(targetType, targetId);
     if (targetType === 'item' && opts.subject !== undefined) {
@@ -471,7 +562,8 @@ export class IconService {
       .update(icons)
       .set({ status: 'rejected', image: null, thumb: null })
       .where(and(eq(icons.targetType, targetType), eq(icons.targetId, targetId), eq(icons.status, 'candidate')));
-    await this.enqueue(targetType, targetId, { hint: opts.hint, paid: opts.paid, candidates: opts.candidates, priority: opts.priority ?? 2000 });
+    const provider = opts.provider ?? (opts.paid ? 'openai' : null);
+    await this.enqueue(targetType, targetId, { hint: opts.hint, provider, candidates: opts.candidates, priority: opts.priority ?? 2000 });
     this.kick();
   }
 
@@ -515,6 +607,7 @@ export class IconService {
         targetId: icons.targetId,
         status: icons.status,
         checks: icons.checks,
+        aiReview: icons.aiReview,
         provider: icons.provider,
         model: icons.model,
         createdAt: icons.createdAt,
@@ -543,7 +636,13 @@ export class IconService {
     }
     return [...targets.values()]
       .filter((t) => t.candidates.length)
-      .map((t) => ({ ...t, candidates: t.candidates.map((c) => ({ id: c.id, checks: c.checks, provider: c.provider, model: c.model, createdAt: c.createdAt })) }));
+      .map((t) => ({
+        ...t,
+        // What the AI pre-review sorted out comes last – still visible, a person has the last word.
+        candidates: t.candidates
+          .map((c) => ({ id: c.id, checks: c.checks, aiReview: c.aiReview, provider: c.provider, model: c.model, createdAt: c.createdAt }))
+          .sort((a, b) => Number(a.aiReview?.ok === false) - Number(b.aiReview?.ok === false)),
+      }));
   }
 
   /** All approved icons, for the overview and to pick style references. */
@@ -569,6 +668,7 @@ export class IconService {
     const anchors = (await this.anchors()).length;
     const cf = await this.usage('cloudflare');
     const oa = await this.usage('openai');
+    const an = await this.usage('claude');
     const failedJobs = await this.db
       .select({ id: iconJobs.id, targetType: iconJobs.targetType, targetId: iconJobs.targetId, error: iconJobs.error, updatedAt: iconJobs.updatedAt })
       .from(iconJobs)
@@ -587,7 +687,7 @@ export class IconService {
       candidates: counts?.candidates ?? 0,
       queued: counts?.queued ?? 0,
       failed: failedJobs.map((j) => ({ ...j, name: name(j).name })),
-      usage: { cloudflareToday: cf.today, openaiMonthCostMilli: oa.monthCost },
+      usage: { cloudflareToday: cf.today, openaiMonth: oa.monthCost / 1_000_000, claudeMonth: an.monthCost / 1_000_000 },
       running: this.draining !== null,
     };
   }

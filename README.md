@@ -49,7 +49,11 @@ eingebautem MCP-Server.
 4. Ab vier Stil-Referenzen „Automatisch im Hintergrund“ einschalten: Kategorien zuerst, dann die
    Artikel nach Häufigkeit, bis zum Tageslimit (Standard 150 Bilder/Tag). Entwürfe kommen in die
    Prüfung; nichts erscheint in der App ohne Freigabe.
-5. Optional einen OpenAI-Key für „Mit Bezahl-Modell neu“ (mit Monatsgrenze in €).
+5. Optional einen **Anthropic-Key** (Claude): Claude zeichnet Icons als SVG (Sonnet, etwa 3–4 Cent
+   pro Entwurf), prüft jeden Entwurf vorab („erkennbar? Schrift? passt zum Stil?“, Haiku, unter 0,1 Cent)
+   und beschreibt Artikel aus Mealie. Was die Vorprüfung aussortiert, steht hinten und ist
+   blass, bleibt aber wählbar; fällt alles durch, gibt es automatisch einen zweiten Versuch.
+6. Optional einen OpenAI-Key (gpt-image). Für Claude und OpenAI gilt je eine Monatsgrenze in €.
 
 In der App kann jeder über das Artikel-Menü „Icon gefällt mir nicht“ melden.
 

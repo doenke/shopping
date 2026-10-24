@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { AvatarService } from '../src/auth/avatar.js';
 import { users } from '../src/db/schema.js';
 import { createTestApp } from './helpers.js';
 
@@ -13,6 +14,8 @@ const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => 
   const url = String(input);
   const auth = (init?.headers as Record<string, string>)?.authorization;
   requests.push({ url, auth });
+  if (url === 'https://id.example/api/users/pocket-sub-1/profile-picture.png') return new Response(new Uint8Array(picture), { headers: { 'content-type': 'image/png' } });
+  if (url !== IDP && url.startsWith('https://id.example/api/users/')) return new Response('{}', { status: 404, headers: { 'content-type': 'application/json' } });
   if (url !== IDP) return new Response('down', { status: 502 });
   if (needsToken && auth !== 'Bearer at-1') return new Response('unauthorized', { status: 401 });
   return new Response(new Uint8Array(picture), { headers: { 'content-type': 'image/png' } });
@@ -68,5 +71,25 @@ describe('profile pictures from OIDC', () => {
     await t.avatars.refresh(ben.id, null);
     const [gone] = await t.db.select({ v: users.avatarVersion }).from(users).where(eq(users.id, ben.id));
     expect(gone!.v).toBeNull();
+  });
+
+  it('finds the picture of existing accounts without a stored URL (Pocket ID address)', async () => {
+    const [carla] = await t.db
+      .insert(users)
+      .values({ id: '00000000-0000-4000-8000-0000000000c1', oidcSubject: 'pocket-sub-1', displayName: 'Carla' })
+      .returning({ id: users.id });
+    const [dora] = await t.db
+      .insert(users)
+      .values({ id: '00000000-0000-4000-8000-0000000000d1', oidcSubject: 'pocket-sub-2', displayName: 'Dora' })
+      .returning({ id: users.id });
+    const service = new AvatarService(t.db, t.sync, { notify: () => {} } as never, t.app.log, fakeFetch, 'https://id.example/');
+    requests = [];
+    await service.refreshAll();
+    expect(requests.map((r) => r.url)).toContain('https://id.example/api/users/pocket-sub-1/profile-picture.png');
+    // Dev accounts are not asked for.
+    expect(requests.some((r) => r.url.includes('dev%3A'))).toBe(false);
+    const rows = await t.db.select({ id: users.id, v: users.avatarVersion }).from(users);
+    expect(rows.find((r) => r.id === carla!.id)!.v).toMatch(/^[0-9a-f]{10}$/);
+    expect(rows.find((r) => r.id === dora!.id)!.v).toBeNull();
   });
 });

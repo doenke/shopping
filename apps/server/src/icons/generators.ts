@@ -4,25 +4,43 @@
  *
  * - Cloudflare Workers AI, FLUX.2 [klein]: daily free allocation, up to 4 style references.
  * - OpenAI gpt-image: paid, native transparency, used as fallback ("mit Bezahl-Modell").
+ * - Claude (anthropic.ts): draws the icon as SVG; paid, very consistent style.
  */
+
+export type ProviderId = 'cloudflare' | 'openai' | 'claude';
 
 export interface GenerateRequest {
   prompt: string;
   /** Style references (PNG), already prepared for the provider's background. */
   references: Buffer[];
+  /** SVG sources of anchors drawn by Claude (only the SVG generator uses them). */
+  referenceSvgs?: string[];
   seed: number;
+  /** The parts of the prompt, for generators that write their own (Claude). */
+  subject: string;
+  style: string;
+  hint?: string | null;
+}
+
+export interface GenerateResult {
+  /** PNG (or anything sharp reads). */
+  image: Buffer;
+  /** What this image cost, in millionths. */
+  costMicro: number;
+  /** SVG source, when the generator drew one. */
+  svg?: string;
 }
 
 export interface IconGenerator {
-  provider: 'cloudflare' | 'openai';
+  provider: ProviderId;
   model: string;
   paid: boolean;
   maxReferences: number;
   /** Background the generator is asked for: the key colour, or real transparency. */
   background: 'key' | 'transparent';
-  /** Estimated cost per image in thousandths (0.1 cent). */
-  costMilli: number;
-  generate(req: GenerateRequest): Promise<Buffer>;
+  /** Estimated cost per image in millionths, checked against the budget before a call. */
+  costMicro: number;
+  generate(req: GenerateRequest): Promise<GenerateResult>;
 }
 
 /** The provider's quota is used up: try again after `until`. */
@@ -67,7 +85,7 @@ export class CloudflareGenerator implements IconGenerator {
   readonly paid = false;
   readonly maxReferences = 4;
   readonly background = 'key' as const;
-  readonly costMilli = 0;
+  readonly costMicro = 0;
   readonly model: string;
   private readonly fetch: typeof fetch;
 
@@ -89,7 +107,7 @@ export class CloudflareGenerator implements IconGenerator {
     throw new Error(`Cloudflare ${res.status}: ${msg}`);
   }
 
-  async generate({ prompt, references, seed }: GenerateRequest): Promise<Buffer> {
+  async generate({ prompt, references, seed }: GenerateRequest): Promise<GenerateResult> {
     // FLUX.2 on Workers AI takes multipart form data, references as input_image_0..3.
     const form = new FormData();
     form.append('prompt', prompt);
@@ -108,7 +126,7 @@ export class CloudflareGenerator implements IconGenerator {
     if (!res.ok) await this.check(res);
     const body = (await res.json()) as { result?: { image?: string }; success?: boolean };
     if (!body.result?.image) throw new Error('Cloudflare: keine Bilddaten in der Antwort');
-    return Buffer.from(body.result.image, 'base64');
+    return { image: Buffer.from(body.result.image, 'base64'), costMicro: 0 };
   }
 
   /** Asks a small text model how to draw a German grocery item (used when the catalog has no description). */
@@ -144,11 +162,11 @@ export class CloudflareGenerator implements IconGenerator {
 export const OPENAI_MODELS = ['gpt-image-1-mini', 'gpt-image-1', 'gpt-image-1.5'] as const;
 export const OPENAI_QUALITIES = ['low', 'medium', 'high'] as const;
 
-/** Rough list prices for a 1024² image, in thousandths. Only used for the cost cap. */
+/** Rough list prices for a 1024² image, in millionths. Only used for the cost cap. */
 const OPENAI_COST: Record<string, Record<string, number>> = {
-  'gpt-image-1-mini': { low: 5, medium: 11, high: 36 },
-  'gpt-image-1': { low: 11, medium: 42, high: 167 },
-  'gpt-image-1.5': { low: 9, medium: 34, high: 133 },
+  'gpt-image-1-mini': { low: 5_000, medium: 11_000, high: 36_000 },
+  'gpt-image-1': { low: 11_000, medium: 42_000, high: 167_000 },
+  'gpt-image-1.5': { low: 9_000, medium: 34_000, high: 133_000 },
 };
 
 export interface OpenAiOptions {
@@ -164,16 +182,16 @@ export class OpenAiGenerator implements IconGenerator {
   readonly maxReferences = 4;
   readonly background = 'transparent' as const;
   readonly model: string;
-  readonly costMilli: number;
+  readonly costMicro: number;
   private readonly fetch: typeof fetch;
 
   constructor(private readonly opts: OpenAiOptions) {
     this.model = opts.model;
-    this.costMilli = OPENAI_COST[opts.model]?.[opts.quality] ?? 50;
+    this.costMicro = OPENAI_COST[opts.model]?.[opts.quality] ?? 50_000;
     this.fetch = opts.fetchImpl ?? fetch;
   }
 
-  async generate({ prompt, references }: GenerateRequest): Promise<Buffer> {
+  async generate({ prompt, references }: GenerateRequest): Promise<GenerateResult> {
     const headers = { authorization: `Bearer ${this.opts.apiKey}` };
     const common = { model: this.model, prompt, size: '1024x1024', quality: this.opts.quality, background: 'transparent', output_format: 'png', n: '1' };
     let res: Response;
@@ -203,6 +221,6 @@ export class OpenAiGenerator implements IconGenerator {
     const body = (await res.json()) as { data?: { b64_json?: string }[] };
     const b64 = body.data?.[0]?.b64_json;
     if (!b64) throw new Error('OpenAI: keine Bilddaten in der Antwort');
-    return Buffer.from(b64, 'base64');
+    return { image: Buffer.from(b64, 'base64'), costMicro: this.costMicro };
   }
 }

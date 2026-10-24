@@ -1,0 +1,1 @@
+ALTER TABLE "icon_usage" DROP COLUMN "cost_milli";

@@ -13,9 +13,14 @@ interface Checks {
 interface Candidate {
   id: string;
   checks: Checks;
+  aiReview: { ok: boolean; shows: string; reason: string } | null;
   provider: string;
   model: string;
 }
+
+type ProviderId = 'cloudflare' | 'openai' | 'claude';
+
+const PROVIDER_LABEL: Record<ProviderId, string> = { cloudflare: 'FLUX', openai: 'OpenAI', claude: 'Claude (SVG)' };
 
 interface ReviewTarget {
   targetType: 'item' | 'category';
@@ -40,11 +45,12 @@ interface GalleryIcon {
 interface Status {
   settings: {
     enabled: boolean;
-    provider: 'cloudflare' | 'openai';
+    provider: ProviderId;
     candidates: number;
     style: string;
     cloudflare: { accountId: string | null; hasToken: boolean; model: string; dailyLimit: number; size: number };
-    openai: { hasKey: boolean; model: string; quality: string; monthlyCapMilli: number };
+    openai: { hasKey: boolean; model: string; quality: string; monthlyCap: number };
+    anthropic: { hasKey: boolean; svgModel: string; review: boolean; reviewModel: string; monthlyCap: number };
     pausedUntil: string | null;
     pauseReason: string | null;
   };
@@ -57,7 +63,7 @@ interface Status {
   candidates: number;
   queued: number;
   failed: { id: string; targetType: string; targetId: string; name: string; error: string | null }[];
-  usage: { cloudflareToday: number; openaiMonthCostMilli: number };
+  usage: { cloudflareToday: number; openaiMonth: number; claudeMonth: number };
   running: boolean;
 }
 
@@ -81,8 +87,17 @@ const CHECK_TEXT: Record<keyof Checks, string> = {
   size: 'Motiv sehr klein',
 };
 
-function euro(milli: number): string {
-  return (milli / 1000).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+function euro(amount: number): string {
+  return amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+}
+
+/** Providers that are set up, for "mit … neu erzeugen". */
+function readyProviders(s: Status['settings']): ProviderId[] {
+  return [
+    ...(s.cloudflare.hasToken && s.cloudflare.accountId ? (['cloudflare'] as const) : []),
+    ...(s.openai.hasKey ? (['openai'] as const) : []),
+    ...(s.anthropic.hasKey ? (['claude'] as const) : []),
+  ];
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -158,7 +173,10 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
     }
   };
 
-  const configured = !!status && (status.settings.provider === 'openai' ? status.settings.openai.hasKey : status.settings.cloudflare.hasToken && !!status.settings.cloudflare.accountId);
+  const ready = status ? readyProviders(status.settings) : [];
+  const configured = !!status && ready.includes(status.settings.provider);
+  // Other set-up providers than the main one, for single re-tries.
+  const alternatives = status ? ready.filter((p) => p !== status.settings.provider) : [];
   const paused = status?.settings.pausedUntil && new Date(status.settings.pausedUntil) > new Date() ? new Date(status.settings.pausedUntil) : null;
 
   // Three random approved icons next to each candidate: does it break the style?
@@ -205,7 +223,8 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
         <p className="muted">
           {status.candidates} Entwürfe warten auf Prüfung · {status.queued} Aufträge in der Warteschlange · heute {status.usage.cloudflareToday} von{' '}
           {status.settings.cloudflare.dailyLimit} Gratis-Bildern
-          {status.settings.openai.hasKey && ` · diesen Monat ${euro(status.usage.openaiMonthCostMilli)} von ${euro(status.settings.openai.monthlyCapMilli)}`}
+          {status.settings.openai.hasKey && ` · OpenAI diesen Monat ${euro(status.usage.openaiMonth)} von ${euro(status.settings.openai.monthlyCap)}`}
+          {status.settings.anthropic.hasKey && ` · Claude diesen Monat ${euro(status.usage.claudeMonth)} von ${euro(status.settings.anthropic.monthlyCap)}`}
         </p>
         {paused && (
           <p className="error">
@@ -240,14 +259,14 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
             target={t}
             stylePhase={status.phase === 'style'}
             neighbours={neighbours.filter((n) => n.targetId !== t.targetId)}
-            paidAvailable={status.settings.openai.hasKey}
+            alternatives={alternatives}
             busy={busy}
             run={run}
           />
         ))}
       </section>
 
-      <Gallery icons={gallery} catalog={catalog} run={run} busy={busy} paidAvailable={status.settings.openai.hasKey} />
+      <Gallery icons={gallery} catalog={catalog} run={run} busy={busy} alternatives={alternatives} />
 
       {status.failed.length > 0 && (
         <section className="card">
@@ -272,22 +291,22 @@ interface ReviewCardProps {
   target: ReviewTarget;
   stylePhase: boolean;
   neighbours: GalleryIcon[];
-  paidAvailable: boolean;
+  alternatives: ProviderId[];
   busy: boolean;
   run: (fn: () => Promise<string | void>) => Promise<void>;
 }
 
-function ReviewCard({ target, stylePhase, neighbours, paidAvailable, busy, run }: ReviewCardProps) {
+function ReviewCard({ target, stylePhase, neighbours, alternatives, busy, run }: ReviewCardProps) {
   const [anchor, setAnchor] = useState(stylePhase);
   const [subject, setSubject] = useState(target.subject ?? '');
   const [hint, setHint] = useState('');
-  const regenerate = (paid: boolean) =>
+  const regenerate = (provider?: ProviderId) =>
     run(async () => {
       await post('/api/v1/icons/generate', {
         targetType: target.targetType,
         targetId: target.targetId,
         hint: hint || null,
-        paid,
+        ...(provider ? { provider } : {}),
         ...(target.targetType === 'item' && subject !== (target.subject ?? '') ? { subject } : {}),
       });
       return `Neue Entwürfe für „${target.name}“ sind in Auftrag.`;
@@ -305,9 +324,15 @@ function ReviewCard({ target, stylePhase, neighbours, paidAvailable, busy, run }
         {target.candidates.map((c) => {
           const problems = (Object.keys(CHECK_TEXT) as (keyof Checks)[]).filter((k) => c.checks[k] === false);
           return (
-            <figure key={c.id} className="review__candidate">
+            <figure key={c.id} className={`review__candidate${c.aiReview?.ok === false ? ' review__candidate--doubtful' : ''}`}>
               <Preview src={`/api/v1/icons/${c.id}/image`} categoryId={target.categoryId} />
               {problems.length > 0 && <figcaption className="review__warn">⚠ {problems.map((p) => CHECK_TEXT[p]).join(', ')}</figcaption>}
+              {c.aiReview && (
+                <figcaption className={c.aiReview.ok ? 'review__ai' : 'review__warn'} title={c.aiReview.shows}>
+                  {c.aiReview.ok ? '✓ KI-Vorprüfung' : '⚠ KI hat aussortiert'}: {c.aiReview.reason}
+                </figcaption>
+              )}
+              <small className="muted">{PROVIDER_LABEL[c.provider as ProviderId] ?? 'eigenes Bild'}</small>
               <button
                 type="button"
                 className="btn btn--primary"
@@ -345,14 +370,14 @@ function ReviewCard({ target, stylePhase, neighbours, paidAvailable, busy, run }
           <input value={hint} onChange={(e) => setHint(e.target.value)} placeholder="z. B. only one carrot, lighter color" />
         </label>
         <div className="row">
-          <button type="button" className="btn" disabled={busy} onClick={() => void regenerate(false)}>
+          <button type="button" className="btn" disabled={busy} onClick={() => void regenerate()}>
             Alle verwerfen und neu erzeugen
           </button>
-          {paidAvailable && (
-            <button type="button" className="btn" disabled={busy} onClick={() => void regenerate(true)}>
-              Mit Bezahl-Modell neu
+          {alternatives.map((p) => (
+            <button key={p} type="button" className="btn" disabled={busy} onClick={() => void regenerate(p)}>
+              Mit {PROVIDER_LABEL[p]} neu
             </button>
-          )}
+          ))}
           <label className="btn">
             Eigenes Bild …
             <input
@@ -378,12 +403,12 @@ function ReviewCard({ target, stylePhase, neighbours, paidAvailable, busy, run }
 interface GalleryProps {
   icons: GalleryIcon[];
   catalog: CatalogItem[];
-  paidAvailable: boolean;
+  alternatives: ProviderId[];
   busy: boolean;
   run: (fn: () => Promise<string | void>) => Promise<void>;
 }
 
-function Gallery({ icons, catalog, paidAvailable, busy, run }: GalleryProps) {
+function Gallery({ icons, catalog, alternatives, busy, run }: GalleryProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const sel = icons.find((i) => i.id === selected);
@@ -462,16 +487,17 @@ function Gallery({ icons, catalog, paidAvailable, busy, run }: GalleryProps) {
           >
             Neu erzeugen
           </button>
-          {paidAvailable && (
+          {alternatives.map((p) => (
             <button
+              key={p}
               type="button"
               className="btn"
               disabled={busy}
-              onClick={() => void run(async () => void (await post('/api/v1/icons/generate', { targetType: sel.targetType, targetId: sel.targetId, paid: true })))}
+              onClick={() => void run(async () => void (await post('/api/v1/icons/generate', { targetType: sel.targetType, targetId: sel.targetId, provider: p })))}
             >
-              Mit Bezahl-Modell neu
+              Mit {PROVIDER_LABEL[p]} neu
             </button>
-          )}
+          ))}
           <button
             type="button"
             className="btn btn--danger"
@@ -501,7 +527,12 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
   const [oaKey, setOaKey] = useState('');
   const [oaModel, setOaModel] = useState(s.openai.model);
   const [quality, setQuality] = useState(s.openai.quality);
-  const [cap, setCap] = useState(String(s.openai.monthlyCapMilli / 1000));
+  const [cap, setCap] = useState(String(s.openai.monthlyCap).replace('.', ','));
+  const [anKey, setAnKey] = useState('');
+  const [svgModel, setSvgModel] = useState(s.anthropic.svgModel);
+  const [review, setReview] = useState(s.anthropic.review);
+  const [reviewModel, setReviewModel] = useState(s.anthropic.reviewModel);
+  const [anCap, setAnCap] = useState(String(s.anthropic.monthlyCap).replace('.', ','));
   const [candidates, setCandidates] = useState(String(s.candidates));
   const [style, setStyle] = useState(s.style);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
@@ -526,12 +557,20 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
             ...(oaKey ? { apiKey: oaKey } : {}),
             model: oaModel,
             quality,
-            monthlyCapMilli: Math.round((Number(cap.replace(',', '.')) || 0) * 1000),
+            monthlyCap: Number(cap.replace(',', '.')) || 0,
+          },
+          anthropic: {
+            ...(anKey ? { apiKey: anKey } : {}),
+            svgModel,
+            review,
+            reviewModel,
+            monthlyCap: Number(anCap.replace(',', '.')) || 0,
           },
         }),
       });
       setCfToken('');
       setOaKey('');
+      setAnKey('');
       setMessage({ kind: 'ok', text: 'Gespeichert.' });
       onSaved();
     } catch (err) {
@@ -546,9 +585,10 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
       </summary>
       <label className="field">
         <span>Anbieter</span>
-        <select value={provider} onChange={(e) => setProvider(e.target.value as 'cloudflare' | 'openai')}>
+        <select value={provider} onChange={(e) => setProvider(e.target.value as ProviderId)}>
           <option value="cloudflare">Cloudflare Workers AI – FLUX.2 (Gratis-Kontingent)</option>
           <option value="openai">OpenAI gpt-image (bezahlt)</option>
+          <option value="claude">Claude – zeichnet SVG (bezahlt)</option>
         </select>
       </label>
 
@@ -616,6 +656,42 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
           <input inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} />
         </label>
       </div>
+
+      <h3>Claude (optional, bezahlt)</h3>
+      <p className="muted">
+        Claude malt keine Bilder, zeichnet aber Icons als SVG (sehr einheitlicher Stil, mit Sonnet etwa 3–4 Cent pro Entwurf). Außerdem prüft
+        Claude jeden Entwurf vor („erkennbar? Schrift? passt zum Stil?“, mit Haiku unter 0,1 Cent) und beschreibt Artikel aus Mealie. Key aus der
+        Anthropic Console; Preise in Dollar, hier als Euro gerechnet.
+      </p>
+      <label className="field">
+        <span>API-Key</span>
+        <input type="password" value={anKey} onChange={(e) => setAnKey(e.target.value)} placeholder={s.anthropic.hasKey ? 'gespeichert – leer lassen zum Behalten' : 'sk-ant-…'} autoComplete="off" />
+      </label>
+      <div className="field__row field__row--wrap">
+        <label className="field">
+          <span>Modell für SVG-Icons</span>
+          <select value={svgModel} onChange={(e) => setSvgModel(e.target.value)}>
+            <option value="claude-sonnet-5-5">Sonnet 5.5 (empfohlen)</option>
+            <option value="claude-opus-5-5">Opus 5.5 (beste, doppelter Preis)</option>
+            <option value="claude-haiku-5-5">Haiku 5.5 (sehr günstig, einfacher)</option>
+          </select>
+        </label>
+        <label className="field">
+          <span>Modell für die Vorprüfung</span>
+          <select value={reviewModel} onChange={(e) => setReviewModel(e.target.value)}>
+            <option value="claude-haiku-5-5">Haiku 5.5 (empfohlen)</option>
+            <option value="claude-sonnet-5-5">Sonnet 5.5 (genauer)</option>
+          </select>
+        </label>
+        <label className="field">
+          <span>Höchstens € pro Monat</span>
+          <input inputMode="decimal" value={anCap} onChange={(e) => setAnCap(e.target.value)} />
+        </label>
+      </div>
+      <label className="check">
+        <input type="checkbox" checked={review} onChange={(e) => setReview(e.target.checked)} />
+        KI-Vorprüfung: jeden Entwurf vorab ansehen, Unbrauchbares nach hinten sortieren und einmal neu versuchen
+      </label>
 
       <h3>Erzeugung</h3>
       <label className="field">

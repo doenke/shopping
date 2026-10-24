@@ -239,6 +239,10 @@ export const icons = pgTable(
     seed: integer('seed'),
     referenceSet: text('reference_set'),
     checks: jsonb('checks').$type<Record<string, boolean>>().notNull().default({}),
+    /** Verdict of the AI pre-review (Claude looks at the picture). */
+    aiReview: jsonb('ai_review').$type<{ ok: boolean; shows: string; reason: string; model: string } | null>(),
+    /** Source of icons drawn as SVG (Claude); used as style reference for later SVG icons. */
+    svg: text('svg'),
     /** 512 px master (WebP with alpha). */
     image: bytea('image'),
     /** 192 px WebP served to the app. */
@@ -261,6 +265,8 @@ export const iconJobs = pgTable(
     priority: integer('priority').notNull().default(0),
     candidates: integer('candidates').notNull().default(2),
     paid: boolean('paid').notNull().default(false),
+    /** Provider chosen in the review ("mit Claude neu"); null = the configured one. */
+    provider: text('provider'),
     /** Optional extra instructions from the review ("rounder", "only one"). */
     hint: text('hint'),
     status: text('status').$type<IconJobStatus>().notNull().default('queued'),
@@ -283,8 +289,8 @@ export const iconUsage = pgTable(
     day: date('day').notNull(),
     provider: text('provider').notNull(),
     images: integer('images').notNull().default(0),
-    /** Estimated cost in tenths of a cent. */
-    costMilli: integer('cost_milli').notNull().default(0),
+    /** Estimated cost in millionths of a dollar/euro (Claude calls cost fractions of a cent). */
+    costMicro: integer('cost_micro').notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.day, t.provider] })],
 );

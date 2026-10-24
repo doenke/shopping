@@ -43,6 +43,20 @@
       "when": 1792755676240,
       "tag": "0005_avatars",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792871028790,
+      "tag": "0006_claude",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792871029766,
+      "tag": "0007_drop_cost_milli",
+      "breakpoints": true
     }
   ]
 }
