@@ -25,6 +25,7 @@ interface Call {
 }
 const calls: Call[] = [];
 let failWith: { status: number; body: unknown } | null = null;
+let cutOff = false;
 
 const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => {
   const url = new URL(String(input));
@@ -37,7 +38,7 @@ const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => 
   const form = init!.body as FormData;
   const references = [0, 1, 2, 3].filter((i) => form.has(`input_image_${i}`)).length;
   calls.push({ model, prompt: String(form.get('prompt')), references });
-  return json({ result: { image: (await fakePicture()).toString('base64') }, success: true });
+  return json({ result: { image: (await fakePicture({ touchEdge: cutOff })).toString('base64') }, success: true });
 }) as typeof fetch;
 
 let t: Awaited<ReturnType<typeof createTestApp>>;
@@ -90,7 +91,7 @@ describe('icon post-processing', () => {
 
 describe('icon pipeline', () => {
   it('keeps secrets out of the settings it returns', async () => {
-    const res = await req('PUT', '/api/v1/icons/settings', { cloudflare: { accountId: 'acc', token: 'cf-token', dailyLimit: 20 } });
+    const res = await req('PUT', '/api/v1/icons/settings', { autoApprove: false, cloudflare: { accountId: 'acc', token: 'cf-token', dailyLimit: 20 } });
     expect(res.statusCode).toBe(200);
     expect(res.body).not.toContain('cf-token');
     expect(res.json().cloudflare.hasToken).toBe(true);
@@ -208,5 +209,38 @@ describe('icon pipeline', () => {
 
   it('is for logged-in accounts only', async () => {
     expect((await t.app.inject({ method: 'GET', url: '/api/v1/icons/status' })).statusCode).toBe(401);
+  });
+
+  it('approves automatically: the first good candidate goes live, bad ones wait for a person', async () => {
+    // Waiting candidates from before are approved when switching it on.
+    const before = (await req('GET', '/api/v1/icons/review')).json().targets.length;
+    expect(before).toBeGreaterThan(0);
+    await req('PUT', '/api/v1/icons/settings', { autoApprove: true });
+    const left = (await req('GET', '/api/v1/icons/review')).json().targets;
+    expect(left.length).toBeLessThan(before);
+
+    // New jobs: one picture is enough when it passes.
+    await req('POST', '/api/v1/icons/generate', { targetType: 'item', targetId: seedId('Zucker'), candidates: 3 });
+    calls.length = 0;
+    expect((await req('POST', '/api/v1/icons/run')).json().result).toBe('done');
+    expect(calls).toHaveLength(1);
+    const catalog = (await req('GET', '/api/v1/catalog')).json();
+    expect(catalog.items.find((i: { id: string }) => i.id === seedId('Zucker')).icon).toMatch(/^[0-9a-f]{10}$/);
+
+    // A cut-off picture fails a check: not approved, the app keeps the category icon.
+    cutOff = true;
+    await req('POST', '/api/v1/icons/generate', { targetType: 'item', targetId: seedId('Mehl'), candidates: 2 });
+    calls.length = 0;
+    expect((await req('POST', '/api/v1/icons/run')).json().result).toBe('done');
+    expect(calls).toHaveLength(2);
+    cutOff = false;
+    const after = (await req('GET', '/api/v1/catalog')).json();
+    expect(after.items.find((i: { id: string }) => i.id === seedId('Mehl')).icon).toBeNull();
+    const waiting = (await req('GET', '/api/v1/icons/review')).json().targets.find((x: { targetId: string }) => x.targetId === seedId('Mehl'));
+    expect(waiting.candidates).toHaveLength(2);
+  });
+
+  it('is for logged-in accounts only, too', async () => {
+    expect((await t.app.inject({ method: 'GET', url: '/api/v1/icons/review' })).statusCode).toBe(401);
   });
 });

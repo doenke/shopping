@@ -23,6 +23,8 @@ const TICK_MS = 5 * 60_000;
 export interface IconSettings {
   /** Works through the queue on its own (daily budget permitting). */
   enabled: boolean;
+  /** Approve the first candidate that passes all checks right away, no manual review. */
+  autoApprove: boolean;
   provider: ProviderId;
   candidates: number;
   style: string;
@@ -37,6 +39,7 @@ export interface IconSettings {
 
 const DEFAULTS: IconSettings = {
   enabled: false,
+  autoApprove: true,
   provider: 'cloudflare',
   candidates: 2,
   style: DEFAULT_STYLE,
@@ -59,6 +62,11 @@ type RunResult = 'idle' | 'done' | 'paused' | 'budget' | 'failed' | 'unconfigure
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** Good enough to go live without a person: all technical checks, and the AI pre-review if there was one. */
+export function passesChecks(checks: Record<string, boolean>, aiReview: ReviewVerdict | null): boolean {
+  return Object.values(checks).every(Boolean) && (aiReview === null || aiReview.ok);
 }
 
 /** Version token in icon URLs: a new approved icon gets a new URL, so caches never serve an old one. */
@@ -137,6 +145,7 @@ export class IconService {
       next.pauseReason = null;
     }
     await this.saveSettings(next);
+    if (u.autoApprove && !s.autoApprove) await this.autoApprovePending();
     if (next.enabled) this.kick();
   }
 
@@ -400,7 +409,7 @@ export class IconService {
         }
         if (aiReview) verdicts.push(aiReview);
         if (!aiReview || aiReview.ok) passed++;
-        await this.db.insert(icons).values({
+        const [inserted] = await this.db.insert(icons).values({
           targetType: job.targetType,
           targetId: job.targetId,
           provider: gen.provider,
@@ -413,8 +422,14 @@ export class IconService {
           svg: result.svg ?? null,
           image: processed.image,
           thumb: processed.thumb,
-        });
+        }).returning({ id: icons.id });
         made++;
+        // Automatic approval: the first good one goes live, no further candidates are paid for.
+        if (s.autoApprove && passesChecks({ ...processed.checks }, aiReview)) {
+          await this.approve(inserted!.id, null, anchors.length < MIN_ANCHORS ? true : undefined);
+          await this.finishJob(job.id, 'done');
+          return 'done';
+        }
       }
     } catch (err) {
       if (err instanceof QuotaExceeded) {
@@ -456,6 +471,7 @@ export class IconService {
       try {
         const s = await this.settings();
         if (!s.enabled) return;
+        if (s.autoApprove) await this.autoApprovePending();
         await this.enqueueMissing();
         let failures = 0;
         for (;;) {
@@ -496,7 +512,29 @@ export class IconService {
     this.hub.broadcast({ t: 'catalog', seq: await currentSeq(this.db) });
   }
 
-  async approve(iconId: string, userId: string, anchor?: boolean): Promise<void> {
+  /**
+   * Approves the best waiting candidate of every target that has none approved yet
+   * (after switching on automatic approval). Candidates that failed a check stay for a person.
+   */
+  async autoApprovePending(): Promise<number> {
+    const rows = await this.db
+      .select({ id: icons.id, targetType: icons.targetType, targetId: icons.targetId, checks: icons.checks, aiReview: icons.aiReview })
+      .from(icons)
+      .where(eq(icons.status, 'candidate'))
+      .orderBy(asc(icons.createdAt));
+    const done = new Set<string>();
+    let anchors = (await this.anchors()).length;
+    for (const r of rows) {
+      const key = `${r.targetType}:${r.targetId}`;
+      if (done.has(key) || !passesChecks(r.checks, r.aiReview)) continue;
+      done.add(key);
+      await this.approve(r.id, null, anchors < MIN_ANCHORS ? true : undefined);
+      anchors++;
+    }
+    return done.size;
+  }
+
+  async approve(iconId: string, userId: string | null, anchor?: boolean): Promise<void> {
     await this.sync.exclusive(() =>
       this.db.transaction(async (tx) => {
         const [icon] = await tx.select({ id: icons.id, targetType: icons.targetType, targetId: icons.targetId, status: icons.status }).from(icons).where(eq(icons.id, iconId));

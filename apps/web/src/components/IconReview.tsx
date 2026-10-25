@@ -45,6 +45,7 @@ interface GalleryIcon {
 interface Status {
   settings: {
     enabled: boolean;
+    autoApprove: boolean;
     provider: ProviderId;
     candidates: number;
     style: string;
@@ -207,9 +208,14 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
         <h2>Stand</h2>
         {status.phase === 'style' ? (
           <p>
-            <strong>Schritt 1: Stil finden.</strong> Für zwölf typische Artikel entstehen je drei Entwürfe ohne Vorlage. Nimm die, die gut
-            zusammenpassen, als <strong>Stil-Referenz ★</strong>. Ab {status.minAnchors} Stil-Referenzen ({status.anchors} bisher) werden alle
-            weiteren Icons mit diesen Referenzbildern im selben Stil erzeugt.
+            <strong>Schritt 1: Stil finden.</strong> Für zwölf typische Artikel entstehen Entwürfe ohne Vorlage.{' '}
+            {status.settings.autoApprove ? (
+              <>Die ersten {status.minAnchors}, die alle Prüfungen bestehen, werden automatisch zur <strong>Stil-Referenz ★</strong>.</>
+            ) : (
+              <>Nimm die, die gut zusammenpassen, als <strong>Stil-Referenz ★</strong>.</>
+            )}{' '}
+            Ab {status.minAnchors} Stil-Referenzen ({status.anchors} bisher) werden alle weiteren Icons mit diesen Referenzbildern im selben Stil
+            erzeugt.
           </p>
         ) : (
           <>
@@ -244,6 +250,14 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
             />
             Automatisch im Hintergrund (bis zum Tageslimit)
           </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={status.settings.autoApprove}
+              onChange={(e) => void run(async () => void (await api('/api/v1/icons/settings', { method: 'PUT', body: JSON.stringify({ autoApprove: e.target.checked }) })))}
+            />
+            Automatisch freigeben (was alle Prüfungen besteht)
+          </label>
         </div>
         {message && <p className={message.kind === 'ok' ? 'success' : 'error'}>{message.text}</p>}
       </section>
@@ -251,8 +265,16 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
       <SettingsForm status={status} open={!configured} onSaved={() => void load()} />
 
       <section>
-        <h2 className="section-title">Zur Prüfung {targets.length > 0 && <span className="count">{targets.length}</span>}</h2>
-        {targets.length === 0 && <p className="muted">Gerade gibt es nichts zu prüfen.</p>}
+        <h2 className="section-title">
+          {status.settings.autoApprove ? 'Nicht bestanden' : 'Zur Prüfung'} {targets.length > 0 && <span className="count">{targets.length}</span>}
+        </h2>
+        {status.settings.autoApprove && targets.length > 0 && (
+          <p className="muted">
+            Diese Entwürfe sind bei einer Prüfung durchgefallen und deshalb nicht freigegeben – die App zeigt dort das Kategorie-Icon. Du kannst
+            einen trotzdem nehmen, neu erzeugen lassen oder es dabei belassen.
+          </p>
+        )}
+        {targets.length === 0 && <p className="muted">{status.settings.autoApprove ? 'Alles bestanden.' : 'Gerade gibt es nichts zu prüfen.'}</p>}
         {targets.map((t) => (
           <ReviewCard
             key={`${t.targetType}:${t.targetId}`}

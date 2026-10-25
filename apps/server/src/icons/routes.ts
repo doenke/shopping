@@ -17,6 +17,7 @@ const Target = z.object({
 
 const SettingsBody = z.object({
   enabled: z.boolean().optional(),
+  autoApprove: z.boolean().optional(),
   provider: z.enum(['cloudflare', 'openai', 'claude']).optional(),
   candidates: z.number().int().min(1).max(4).optional(),
   style: z.string().max(1000).optional(),
@@ -124,6 +125,7 @@ export async function iconRoutes(app: FastifyInstance, { icons, requireAccount }
 
     /** Runs the next job right away (also while automatic generation is off, e.g. to find the style). */
     api.post('/api/v1/icons/run', async () => {
+      if ((await icons.settings()).autoApprove) await icons.autoApprovePending();
       await icons.enqueueMissing();
       return { result: await icons.runNext() };
     });

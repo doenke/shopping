@@ -43,12 +43,15 @@ eingebautem MCP-Server.
 1. Kostenloses Cloudflare-Konto anlegen, unter *AI → Workers AI → REST API* die Account-ID
    ablesen und ein API-Token (Vorlage „Workers AI“) erstellen.
 2. In der App *🖼 Icons → Bild-KI einrichten*: Account-ID und Token eintragen, speichern.
-3. **Stil finden:** „Nächsten Auftrag jetzt erzeugen“ – für zwölf typische Artikel entstehen je
-   drei Entwürfe. Passende als Stil-Referenz ★ nehmen, bei Bedarf den Stiltext anpassen oder
-   eigene Bilder (z. B. aus ChatGPT/AI Studio) hochladen.
-4. Ab vier Stil-Referenzen „Automatisch im Hintergrund“ einschalten: Kategorien zuerst, dann die
-   Artikel nach Häufigkeit, bis zum Tageslimit (Standard 150 Bilder/Tag). Entwürfe kommen in die
-   Prüfung; nichts erscheint in der App ohne Freigabe.
+3. „Automatisch im Hintergrund“ einschalten. Neue Icons werden **automatisch freigegeben**, sobald ein
+   Entwurf alle Prüfungen besteht (Hintergrund sauber, nichts abgeschnitten, nicht zu klein und – mit
+   Anthropic-Key – die KI-Vorprüfung). Weitere Entwürfe werden dann gar nicht erst erzeugt.
+   Durchgefallenes wird nicht freigegeben: die App zeigt dort das Kategorie-Icon, und der Entwurf steht
+   unter „Nicht bestanden“, wo man ihn trotzdem nehmen kann. Wer lieber selbst auswählt, schaltet
+   „Automatisch freigeben“ ab.
+4. Zuerst entsteht der Stil an zwölf typischen Artikeln: die ersten vier freigegebenen werden Stil-Referenz ★,
+   alles Weitere wird mit ihnen als Vorlage im selben Stil erzeugt – erst Kategorien, dann die Artikel nach
+   Häufigkeit, bis zum Tageslimit (Standard 150 Bilder/Tag). Referenzen lassen sich in der Übersicht ändern.
 5. Optional einen **Anthropic-Key** (Claude): Claude zeichnet Icons als SVG (Sonnet, etwa 3–4 Cent
    pro Entwurf), prüft jeden Entwurf vorab („erkennbar? Schrift? passt zum Stil?“, Haiku, unter 0,1 Cent)
    und beschreibt Artikel aus Mealie. Was die Vorprüfung aussortiert, steht hinten und ist

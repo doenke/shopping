@@ -99,7 +99,7 @@ describe('SVG safety', () => {
 
 describe('Claude in the icon pipeline', () => {
   it('keeps the key secret', async () => {
-    const res = await req('PUT', '/api/v1/icons/settings', { provider: 'claude', anthropic: { apiKey: 'sk-ant-test', monthlyCap: 5 } });
+    const res = await req('PUT', '/api/v1/icons/settings', { autoApprove: false, provider: 'claude', anthropic: { apiKey: 'sk-ant-test', monthlyCap: 5 } });
     expect(res.statusCode).toBe(200);
     expect(res.body).not.toContain('sk-ant-test');
     expect(res.json().anthropic).toMatchObject({ hasKey: true, svgModel: 'claude-sonnet-5-5', review: true, reviewModel: 'claude-haiku-5-5' });
@@ -180,5 +180,21 @@ describe('Claude in the icon pipeline', () => {
     calls.length = 0;
     expect((await req('POST', '/api/v1/icons/run')).json().result).toBe('budget');
     expect(calls).toHaveLength(0);
+  });
+
+  it('approves automatically only what the AI pre-review passed', async () => {
+    await req('PUT', '/api/v1/icons/settings', { autoApprove: true, anthropic: { monthlyCap: 5 } });
+    reviewOk = false;
+    await req('POST', '/api/v1/icons/generate', { targetType: 'category', targetId: 'tierbedarf', candidates: 1 });
+    expect((await req('POST', '/api/v1/icons/run')).json().result).toBe('done');
+    const cat = () => req('GET', '/api/v1/catalog').then((r) => r.json().categoryIcons as Record<string, string>);
+    expect((await cat()).tierbedarf).toBeUndefined();
+
+    reviewOk = true;
+    await req('POST', '/api/v1/icons/generate', { targetType: 'category', targetId: 'tierbedarf', candidates: 2 });
+    calls.length = 0;
+    expect((await req('POST', '/api/v1/icons/run')).json().result).toBe('done');
+    expect(calls.filter((c) => c.kind === 'svg')).toHaveLength(1);
+    expect((await cat()).tierbedarf).toMatch(/^[0-9a-f]{10}$/);
   });
 });

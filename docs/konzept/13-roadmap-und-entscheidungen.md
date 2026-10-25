@@ -93,6 +93,10 @@ Umsetzungsdetails:
 - Auslieferung unter `/icons/item/{id}.webp?v=…` (öffentlich, unveränderlich gecacht),
   die PWA lädt alle freigegebenen Icons im Hintergrund vor und hat sie offline.
 - Automatische Prüfungen: Hintergrund sauber, Motiv nicht angeschnitten, nicht zu klein.
+- **Automatische Freigabe** (Standard, abschaltbar): der erste Entwurf, der alle Prüfungen besteht, geht
+  sofort live; danach werden keine weiteren Entwürfe bezahlt. Im Stil-Schritt werden die ersten vier
+  automatisch Stil-Referenz. Durchgefallenes bleibt ohne Freigabe (Kategorie-Icon) und kann von Hand
+  genommen werden. Abweichung vom Konzept („jedes Icon wird vor Freigabe angesehen“) auf Wunsch.
 - **Claude** (optional, Anthropic-Key): zeichnet Icons als SVG (Sonnet 5.5; Referenzen sind die
   SVG-Quellen der Stil-Anker, sonst deren Bilder), prüft jeden Entwurf per Bildverständnis vor
   (Haiku 5.5: erkennbar, keine Schrift, passt zum Stil – ersetzt die geplante OCR-Prüfung) und
