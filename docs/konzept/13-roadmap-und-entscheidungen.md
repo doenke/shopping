@@ -71,7 +71,6 @@ Umsetzungsdetails:
 - Die HA-Integration liegt im selben Repo (`custom_components/`, `hacs.json`) statt in
   einem eigenen; sie wird in der CI in einem echten Home Assistant gegen einen echten
   Server getestet.
-- Ausgehende Webhooks und `Idempotency-Key` sind noch nicht umgesetzt.
 
 ### Phase 4 – Icons ✅ umgesetzt (Pipeline; die Icons selbst entstehen im Betrieb)
 - Stil finden (Anker-Set) direkt in der App, alternativ eigene Bilder hochladen
@@ -105,9 +104,23 @@ Umsetzungsdetails:
   verbucht, mit Monatsgrenze. Bei Sicherheits-Ablehnungen springt serverseitig ein anderes
   Modell ein (`fallbacks: "default"`, nur Sonnet/Opus).
 
-### Phase 5 – Ausbau (bei Bedarf)
+### Phase 5 – Ausbau ✅ umgesetzt (ohne Android-App)
 - Packlisten (zweiter Listentyp)
-- ggf. TWA/Capacitor für Homescreen-Widget und Play Store
+- ~~TWA/Capacitor für Homescreen-Widget und Play Store~~ – verworfen, die PWA reicht
+
+Umsetzungsdetails:
+- Packlisten haben einen eigenen Katalog (`catalog_items.kind = 'packing'`, ~120 Artikel) und eigene
+  Kategorien; Kategorie-IDs sind über alle Listentypen eindeutig.
+- **Person** (frei getippt) und **Packstück** stehen in `attributes`; „@Anna“/„#Koffer“ im Eingabefeld.
+  Gleiche Artikel werden nur zusammengeführt, wenn Person und Packstück gleich sind (auch beim
+  serverseitigen Duplikat-Abgleich).
+- Eingepackt bleibt sichtbar (durchgestrichen); Gruppierung nach Kategorie, Packstück oder Person.
+- Neue Packlisten **aus Vorlage** (Vorlage bestimmt den Typ); erledigte werden archiviert, nicht
+  zurückgesetzt. Vorlagen und Listen verschiedener Typen lassen sich nicht mischen (409).
+- Änderungen über Tokens/MCP tragen `attributes.via` (Token- bzw. Client-Name).
+- Ausgehende Webhooks: eigener Änderungsstrom pro Webhook mit gespeicherter Position (Nachlieferung
+  nach Ausfall/Neustart), Signatur `t=…,v1=HMAC-SHA256`, 3 Wiederholungen, nach 20 Fehlschlägen aus.
+- `Idempotency-Key` für schreibende REST-Aufrufe (24 h).
 
 ## Noch offen
 

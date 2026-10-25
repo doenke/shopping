@@ -1,4 +1,4 @@
-import { planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type NewItem, type ParsedItem } from '@shopping/shared';
+import { packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem } from '@shopping/shared';
 import { db } from './db';
 import { sync } from './sync/engine';
 
@@ -30,20 +30,36 @@ export async function deleteItem(id: string): Promise<void> {
   await sync.mutateItem(id, { deleted: true });
 }
 
-export async function createList(name: string, isTemplate = false): Promise<string> {
+export async function createList(name: string, isTemplate = false, listType: ListType = 'shopping'): Promise<string> {
   const id = crypto.randomUUID();
-  await sync.mutateList(id, { name, listType: 'shopping', isTemplate });
+  await sync.mutateList(id, { name, listType, isTemplate });
   return id;
+}
+
+/** Done packing lists go to the archive instead of being deleted. */
+export async function archiveList(id: string, archived: boolean): Promise<void> {
+  await sync.mutateList(id, { archivedAt: archived ? new Date().toISOString() : null });
+}
+
+/** A list or template item as new item (keeps person and Packstück). */
+export function itemToNew(i: ItemRow): NewItem {
+  return {
+    name: i.name,
+    catalogItemId: i.catalogItemId,
+    categoryId: i.categoryId,
+    amounts: i.amounts,
+    properties: i.properties,
+    note: i.note,
+    ...packingInfo(i),
+  };
 }
 
 /** "Als Vorlage speichern": copies the open items of a list into a new template. */
 export async function saveAsTemplate(list: ListRow, name: string): Promise<string> {
-  const id = await createList(name, true);
-  const items = (await db.items.where('listId').equals(list.id).toArray()).filter((i) => !i.deleted && !i.checked);
-  await addItems(
-    id,
-    items.map((i) => ({ name: i.name, catalogItemId: i.catalogItemId, categoryId: i.categoryId, amounts: i.amounts, properties: i.properties, note: i.note })),
-  );
+  const id = await createList(name, true, list.listType);
+  // A packing list is all packed in the end – everything goes into the template.
+  const items = (await db.items.where('listId').equals(list.id).toArray()).filter((i) => !i.deleted && (list.listType === 'packing' || !i.checked));
+  await addItems(id, items.map(itemToNew));
   return id;
 }
 
@@ -75,7 +91,7 @@ export async function shareList(list: ListRow, renew = false): Promise<void> {
     return;
   }
   const { url } = (await res.json()) as { url: string };
-  const text = `Unsere Einkaufsliste „${list.name}“`;
+  const text = `${list.listType === 'packing' ? 'Unsere Packliste' : 'Unsere Einkaufsliste'} „${list.name}“`;
   if (navigator.share) {
     await navigator.share({ title: list.name, text, url }).catch(() => undefined);
   } else {

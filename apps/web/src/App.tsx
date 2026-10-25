@@ -1,6 +1,6 @@
-import { parseInput, type ListRow, type Me } from '@shopping/shared';
+import { parseInput, type ListRow, type ListType, type Me } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, createList, deleteList, leaveList, renameList, saveAsTemplate, setMainList, shareList } from './actions';
+import { addItems, archiveList, createList, deleteList, leaveList, renameList, saveAsTemplate, setMainList, shareList } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
@@ -56,11 +56,13 @@ function Shell({ me }: { me: Me }) {
   const [importing, setImporting] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const guest = me.isGuest;
-  const [templateDialog, setTemplateDialog] = useState<'new' | 'apply' | null>(null);
-  const shoppingLists = lists.filter((l) => !l.isTemplate);
+  const [templateDialog, setTemplateDialog] = useState<{ mode: 'new' | 'apply'; type: ListType } | null>(null);
+  const shoppingLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'shopping');
+  const packingLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'packing');
+  const archived = lists.filter((l) => !l.isTemplate && l.archivedAt);
   const templates = lists.filter((l) => l.isTemplate);
   const mainList = shoppingLists.find((l) => l.id === me.defaultListId) ?? shoppingLists[0];
-  const listId = route.page === 'list' ? (route.listId ?? mainList?.id) : undefined;
+  const listId = route.page === 'list' ? (route.listId ?? (mainList ?? packingLists[0])?.id) : undefined;
   const addRef = useRef<HTMLInputElement>(null);
 
 
@@ -96,15 +98,15 @@ function Shell({ me }: { me: Me }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const newList = () => {
-    setTemplateDialog('new');
+  const newList = (type: ListType = 'shopping') => {
+    setTemplateDialog({ mode: 'new', type });
     setDrawer(false);
   };
 
-  const newTemplate = async () => {
-    const name = prompt('Name der Vorlage', 'Wocheneinkauf Basis');
+  const newTemplate = async (type: ListType) => {
+    const name = prompt(type === 'packing' ? 'Name der Packvorlage' : 'Name der Vorlage', type === 'packing' ? 'Wochenend-Trip' : 'Wocheneinkauf Basis');
     if (!name?.trim()) return;
-    const id = await createList(name.trim(), true);
+    const id = await createList(name.trim(), true, type);
     navigate({ page: 'list', listId: id });
     setDrawer(false);
   };
@@ -137,6 +139,26 @@ function Shell({ me }: { me: Me }) {
           + Neue Liste
         </button>
       )}
+      {(packingLists.length > 0 || !guest) && <h3 className="sidebar__section">Packlisten</h3>}
+      <ul>
+        {packingLists.map((l) => (
+          <li key={l.id}>
+            <a
+              href={`#/list/${l.id}`}
+              className={l.id === list?.id && route.page === 'list' ? 'active' : ''}
+              onClick={() => setDrawer(false)}
+            >
+              <span>🧳 {l.name}</span>
+              <OpenCount listId={l.id} />
+            </a>
+          </li>
+        ))}
+      </ul>
+      {!guest && (
+        <button type="button" className="btn btn--ghost" onClick={() => void newList('packing')}>
+          + Neue Packliste
+        </button>
+      )}
       {!guest && <h3 className="sidebar__section">Vorlagen</h3>}
       <ul>
         {templates.map((l) => (
@@ -146,15 +168,40 @@ function Shell({ me }: { me: Me }) {
               className={l.id === list?.id && route.page === 'list' ? 'active' : ''}
               onClick={() => setDrawer(false)}
             >
-              <span>◇ {l.name}</span>
+              <span>
+                ◇ {l.listType === 'packing' && '🧳 '}
+                {l.name}
+              </span>
             </a>
           </li>
         ))}
       </ul>
       {!guest && (
-        <button type="button" className="btn btn--ghost" onClick={() => void newTemplate()}>
-          + Neue Vorlage
-        </button>
+        <div className="row">
+          <button type="button" className="btn btn--ghost" onClick={() => void newTemplate('shopping')}>
+            + Einkaufsvorlage
+          </button>
+          <button type="button" className="btn btn--ghost" onClick={() => void newTemplate('packing')}>
+            + Packvorlage
+          </button>
+        </div>
+      )}
+      {archived.length > 0 && (
+        <details className="sidebar__archive">
+          <summary className="sidebar__section">Archiv ({archived.length})</summary>
+          <ul>
+            {archived.map((l) => (
+              <li key={l.id}>
+                <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
+                  <span>
+                    {l.listType === 'packing' ? '🧳 ' : ''}
+                    {l.name}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       <span className="spacer" />
       {!guest && (
@@ -191,10 +238,10 @@ function Shell({ me }: { me: Me }) {
                 <ListMenu
                   list={list}
                   me={me}
-                  hasTemplates={templates.length > 0}
+                  hasTemplates={templates.some((t) => t.listType === list.listType)}
                   onClose={() => setMenu(false)}
                   onImport={() => setImporting(true)}
-                  onApplyTemplate={() => setTemplateDialog('apply')}
+                  onApplyTemplate={() => setTemplateDialog({ mode: 'apply', type: list.listType })}
                   onMembers={() => setShowMembers(true)}
                 />
               )}
@@ -208,7 +255,15 @@ function Shell({ me }: { me: Me }) {
           ) : route.page === 'icons' && !guest ? (
             <IconReview catalog={catalog.items} />
           ) : list && items ? (
-            <ListView ref={addRef} key={list.id} list={list} items={items} index={catalog.index} users={users} remoteChecks={remoteChecks} />
+            <ListView
+              ref={addRef}
+              key={list.id}
+              list={list}
+              items={items}
+              index={list.listType === 'packing' ? catalog.packingIndex : catalog.index}
+              users={users}
+              remoteChecks={remoteChecks}
+            />
           ) : route.page === 'list' && route.listId && !list ? (
             <div className="empty">
               <p>Liste wird geladen …</p>
@@ -216,9 +271,14 @@ function Shell({ me }: { me: Me }) {
           ) : lists.length === 0 ? (
             <div className="empty">
               <p className="empty__title">Noch keine Liste</p>
-              <button type="button" className="btn btn--primary" onClick={() => void newList()}>
-                Erste Liste anlegen
-              </button>
+              <div className="row row--center">
+                <button type="button" className="btn btn--primary" onClick={() => void newList()}>
+                  Erste Liste anlegen
+                </button>
+                <button type="button" className="btn" onClick={() => void newList('packing')}>
+                  Packliste anlegen
+                </button>
+              </div>
             </div>
           ) : null}
         </main>
@@ -227,13 +287,16 @@ function Shell({ me }: { me: Me }) {
       {templateDialog && (
         <TemplateDialog
           templates={templates}
-          targetList={templateDialog === 'apply' ? list : undefined}
+          targetList={templateDialog.mode === 'apply' ? list : undefined}
+          listType={templateDialog.type}
           onClose={() => setTemplateDialog(null)}
         />
       )}
       {showMembers && list && <MembersDialog list={list} me={me} onClose={() => setShowMembers(false)} />}
       {importing && list && <ImportDialog listId={list.id} onClose={() => setImporting(false)} />}
-      {extraWide && route.page === 'list' && list && <CatalogPanel listId={list.id} catalog={catalog.items} items={items ?? []} />}
+      {extraWide && route.page === 'list' && list && (
+        <CatalogPanel key={list.listType} listId={list.id} listType={list.listType} catalog={catalog.items} items={items ?? []} />
+      )}
     </div>
     </IconContext.Provider>
   );
@@ -293,7 +356,7 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
       >
         Wer ist dabei?
       </button>
-      {!list.isTemplate && !guest && (
+      {!list.isTemplate && list.listType === 'shopping' && !guest && (
         <button
           type="button"
           role="menuitem"
@@ -340,7 +403,20 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
       >
         Teilen …
       </button>
-      {list.id !== me.defaultListId && !list.isTemplate && !guest && (
+      {list.listType === 'packing' && !list.isTemplate && !guest && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            void archiveList(list.id, !list.archivedAt);
+            if (!list.archivedAt) navigate({ page: 'list' });
+            onClose();
+          }}
+        >
+          {list.archivedAt ? 'Aus dem Archiv holen' : 'Archivieren'}
+        </button>
+      )}
+      {list.id !== me.defaultListId && list.listType === 'shopping' && !list.isTemplate && !list.archivedAt && !guest && (
         <button
           type="button"
           role="menuitem"

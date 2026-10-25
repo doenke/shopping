@@ -2,6 +2,8 @@ import {
   Hlc,
   applyPatch,
   mergeAmounts,
+  packingInfo,
+  samePacking,
   type ChangeSet,
   type ItemPatch,
   type ItemRow,
@@ -271,7 +273,8 @@ export class SyncService {
             : sql`lower(${listItems.name}) = lower(${row.name}) AND ${listItems.catalogItemId} IS NULL`,
         ),
       );
-    return candidates.find((c) => sameProperties(c.properties, row.properties));
+    // Packing lists: Anna's and Ben's T-Shirts (or different Packstücke) are not duplicates.
+    return candidates.find((c) => sameProperties(c.properties, row.properties) && samePacking(packingInfo(c), packingInfo(row)));
   }
 
   private async applyMe(tx: Tx, userId: string, patch: { defaultListId?: string | null }, ts: string): Promise<void> {

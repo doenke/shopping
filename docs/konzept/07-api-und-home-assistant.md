@@ -54,7 +54,7 @@ Fehler im Format RFC 9457 (`application/problem+json`).
 - **SSE** `GET /api/v1/events` – Ereignisse `list.changed`, `list.removed`,
   `item.changed`, `item.removed` (jeweils mit dem Objekt als JSON). Einfach zu
   konsumieren, funktioniert durch jeden Proxy.
-- **Ausgehende Webhooks** (noch nicht umgesetzt; optional, HMAC-signiert) – für eigene
+- **Ausgehende Webhooks** (umgesetzt, Einstellungen → Webhooks; HMAC-signiert, mit Nachlieferung) – für eigene
   Automationen, z. B. in n8n. Die App selbst verschickt keine
   Benachrichtigungen.
 

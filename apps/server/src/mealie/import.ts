@@ -38,7 +38,7 @@ export async function importFoods(db: Db, foods: MealieFood[], labelMapping: Rec
   const labels = new Set<string>();
   const existing = (await db.select().from(catalogItems)).map((r) => ({ record: r, item: toCatalogItem(r) }));
   const byMealie = new Map(existing.filter((e) => e.record.mealieFoodId).map((e) => [e.record.mealieFoodId!, e.record]));
-  const index = new CatalogIndex(existing.filter((e) => !e.record.mealieFoodId).map((e) => e.item));
+  const index = new CatalogIndex(existing.filter((e) => !e.record.mealieFoodId && e.record.kind === 'shopping').map((e) => e.item));
 
   await db.transaction(async (tx) => {
     for (const food of foods) {

@@ -1,7 +1,12 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import {
-  CATEGORIES,
+  categoriesFor,
   CatalogIndex,
+  packingInfo,
+  withPacking,
+  type CatalogKind,
+  type ListType,
   findUnit,
   parseInput,
   planAdd,
@@ -24,7 +29,23 @@ import { toApiItem, toApiList, type ApiItem, type ApiList } from './format.js';
 /** An item as callers describe it: free text ("2 kg Kartoffeln") or structured. */
 export type ItemInput =
   | string
-  | { name: string; quantity?: number | null; unit?: string | null; properties?: string[]; note?: string | null; category?: string | null };
+  | {
+      name: string;
+      quantity?: number | null;
+      unit?: string | null;
+      properties?: string[];
+      note?: string | null;
+      category?: string | null;
+      /** Packing lists: who it is for, and the Packstück ("Koffer"). */
+      person?: string | null;
+      container?: string | null;
+    };
+
+/**
+ * Who is acting besides the user: the name of the API token or OAuth client
+ * ("Claude", "Home Assistant"). New items remember it ("hinzugefügt über Claude").
+ */
+export const actorContext = new AsyncLocalStorage<{ via: string | null }>();
 
 export interface AddResult {
   added: { id: string; name: string; specification: string; action: 'created' | 'merged' | 'restored' }[];
@@ -34,6 +55,7 @@ const REJECTIONS: Record<string, [number, string]> = {
   forbidden: [403, 'Kein Zugriff auf diese Liste'],
   owner_only: [403, 'Nur der Besitzer darf das'],
   template_not_checkable: [409, 'In Vorlagen wird nichts abgehakt'],
+  type_mismatch: [409, 'Listentyp passt nicht (Einkaufs- und Packliste)'],
   guest: [403, 'Gäste können keine Listen anlegen'],
 };
 
@@ -42,7 +64,7 @@ const REJECTIONS: Record<string, [number, string]> = {
  * All writes go through the sync engine, so the apps see them in real time.
  */
 export class ShoppingApi {
-  private catalogCache: { at: number; items: CatalogItem[]; index: CatalogIndex } | undefined;
+  private catalogCache: { at: number; items: CatalogItem[]; index: Record<CatalogKind, CatalogIndex> } | undefined;
 
   constructor(
     private readonly db: Db,
@@ -58,7 +80,15 @@ export class ShoppingApi {
   private async catalog() {
     if (!this.catalogCache || Date.now() - this.catalogCache.at > 30_000) {
       const items = (await this.db.select().from(catalogItems)).map(toCatalogItem);
-      this.catalogCache = { at: Date.now(), items, index: new CatalogIndex(items) };
+      // Groceries and packing items are separate catalogs ("Zahnpasta" exists in both).
+      this.catalogCache = {
+        at: Date.now(),
+        items,
+        index: {
+          shopping: new CatalogIndex(items.filter((i) => i.kind === 'shopping')),
+          packing: new CatalogIndex(items.filter((i) => i.kind === 'packing')),
+        },
+      };
     }
     return this.catalogCache;
   }
@@ -69,6 +99,13 @@ export class ShoppingApi {
 
   private async mutate(userId: string, entity: 'list' | 'item', changes: { id: string; patch: ListPatch | ItemPatch }[]): Promise<void> {
     if (changes.length === 0) return;
+    const via = actorContext.getStore()?.via;
+    if (via && entity === 'item') {
+      // Only new items (they carry a listId) remember how they were added.
+      changes = changes.map((c) =>
+        'listId' in c.patch && c.patch.listId ? { ...c, patch: { ...c.patch, attributes: { ...(c.patch as ItemPatch).attributes, via } } } : c,
+      );
+    }
     const mutations = changes.map((c) => ({ mid: randomUUID(), entity, id: c.id, hlc: this.sync.clock.tick(), patch: c.patch }));
     const result = await this.sync.apply(userId, mutations);
     this.hub.notify(result.affectedUsers);
@@ -138,14 +175,15 @@ export class ShoppingApi {
     const pick = open.length === 1 ? open[0] : matches.length === 1 ? matches[0] : undefined;
     if (pick) return pick;
     if (matches.length > 1) throw new ApiError(409, 'ambiguous', `Mehrere Artikel heißen „${ref}“`, { candidates: matches.map((i) => i.id) });
-    const fuzzy = (await this.catalog()).index.match(ref);
+    const fuzzy = (await this.catalog()).index[list.listType === 'packing' ? 'packing' : 'shopping'].match(ref);
     const viaCatalog = fuzzy ? items.find((i) => i.catalogItemId === fuzzy.id && !i.checked) : undefined;
     if (viaCatalog) return viaCatalog;
     throw notFound(`Artikel „${ref}“`);
   }
 
-  async toNewItems(inputs: ItemInput[]): Promise<NewItem[]> {
-    const { index } = await this.catalog();
+  async toNewItems(inputs: ItemInput[], listType: ListType = 'shopping'): Promise<NewItem[]> {
+    const index = (await this.catalog()).index[listType];
+    const categories = categoriesFor(listType);
     const out: NewItem[] = [];
     for (const input of inputs) {
       if (typeof input === 'string') {
@@ -153,7 +191,7 @@ export class ShoppingApi {
         continue;
       }
       const hit = index.match(input.name);
-      const category = input.category ? CATEGORIES.find((c) => c.id === input.category || c.name.toLowerCase() === input.category!.toLowerCase()) : undefined;
+      const category = input.category ? categories.find((c) => c.id === input.category || c.name.toLowerCase() === input.category!.toLowerCase()) : undefined;
       const unit = input.unit ? (findUnit(input.unit)?.id ?? input.unit) : null;
       out.push({
         name: hit?.name ?? input.name.trim(),
@@ -162,6 +200,8 @@ export class ShoppingApi {
         amounts: input.quantity || unit ? [{ q: input.quantity ?? null, u: unit }] : [],
         properties: input.properties ?? [],
         note: input.note ?? null,
+        person: input.person?.trim() || null,
+        container: input.container?.trim() || null,
       });
     }
     return out;
@@ -169,9 +209,16 @@ export class ShoppingApi {
 
   // ---- reads ---------------------------------------------------------------
 
-  async lists(userId: string, templates: 'exclude' | 'include' | 'only' = 'exclude'): Promise<ApiList[]> {
-    const all = (await this.accessibleLists(userId)).filter((l) =>
-      templates === 'include' ? true : templates === 'only' ? l.isTemplate : !l.isTemplate,
+  async lists(
+    userId: string,
+    templates: 'exclude' | 'include' | 'only' = 'exclude',
+    opts: { type?: ListType; archived?: boolean } = {},
+  ): Promise<ApiList[]> {
+    const all = (await this.accessibleLists(userId)).filter(
+      (l) =>
+        (templates === 'include' ? true : templates === 'only' ? l.isTemplate : !l.isTemplate) &&
+        (!opts.type || l.listType === opts.type) &&
+        (opts.archived || !l.archivedAt),
     );
     const main = await this.mainListId(userId);
     const counts = new Map<string, number>();
@@ -191,16 +238,17 @@ export class ShoppingApi {
     const list = await this.resolveList(userId, ref);
     const items = await this.itemsOf(list.id);
     const names = await this.userNames();
+    const categories = categoriesFor(list.listType);
+    const rank = (id: string | null) => {
+      const i = categories.findIndex((c) => c.id === id);
+      return i < 0 ? categories.length : i;
+    };
     const shown = items
       .filter((i) => (filter === 'all' ? true : filter === 'open' ? !i.checked : i.checked))
-      .sort((a, b) => {
-        const ca = CATEGORIES.findIndex((c) => c.id === (a.categoryId ?? 'eigene'));
-        const cb = CATEGORIES.findIndex((c) => c.id === (b.categoryId ?? 'eigene'));
-        return ca - cb || a.position.localeCompare(b.position);
-      });
+      .sort((a, b) => rank(a.categoryId) - rank(b.categoryId) || a.position.localeCompare(b.position));
     return {
       ...toApiList(list, userId, await this.mainListId(userId), items.filter((i) => !i.checked).length),
-      items: shown.map((i) => toApiItem(i, names)),
+      items: shown.map((i) => toApiItem(i, names, list.listType)),
     };
   }
 
@@ -221,23 +269,32 @@ export class ShoppingApi {
     return rows.map((r) => toApiItem(toItemRow(r), names));
   }
 
-  async searchCatalog(q: string, limit = 15) {
-    const { index } = await this.catalog();
+  async searchCatalog(q: string, limit = 15, kind: CatalogKind = 'shopping') {
+    const index = (await this.catalog()).index[kind];
     return index.search(q, limit).map((c) => ({ id: c.id, name: c.name, category: c.categoryId, aliases: c.aliases }));
   }
 
-  async parse(text: string) {
-    const { index } = await this.catalog();
-    return parseInput(text, index);
+  async parse(text: string, kind: CatalogKind = 'shopping') {
+    return parseInput(text, (await this.catalog()).index[kind]);
   }
 
   // ---- writes --------------------------------------------------------------
 
-  async createList(userId: string, name: string, opts: { template?: string; isTemplate?: boolean } = {}): Promise<ApiList> {
+  /** A new list; from a template it takes the template's type (packing template → packing list). */
+  async createList(userId: string, name: string, opts: { template?: string; isTemplate?: boolean; type?: ListType } = {}): Promise<ApiList> {
+    const template = opts.template ? await this.resolveList(userId, opts.template, { templates: true }) : undefined;
+    if (template && !template.isTemplate) throw new ApiError(400, 'not_a_template', `„${template.name}“ ist keine Vorlage`);
+    const listType = template?.listType ?? opts.type ?? 'shopping';
     const id = randomUUID();
-    await this.mutate(userId, 'list', [{ id, patch: { name, listType: 'shopping', isTemplate: opts.isTemplate ?? false } }]);
-    if (opts.template) await this.applyTemplate(userId, id, opts.template, false);
-    return (await this.lists(userId, 'include')).find((l) => l.id === id)!;
+    await this.mutate(userId, 'list', [{ id, patch: { name, listType, isTemplate: opts.isTemplate ?? false } }]);
+    if (template) await this.applyTemplate(userId, id, template.id, false);
+    return (await this.lists(userId, 'include', { archived: true })).find((l) => l.id === id)!;
+  }
+
+  /** Done packing lists are archived instead of deleted. */
+  async archiveList(userId: string, ref: string, archived: boolean): Promise<void> {
+    const list = await this.resolveList(userId, ref);
+    await this.mutate(userId, 'list', [{ id: list.id, patch: { archivedAt: archived ? new Date().toISOString() : null } }]);
   }
 
   async renameList(userId: string, ref: string, name: string): Promise<void> {
@@ -252,7 +309,7 @@ export class ShoppingApi {
 
   async addItems(userId: string, listRef: string | undefined, inputs: NewItem[] | ItemInput[], parsed = false): Promise<AddResult> {
     const list = await this.resolveList(userId, listRef);
-    const items = parsed ? (inputs as NewItem[]) : await this.toNewItems(inputs as ItemInput[]);
+    const items = parsed ? (inputs as NewItem[]) : await this.toNewItems(inputs as ItemInput[], list.listType);
     if (items.length === 0) throw new ApiError(400, 'empty', 'Keine Artikel erkannt');
     const existing = await this.itemsOf(list.id);
     const plan = planAdd(list.id, existing, items, randomUUID);
@@ -278,8 +335,15 @@ export class ShoppingApi {
     }
     if (input.properties !== undefined) patch.properties = input.properties;
     if (input.note !== undefined) patch.note = input.note;
+    if (input.person !== undefined || input.container !== undefined) {
+      patch.attributes = withPacking(item.attributes, {
+        ...(input.person !== undefined ? { person: input.person } : {}),
+        ...(input.container !== undefined ? { container: input.container } : {}),
+      });
+    }
     if (input.category !== undefined) {
-      const cat = CATEGORIES.find((c) => c.id === input.category || c.name.toLowerCase() === input.category?.toLowerCase());
+      const list = (await this.accessibleLists(userId)).find((l) => l.id === item.listId);
+      const cat = categoriesFor(list?.listType ?? 'shopping').find((c) => c.id === input.category || c.name.toLowerCase() === input.category?.toLowerCase());
       if (!cat) throw new ApiError(400, 'unknown_category', `Unbekannte Kategorie „${input.category}“`);
       patch.categoryId = cat.id;
     }
@@ -313,6 +377,8 @@ export class ShoppingApi {
   async applyTemplate(userId: string, listRef: string | undefined, templateRef: string, includeOptional: boolean): Promise<AddResult> {
     const template = await this.resolveList(userId, templateRef, { templates: true });
     if (!template.isTemplate) throw new ApiError(400, 'not_a_template', `„${template.name}“ ist keine Vorlage`);
+    const target = await this.resolveList(userId, listRef);
+    if (target.listType !== template.listType) throw new ApiError(409, 'type_mismatch', REJECTIONS.type_mismatch![1]);
     const items = (await this.itemsOf(template.id))
       .filter((i) => includeOptional || !i.optional)
       .map<NewItem>((i) => ({
@@ -322,6 +388,7 @@ export class ShoppingApi {
         amounts: i.amounts,
         properties: i.properties,
         note: i.note,
+        ...packingInfo(i),
         sources: [{ type: 'template', label: template.name }],
       }));
     if (items.length === 0) return { added: [] };
@@ -334,13 +401,20 @@ export class ShoppingApi {
       .map(({ pantry: _p, sources, ...rest }) => ({ ...rest, sources: sources.map((label) => ({ type, label })) }));
   }
 
+  private async shoppingOnly(userId: string, listRef: string | undefined): Promise<void> {
+    const list = await this.resolveList(userId, listRef);
+    if (list.listType !== 'shopping') throw new ApiError(409, 'type_mismatch', 'Mealie-Rezepte gehören auf eine Einkaufsliste');
+  }
+
   async importRecipe(userId: string, listRef: string | undefined, slug: string, servings: number | undefined, includePantry: boolean) {
+    await this.shoppingOnly(userId, listRef);
     const r = await this.mealie.recipeCandidates(userId, slug, servings);
     const res = await this.addItems(userId, listRef, this.candidatesToItems(r.items, includePantry, 'mealie_recipe'), true);
     return { recipe: r.name, servings: r.servings, ...res };
   }
 
   async importMealplan(userId: string, listRef: string | undefined, from: string, to: string, includePantry: boolean) {
+    await this.shoppingOnly(userId, listRef);
     const r = await this.mealie.mealplanCandidates(userId, from, to);
     if (r.items.length === 0) return { recipes: r.recipes, added: [] };
     const res = await this.addItems(userId, listRef, this.candidatesToItems(r.items, includePantry, 'mealie_mealplan'), true);

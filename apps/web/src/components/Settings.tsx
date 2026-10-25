@@ -4,6 +4,7 @@ import { logout } from '../actions';
 import { useLists } from '../hooks';
 import { Avatar } from './Avatar';
 import { TokensCard } from './TokensCard';
+import { WebhooksCard } from './WebhooksCard';
 import { sync } from '../sync/engine';
 
 interface MealieState {
@@ -56,7 +57,7 @@ function Copy({ text }: { text: string }) {
 }
 
 export function Settings({ me }: { me: Me }) {
-  const lists = useLists().filter((l) => !l.isTemplate);
+  const lists = useLists().filter((l) => !l.isTemplate && l.listType === 'shopping');
   const [mealie, setMealie] = useState<MealieState | null>(null);
   const [url, setUrl] = useState('');
   const [token, setToken] = useState('');
@@ -285,6 +286,7 @@ export function Settings({ me }: { me: Me }) {
       )}
 
       {!me.isGuest && <TokensCard />}
+      {!me.isGuest && <WebhooksCard />}
     </section>
   );
 }

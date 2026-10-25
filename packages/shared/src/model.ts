@@ -3,7 +3,7 @@ export interface Amount {
   u: string | null;
 }
 
-export const LIST_TYPES = ['shopping'] as const;
+export const LIST_TYPES = ['shopping', 'packing'] as const;
 export type ListType = (typeof LIST_TYPES)[number];
 
 /** Per-field HLC timestamps, used for last-writer-wins merging per field. */
@@ -68,6 +68,8 @@ export interface Me extends UserInfo {
   defaultListId: string | null;
 }
 
+export type CatalogKind = 'shopping' | 'packing';
+
 export interface CatalogItem {
   id: string;
   name: string;
@@ -79,6 +81,8 @@ export interface CatalogItem {
   source: 'seed' | 'mealie' | 'user';
   mealieFoodId: string | null;
   hidden: boolean;
+  /** Which kind of list the item belongs to: groceries or packing. */
+  kind: CatalogKind;
   /** Version token of the approved icon, null = category icon / letter. */
   icon: string | null;
   seq: number;

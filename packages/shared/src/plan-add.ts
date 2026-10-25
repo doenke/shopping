@@ -1,6 +1,7 @@
 import { generateKeyBetween } from 'fractional-indexing';
 import { mergeAmounts } from './amounts.js';
 import type { ItemPatch, ItemRow, ItemSource } from './model.js';
+import { packingInfo, samePacking, withPacking } from './packing.js';
 import type { ParsedItem } from './parser.js';
 
 /** A parsed item plus where it came from (recipe, template …). */
@@ -17,9 +18,15 @@ type ExistingItem = Pick<
   'id' | 'catalogItemId' | 'name' | 'checked' | 'deleted' | 'amounts' | 'properties' | 'note' | 'attributes' | 'position'
 >;
 
-function sameItem(item: ExistingItem, p: { catalogItemId: string | null; name: string }): boolean {
+function sameItem(item: ExistingItem, p: NewItem): boolean {
+  // Packing lists: Annas T-Shirts and Bens T-Shirts (or the ones in another Packstück) stay apart.
+  if (!samePacking(packingInfo(item), { person: p.person ?? null, container: p.container ?? null })) return false;
   if (p.catalogItemId) return item.catalogItemId === p.catalogItemId;
   return !item.catalogItemId && item.name.toLowerCase() === p.name.toLowerCase();
+}
+
+function packingOf(p: NewItem) {
+  return { person: p.person ?? null, container: p.container ?? null };
 }
 
 function withSources(attributes: Record<string, unknown>, add: ItemSource[] | undefined): Record<string, unknown> | null {
@@ -67,7 +74,7 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
           amounts: p.amounts,
           properties: p.properties,
           note: p.note,
-          attributes: { ...done.attributes, sources: p.sources ?? [] },
+          attributes: withPacking({ ...done.attributes, sources: p.sources ?? [] }, packingOf(p)),
         },
         kind: 'restored',
       });
@@ -84,7 +91,9 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
       properties: p.properties,
       note: p.note,
       position,
-      ...(p.sources?.length ? { attributes: { sources: p.sources } } : {}),
+      ...(p.sources?.length || p.person || p.container
+        ? { attributes: withPacking(p.sources?.length ? { sources: p.sources } : {}, packingOf(p)) }
+        : {}),
       ...(p.optional ? { optional: true } : {}),
     };
     changes.push({ id, patch, kind: 'created' });

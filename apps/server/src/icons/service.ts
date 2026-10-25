@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { getCategory, CATEGORIES } from '@shopping/shared';
+import { ALL_CATEGORIES, getCategory } from '@shopping/shared';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import sharp from 'sharp';
@@ -14,7 +14,7 @@ import { ClaudeReviewer, ClaudeSvgGenerator, type ReviewVerdict } from './anthro
 import { CloudflareGenerator, OpenAiGenerator, QuotaExceeded, type IconGenerator, type ProviderId } from './generators.js';
 import { processIcon, referenceImage } from './image.js';
 import { buildPrompt, DEFAULT_STYLE } from './prompt.js';
-import { ANCHOR_ITEMS, CATEGORY_SUBJECTS, SEED_SUBJECTS } from './subjects.js';
+import { ANCHOR_ITEMS, CATEGORY_SUBJECTS, PACKING_SUBJECTS, SEED_SUBJECTS } from './subjects.js';
 
 /** Below this many anchors the style is still being found: only the anchor items are generated. */
 export const MIN_ANCHORS = 4;
@@ -272,7 +272,7 @@ export class IconService {
         SELECT i.target_id AS id FROM ${icons} i WHERE i.target_type = 'category'
         UNION SELECT j.target_id FROM ${iconJobs} j WHERE j.target_type = 'category'`);
       const usedCats = new Set(used.map((r) => r.id));
-      jobs = CATEGORIES.filter((c) => !usedCats.has(c.id)).map((c) => ({ targetType: 'category', targetId: c.id, priority: 1100, candidates: s.candidates }));
+      jobs = ALL_CATEGORIES.filter((c) => !usedCats.has(c.id)).map((c) => ({ targetType: 'category', targetId: c.id, priority: 1100, candidates: s.candidates }));
       const items = await this.db.execute<{ id: string; uses: number }>(sql`
         SELECT c.id, (SELECT count(*) FROM list_items li WHERE li.catalog_item_id = c.id)::int AS uses
         FROM ${catalogItems} c
@@ -288,7 +288,7 @@ export class IconService {
 
   private async assertTarget(targetType: IconTarget, targetId: string): Promise<void> {
     if (targetType === 'category') {
-      if (!CATEGORIES.some((c) => c.id === targetId)) throw new ApiError(404, 'not_found', 'Unbekannte Kategorie');
+      if (!ALL_CATEGORIES.some((c) => c.id === targetId)) throw new ApiError(404, 'not_found', 'Unbekannte Kategorie');
       return;
     }
     if (!/^[0-9a-f-]{36}$/.test(targetId)) throw new ApiError(404, 'not_found', 'Unbekannter Artikel');
@@ -304,7 +304,7 @@ export class IconService {
     const [item] = await this.db.select().from(catalogItems).where(eq(catalogItems.id, targetId));
     if (!item) throw new Error('Artikel nicht gefunden');
     if (item.iconSubject) return { subject: item.iconSubject, name: item.name };
-    let subject = SEED_SUBJECTS[item.name];
+    let subject = (item.kind === 'packing' ? (PACKING_SUBJECTS[item.name] ?? SEED_SUBJECTS[item.name]) : SEED_SUBJECTS[item.name]);
     const claude = this.claude(s);
     if (!subject && claude && (await this.withinBudget(s, 'claude', 1_000))) {
       subject = await claude
@@ -632,7 +632,7 @@ export class IconService {
         return { name: getCategory(t.targetId).name, categoryId: t.targetId, subject: CATEGORY_SUBJECTS[t.targetId] ?? null };
       }
       const r = byId.get(t.targetId);
-      return { name: r?.name ?? '?', categoryId: r?.categoryId ?? 'eigene', subject: r?.subject ?? (r ? (SEED_SUBJECTS[r.name] ?? null) : null) };
+      return { name: r?.name ?? '?', categoryId: r?.categoryId ?? 'eigene', subject: r?.subject ?? (r ? (SEED_SUBJECTS[r.name] ?? PACKING_SUBJECTS[r.name] ?? null) : null) };
     };
   }
 

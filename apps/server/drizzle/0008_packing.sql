@@ -1,0 +1,1 @@
+ALTER TABLE "catalog_items" ADD COLUMN "kind" text DEFAULT 'shopping' NOT NULL;

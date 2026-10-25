@@ -27,18 +27,21 @@ export function ItemIcon({ name, categoryId, catalogItemId, size = 'md' }: ItemI
 
 interface TileProps {
   item: Pick<ItemRow, 'name' | 'categoryId' | 'amounts' | 'properties' | 'note'> & { catalogItemId?: string | null };
-  variant?: 'open' | 'done' | 'suggestion';
+  /** packed: packing lists – crossed out, stays in place. */
+  variant?: 'open' | 'done' | 'suggestion' | 'packed';
   badge?: string;
   /** Shown in front of the badge, e.g. who just checked the item. */
   badgeUser?: { displayName: string; avatarUrl: string | null };
   /** Checked by someone else: fades out before it moves away. */
   fading?: boolean;
+  /** Extra line, e.g. person and Packstück on packing lists. */
+  extra?: string;
   onTap: () => void;
   onLongPress?: () => void;
 }
 
 /** Bring!-style tile: tap to check (or add), long press / right click for details. */
-export function Tile({ item, variant = 'open', badge, badgeUser, fading = false, onTap, onLongPress }: TileProps) {
+export function Tile({ item, variant = 'open', badge, badgeUser, fading = false, extra, onTap, onLongPress }: TileProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressed = useRef(false);
   const spec = itemSpecification(item);
@@ -73,11 +76,12 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
         cancel();
         onLongPress();
       }}
-      aria-label={[item.name, spec].filter(Boolean).join(', ')}
+      aria-label={[item.name, spec, extra].filter(Boolean).join(', ')}
     >
       <ItemIcon name={item.name} categoryId={item.categoryId} catalogItemId={item.catalogItemId} />
       <span className="tile__name">{item.name}</span>
       {spec && <span className="tile__spec">{spec}</span>}
+      {extra && <span className="tile__spec tile__extra">{extra}</span>}
       {badge && (
         <span className="tile__badge">
           {badgeUser && <Avatar user={badgeUser} size="xs" />}

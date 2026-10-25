@@ -1,4 +1,4 @@
-import { CATEGORIES, formatAmount, SUGGESTED_PROPERTIES, UNITS, type Amount, type ItemRow, type ItemSource, type UserInfo } from '@shopping/shared';
+import { categoriesFor, categoryInList, formatAmount, packingInfo, SUGGESTED_PROPERTIES, UNITS, withPacking, type Amount, type ItemRow, type ItemSource, type ListRow, type UserInfo } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { deleteItem, updateItem } from '../actions';
 import { useMe } from '../hooks';
@@ -8,7 +8,9 @@ import { sync } from '../sync/engine';
 interface Props {
   item: ItemRow;
   users: Map<string, UserInfo>;
-  isTemplate?: boolean;
+  list: ListRow;
+  /** The other items of the list, for person/Packstück suggestions. */
+  items?: ItemRow[];
   onClose: () => void;
 }
 
@@ -17,7 +19,10 @@ function parseQuantity(s: string): number | null {
   return s.trim() && Number.isFinite(n) && n > 0 ? n : null;
 }
 
-export function ItemEditor({ item, users, isTemplate = false, onClose }: Props) {
+export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
+  const isTemplate = list.isTemplate;
+  const packing = list.listType === 'packing';
+  const categories = categoriesFor(list.listType);
   const ref = useRef<HTMLDialogElement>(null);
   const first = item.amounts[0];
   const [name, setName] = useState(item.name);
@@ -26,7 +31,9 @@ export function ItemEditor({ item, users, isTemplate = false, onClose }: Props) 
   const [properties, setProperties] = useState(item.properties);
   const [custom, setCustom] = useState('');
   const [note, setNote] = useState(item.note ?? '');
-  const [categoryId, setCategoryId] = useState(item.categoryId ?? 'eigene');
+  const [categoryId, setCategoryId] = useState(categoryInList(item.categoryId, list.listType).id);
+  const [person, setPerson] = useState(packingInfo(item).person ?? '');
+  const [container, setContainer] = useState(packingInfo(item).container ?? '');
   const [forAll, setForAll] = useState(false);
   const [optional, setOptional] = useState(item.optional);
   const [reported, setReported] = useState<'idle' | 'done' | 'error'>('idle');
@@ -49,6 +56,7 @@ export function ItemEditor({ item, users, isTemplate = false, onClose }: Props) 
       note: note.trim() || null,
       categoryId,
       ...(isTemplate ? { optional } : {}),
+      ...(packing ? { attributes: withPacking(item.attributes, { person, container }) } : {}),
     });
     if (forAll && item.catalogItemId && categoryId !== item.categoryId) {
       await fetch(`/api/v1/catalog/${item.catalogItemId}`, {
@@ -125,16 +133,39 @@ export function ItemEditor({ item, users, isTemplate = false, onClose }: Props) 
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="z. B. die von Oma" />
         </label>
 
+        {packing && (
+          <div className="field__row">
+            <label className="field">
+              <span>Für wen</span>
+              <input value={person} onChange={(e) => setPerson(e.target.value)} list="packing-people" placeholder="alle" />
+            </label>
+            <label className="field">
+              <span>Packstück</span>
+              <input value={container} onChange={(e) => setContainer(e.target.value)} list="packing-containers" placeholder="z. B. Koffer" />
+            </label>
+            <datalist id="packing-people">
+              {[...new Set(items.map((i) => packingInfo(i).person).filter(Boolean))].map((p) => (
+                <option key={p} value={p!} />
+              ))}
+            </datalist>
+            <datalist id="packing-containers">
+              {[...new Set(items.map((i) => packingInfo(i).container).filter(Boolean))].map((c) => (
+                <option key={c} value={c!} />
+              ))}
+            </datalist>
+          </div>
+        )}
+
         <label className="field">
           <span>Kategorie</span>
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
           </select>
-          {item.catalogItemId && categoryId !== (item.categoryId ?? 'eigene') && (
+          {item.catalogItemId && categoryId !== categoryInList(item.categoryId, list.listType).id && (
             <label className="check">
               <input type="checkbox" checked={forAll} onChange={(e) => setForAll(e.target.checked)} /> für diesen Artikel immer verwenden
             </label>
@@ -153,12 +184,13 @@ export function ItemEditor({ item, users, isTemplate = false, onClose }: Props) 
         <p className="sheet__meta">
           {createdBy && (
             <>
-              Hinzugefügt von <Avatar user={createdBy} size="xs" /> {createdBy.displayName}.{' '}
+              Hinzugefügt von <Avatar user={createdBy} size="xs" /> {createdBy.displayName}
+              {typeof item.attributes.via === 'string' && <> über {item.attributes.via}</>}.{' '}
             </>
           )}
           {item.checked && checkedBy && (
             <>
-              Gekauft von <Avatar user={checkedBy} size="xs" /> {checkedBy.displayName}.
+              {packing ? 'Eingepackt von' : 'Gekauft von'} <Avatar user={checkedBy} size="xs" /> {checkedBy.displayName}.
             </>
           )}
         </p>

@@ -147,6 +147,8 @@ export const catalogItems = pgTable(
     aliases: jsonb('aliases').$type<string[]>().notNull().default([]),
     pantry: boolean('pantry').notNull().default(false),
     source: text('source').$type<'seed' | 'mealie' | 'user'>().notNull(),
+    /** Groceries or packing items (packing lists have their own catalog). */
+    kind: text('kind').$type<'shopping' | 'packing'>().notNull().default('shopping'),
     mealieFoodId: text('mealie_food_id'),
     /** Category was changed by hand and must not be overwritten by imports. */
     categoryLocked: boolean('category_locked').notNull().default(false),
@@ -293,4 +295,47 @@ export const iconUsage = pgTable(
     costMicro: integer('cost_micro').notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.day, t.provider] })],
+);
+
+export const WEBHOOK_EVENTS = ['list.changed', 'list.removed', 'item.changed', 'item.removed'] as const;
+export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
+
+/** Outgoing webhooks (e.g. to n8n): every change of the owner's lists, HMAC-signed. */
+export const webhooks = pgTable(
+  'webhooks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    url: text('url').notNull(),
+    /** Signing secret, encrypted (SecretBox). */
+    secret: text('secret').notNull(),
+    events: jsonb('events').$type<WebhookEvent[]>().notNull(),
+    active: boolean('active').notNull().default(true),
+    /** Position in the change stream: everything after it is still to be delivered. */
+    cursor: bigint('cursor', { mode: 'number' }).notNull(),
+    lastStatus: text('last_status'),
+    lastDeliveryAt: timestamp('last_delivery_at', { withTimezone: true }),
+    failures: integer('failures').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('webhooks_user_idx').on(t.userId)],
+);
+
+/** Remembered answers for the Idempotency-Key header (24 h). */
+export const idempotencyKeys = pgTable(
+  'idempotency_keys',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    key: text('key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    /** null while the first request is still running. */
+    status: integer('status'),
+    response: jsonb('response'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.key] })],
 );

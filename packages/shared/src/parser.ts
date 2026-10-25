@@ -1,5 +1,6 @@
 import type { CatalogIndex } from './catalog-index.js';
 import type { Amount } from './model.js';
+import { extractPackingTokens } from './packing.js';
 import { findProperty } from './properties.js';
 import { findUnit } from './units.js';
 
@@ -10,6 +11,9 @@ export interface ParsedItem {
   amounts: Amount[];
   properties: string[];
   note: string | null;
+  /** Packing lists: "@Anna" and "#Koffer" in the typed text. */
+  person?: string | null;
+  container?: string | null;
 }
 
 const NUMBER_WORDS: Record<string, number> = {
@@ -57,7 +61,8 @@ function capitalize(s: string): string {
 }
 
 export function parseItem(text: string, catalog?: CatalogIndex): ParsedItem | null {
-  let rest = text.trim();
+  const packing = extractPackingTokens(text);
+  let rest = packing.text;
   if (!rest) return null;
 
   const notes: string[] = [];
@@ -148,6 +153,8 @@ export function parseItem(text: string, catalog?: CatalogIndex): ParsedItem | nu
     amounts: quantity !== null || unit !== null ? [{ q: quantity, u: unit }] : [],
     properties,
     note: notes.length ? notes.join(', ') : null,
+    ...(packing.person ? { person: packing.person } : {}),
+    ...(packing.container ? { container: packing.container } : {}),
   };
 }
 

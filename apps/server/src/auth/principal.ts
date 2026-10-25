@@ -15,6 +15,8 @@ export interface Principal {
   /** Granted scopes; a browser session has all of them. */
   scopes: ReadonlySet<Scope>;
   tokenId?: string;
+  /** Name of the API token or OAuth client ("Home Assistant", "Claude"). */
+  tokenName?: string;
 }
 
 export const TOKEN_PREFIX = 'shp_';
@@ -33,7 +35,7 @@ const LAST_USED_GRANULARITY_MS = 5 * 60_000;
 async function tokenPrincipal(db: Db, token: string): Promise<Principal | null> {
   const now = new Date();
   const [row] = await db
-    .select({ id: apiTokens.id, userId: apiTokens.userId, scopes: apiTokens.scopes, lastUsedAt: apiTokens.lastUsedAt, isGuest: users.isGuest })
+    .select({ id: apiTokens.id, name: apiTokens.name, userId: apiTokens.userId, scopes: apiTokens.scopes, lastUsedAt: apiTokens.lastUsedAt, isGuest: users.isGuest })
     .from(apiTokens)
     .innerJoin(users, eq(users.id, apiTokens.userId))
     .where(
@@ -53,6 +55,7 @@ async function tokenPrincipal(db: Db, token: string): Promise<Principal | null> 
     via: 'token',
     scopes: new Set(row.scopes.filter((s): s is Scope => (SCOPES as readonly string[]).includes(s))),
     tokenId: row.id,
+    tokenName: row.name,
   };
 }
 

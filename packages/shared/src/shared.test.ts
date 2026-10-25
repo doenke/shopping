@@ -5,10 +5,13 @@ import { Hlc } from './hlc.js';
 import { applyPatch, ITEM_FIELDS, mergeRow } from './lww.js';
 import type { CatalogItem } from './model.js';
 import { parseInput, parseItem, splitInput } from './parser.js';
+import { categoriesFor, categoryInList } from './categories.js';
 import { planAdd } from './plan-add.js';
 import { seedCatalog } from './seed-catalog.js';
 
-const catalog: CatalogItem[] = seedCatalog().map((s, i) => ({
+const catalog: CatalogItem[] = seedCatalog()
+  .filter((s) => s.kind === 'shopping')
+  .map((s, i) => ({
   id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
   name: s.name,
   plural: null,
@@ -19,6 +22,7 @@ const catalog: CatalogItem[] = seedCatalog().map((s, i) => ({
   source: 'seed',
   mealieFoodId: null,
   icon: null,
+  kind: s.kind,
   hidden: false,
   seq: 0,
 }));
@@ -138,5 +142,48 @@ describe('planAdd', () => {
     ]);
     expect(plan[0]!.patch.amounts).toEqual([{ q: 3, u: 'l' }]);
     expect(plan[2]!.patch.position! > 'a1').toBe(true);
+  });
+});
+
+describe('packing lists', () => {
+  const packing: CatalogItem[] = seedCatalog()
+    .filter((s) => s.kind === 'packing')
+    .map((s, i) => ({ ...catalog[0]!, id: `00000000-0000-4000-9000-${String(i).padStart(12, '0')}`, name: s.name, aliases: s.aliases, categoryId: s.categoryId, kind: 'packing' as const }));
+  const index = new CatalogIndex(packing);
+
+  it('reads person and Packstück from the input', () => {
+    const [shirts, brush] = parseInput('3 T-Shirts @anna #Koffer, Zahnbürste @Ben #Blaue_Tasche', index);
+    expect(shirts).toMatchObject({ name: 'T-Shirts', amounts: [{ q: 3, u: null }], person: 'Anna', container: 'Koffer', categoryId: 'kleidung' });
+    expect(brush).toMatchObject({ name: 'Zahnbürste', person: 'Ben', container: 'Blaue Tasche', categoryId: 'koerperpflege' });
+    expect(parseItem('Socken', index)).not.toHaveProperty('person');
+  });
+
+  it('keeps items of different people or Packstücke apart', () => {
+    let n = 0;
+    const newId = () => `id-${++n}`;
+    const first = planAdd('l', [], parseInput('2 T-Shirts @Anna, 2 T-Shirts @Ben', index), newId);
+    expect(first.map((c) => c.kind)).toEqual(['created', 'created']);
+    expect(first[0]!.patch.attributes).toEqual({ person: 'Anna' });
+    const existing = first.map((c) => ({
+      id: c.id,
+      catalogItemId: c.patch.catalogItemId ?? null,
+      name: c.patch.name!,
+      checked: false,
+      deleted: false,
+      amounts: c.patch.amounts!,
+      properties: [],
+      note: null,
+      attributes: c.patch.attributes ?? {},
+      position: c.patch.position!,
+    }));
+    const more = planAdd('l', existing, parseInput('1 T-Shirts @anna, T-Shirts #Koffer', index), newId);
+    expect(more[0]).toMatchObject({ id: 'id-1', kind: 'merged', patch: { amounts: [{ q: 3, u: null }] } });
+    expect(more[1]).toMatchObject({ kind: 'created', patch: { attributes: { container: 'Koffer' } } });
+  });
+
+  it('sorts unknown categories of a packing list into "Sonstiges"', () => {
+    expect(categoryInList('obst-gemuese', 'packing').id).toBe('packen-sonstiges');
+    expect(categoryInList('technik', 'packing').name).toBe('Technik');
+    expect(categoriesFor('shopping')).toHaveLength(14);
   });
 });

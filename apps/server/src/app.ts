@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import websocket from '@fastify/websocket';
-import { CATEGORIES } from '@shopping/shared';
+import { ALL_CATEGORIES, CATEGORIES } from '@shopping/shared';
 import { eq, gt, sql } from 'drizzle-orm';
 import Fastify, { type FastifyRequest } from 'fastify';
 import { z } from 'zod';
@@ -30,6 +30,8 @@ import { sharingRoutes } from './sharing/routes.js';
 import { SyncHub } from './sync/hub.js';
 import { toCatalogItem, toMe } from './sync/rows.js';
 import { SyncService } from './sync/service.js';
+import { webhookRoutes } from './webhooks/routes.js';
+import { WebhookService } from './webhooks/service.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -158,7 +160,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
       const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
       const body = z
         .object({
-          categoryId: z.enum(CATEGORIES.map((c) => c.id) as [string, ...string[]]).optional(),
+          categoryId: z.enum(ALL_CATEGORIES.map((c) => c.id) as [string, ...string[]]).optional(),
           hidden: z.boolean().optional(),
           pantry: z.boolean().optional(),
         })
@@ -178,7 +180,10 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
 
   const mealie = new MealieService(db, secrets, sync, hub, app.log, fetchImpl);
   const api = new ShoppingApi(db, sync, hub, mealie);
-  await app.register(apiRoutes, { config, api, sync, hub, requireUser });
+  await app.register(apiRoutes, { config, db, api, sync, hub, requireUser });
+  const webhooks = new WebhookService(db, secrets, hub, app.log, fetchImpl);
+  await app.register(webhookRoutes, { webhooks, requireAccount });
+  app.addHook('onClose', async () => webhooks.stop());
   await app.register(oauthRoutes, { config, db });
   await app.register(mcpRoutes, { api, requireUser });
   await app.register(mealieRoutes, { config, db, sync, hub, secrets, mealie, requireUser: requireAccount });
@@ -212,5 +217,5 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
     app.log.warn('Kein Web-Build gefunden – es läuft nur die API.');
   }
 
-  return { app, sync, hub, mealie, api, icons, avatars };
+  return { app, sync, hub, mealie, api, icons, avatars, webhooks };
 }

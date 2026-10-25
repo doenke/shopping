@@ -1,11 +1,13 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Config } from '../config.js';
+import type { Db } from '../db/index.js';
+import { withIdempotency } from './idempotency.js';
 import type { SyncHub } from '../sync/hub.js';
 import type { SyncService } from '../sync/service.js';
 import { toApiItem, toApiList } from './format.js';
 import { buildOpenApi, type RouteDoc } from './openapi.js';
-import type { ShoppingApi } from './service.js';
+import { actorContext, type ShoppingApi } from './service.js';
 
 const ItemObject = z.object({
   name: z.string().trim().min(1).max(120).describe('Artikelname, z. B. „Milch“'),
@@ -14,7 +16,10 @@ const ItemObject = z.object({
   properties: z.array(z.string().max(40)).max(20).optional().describe('Eigenschaften, z. B. ["bio", "laktosefrei"]'),
   note: z.string().max(500).nullable().optional(),
   category: z.string().max(40).nullable().optional().describe('Kategorie-ID oder -Name, z. B. „Milch & Käse“'),
+  person: z.string().max(40).nullable().optional().describe('Packliste: für wen, z. B. „Anna“'),
+  container: z.string().max(40).nullable().optional().describe('Packliste: Packstück, z. B. „Koffer“'),
 });
+const ListType = z.enum(['shopping', 'packing']).describe('„shopping“ (Einkaufsliste) oder „packing“ (Packliste)');
 const ItemInput = z.union([z.string().trim().min(1).max(300).describe('Freitext, z. B. „2 kg Kartoffeln festkochend“'), ItemObject]);
 
 const ListRef = z.object({ id: z.string().min(1).max(100).describe('Listen-ID, Name oder „default“ für die Hauptliste') });
@@ -44,6 +49,7 @@ const ImportBody = z.union([
 
 interface Options {
   config: Config;
+  db: Db;
   api: ShoppingApi;
   sync: SyncService;
   hub: SyncHub;
@@ -57,7 +63,7 @@ type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
  * anything else that is not the app's own sync protocol.
  */
 export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<void> {
-  const { config, api, sync, hub, requireUser } = opts;
+  const { config, db, api, sync, hub, requireUser } = opts;
   const docs: RouteDoc[] = [];
 
   /** Registers a route and documents it in the OpenAPI description. */
@@ -72,14 +78,19 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
       method,
       url,
       preHandler: requireUser,
-      handler: async (request) =>
-        handler({
-          userId: request.userId,
-          params: (doc.params ? doc.params.parse(request.params) : {}) as z.infer<P>,
-          query: (doc.query ? doc.query.parse(request.query) : {}) as z.infer<Q>,
-          body: (doc.body ? doc.body.parse(request.body ?? {}) : {}) as z.infer<B>,
-          request,
-        }),
+      handler: async (request, reply) =>
+        withIdempotency(db, request, reply, () =>
+          // Items added with a token remember it ("über Home Assistant").
+          actorContext.run({ via: request.principal.tokenName ?? null }, () =>
+            handler({
+              userId: request.userId,
+              params: (doc.params ? doc.params.parse(request.params) : {}) as z.infer<P>,
+              query: (doc.query ? doc.query.parse(request.query) : {}) as z.infer<Q>,
+              body: (doc.body ? doc.body.parse(request.body ?? {}) : {}) as z.infer<B>,
+              request,
+            }),
+          ),
+        ),
     });
   }
 
@@ -91,9 +102,13 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
     {
       summary: 'Alle Listen',
       tag: 'Listen',
-      query: z.object({ templates: z.enum(['exclude', 'include', 'only']).default('exclude') }),
+      query: z.object({
+        templates: z.enum(['exclude', 'include', 'only']).default('exclude'),
+        type: ListType.optional(),
+        archived: z.enum(['true', 'false']).default('false').describe('Auch archivierte Listen'),
+      }),
     },
-    ({ userId, query }) => api.lists(userId, query.templates),
+    ({ userId, query }) => api.lists(userId, query.templates, { type: query.type, archived: query.archived === 'true' }),
   );
 
   route(
@@ -101,10 +116,16 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
     '/api/v1/lists',
     {
       summary: 'Liste anlegen (optional aus einer Vorlage)',
+      description: 'Aus einer Vorlage übernimmt die Liste deren Typ (Packliste oder Einkaufsliste).',
       tag: 'Listen',
-      body: z.object({ name: z.string().trim().min(1).max(80), template: z.string().optional(), isTemplate: z.boolean().optional() }),
+      body: z.object({
+        name: z.string().trim().min(1).max(80),
+        type: ListType.optional(),
+        template: z.string().optional(),
+        isTemplate: z.boolean().optional(),
+      }),
     },
-    ({ userId, body }) => api.createList(userId, body.name, { template: body.template, isTemplate: body.isTemplate }),
+    ({ userId, body }) => api.createList(userId, body.name, { template: body.template, isTemplate: body.isTemplate, type: body.type }),
   );
 
   route(
@@ -122,9 +143,15 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
   route(
     'PATCH',
     '/api/v1/lists/:id',
-    { summary: 'Liste umbenennen', tag: 'Listen', params: ListRef, body: z.object({ name: z.string().trim().min(1).max(80) }) },
+    {
+      summary: 'Liste umbenennen oder archivieren',
+      tag: 'Listen',
+      params: ListRef,
+      body: z.object({ name: z.string().trim().min(1).max(80).optional(), archived: z.boolean().optional() }),
+    },
     async ({ userId, params, body }) => {
-      await api.renameList(userId, params.id, body.name);
+      if (body.name) await api.renameList(userId, params.id, body.name);
+      if (body.archived !== undefined) await api.archiveList(userId, params.id, body.archived);
       return api.list(userId, params.id);
     },
   );
@@ -208,15 +235,24 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
   route(
     'GET',
     '/api/v1/catalog/search',
-    { summary: 'Lebensmittel im Katalog suchen', tag: 'Katalog', query: z.object({ q: z.string().min(1).max(100) }) },
-    ({ query }) => api.searchCatalog(query.q),
+    {
+      summary: 'Lebensmittel (oder Packartikel) im Katalog suchen',
+      tag: 'Katalog',
+      query: z.object({ q: z.string().min(1).max(100), kind: ListType.default('shopping') }),
+    },
+    ({ query }) => api.searchCatalog(query.q, 15, query.kind),
   );
 
   route(
     'POST',
     '/api/v1/parse',
-    { summary: 'Text in Artikel zerlegen (ohne zu speichern)', tag: 'Katalog', body: z.object({ text: z.string().min(1).max(2000) }) },
-    ({ body }) => api.parse(body.text),
+    {
+      summary: 'Text in Artikel zerlegen (ohne zu speichern)',
+      description: 'Packlisten: „@Anna“ ist die Person, „#Koffer“ das Packstück.',
+      tag: 'Katalog',
+      body: z.object({ text: z.string().min(1).max(2000), kind: ListType.default('shopping') }),
+    },
+    ({ body }) => api.parse(body.text, body.kind),
   );
 
   route(

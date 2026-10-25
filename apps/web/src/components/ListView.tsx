@@ -1,9 +1,10 @@
-import { CATEGORIES, getCategory, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
+import { categoriesFor, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { clearChecked, setChecked } from '../actions';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
+import { PackingView } from './PackingView';
 import { Tile } from './Tile';
 
 interface Props {
@@ -16,7 +17,13 @@ interface Props {
 
 const RECENT_LIMIT = 40;
 
-export const ListView = forwardRef<HTMLInputElement, Props>(function ListView({ list, items, index, users, remoteChecks }, addRef) {
+export const ListView = forwardRef<HTMLInputElement, Props>(function ListView(props, addRef) {
+  // Packing lists work differently: packed items stay visible (templates are shown like any template).
+  if (props.list.listType === 'packing' && !props.list.isTemplate) return <PackingView ref={addRef} {...props} />;
+  return <ShoppingView ref={addRef} {...props} />;
+});
+
+const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({ list, items, index, users, remoteChecks }, addRef) {
   const [editing, setEditing] = useState<string | null>(null);
   const [undo, setUndo] = useState<ItemRow | null>(null);
   const [showRecent, setShowRecent] = useState(false);
@@ -37,14 +44,14 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView({ 
   const groups = useMemo(() => {
     const byCat = new Map<string, ItemRow[]>();
     for (const i of open) {
-      const cat = getCategory(i.categoryId).id;
+      const cat = categoryInList(i.categoryId, list.listType).id;
       byCat.set(cat, [...(byCat.get(cat) ?? []), i]);
     }
-    return CATEGORIES.filter((c) => byCat.has(c.id)).map((c) => ({
+    return categoriesFor(list.listType).filter((c) => byCat.has(c.id)).map((c) => ({
       category: c,
       items: byCat.get(c.id)!.sort((a, b) => a.position.localeCompare(b.position)),
     }));
-  }, [open]);
+  }, [open, list.listType]);
 
   const boost = useMemo(() => {
     const used = new Map<string, number>();
@@ -56,7 +63,13 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView({ 
 
   return (
     <section className="listview">
-      <AddBar ref={addRef} listId={list.id} index={index} boost={boost} />
+      <AddBar
+        ref={addRef}
+        listId={list.id}
+        index={index}
+        boost={boost}
+        placeholder={list.listType === 'packing' ? 'Was kommt mit? z. B. 3 T-Shirts @Anna #Koffer' : undefined}
+      />
 
       {list.isTemplate && (
         <p className="template-hint">
@@ -85,6 +98,7 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView({ 
                   fading={!!remote}
                   badge={remote ? `✓ ${users.get(remote.by)?.displayName ?? ''}`.trim() : list.isTemplate && item.optional ? 'optional' : undefined}
                   badgeUser={remote ? users.get(remote.by) : undefined}
+                  extra={[packingInfo(item).person, packingInfo(item).container].filter(Boolean).join(' · ') || undefined}
                   onTap={() => {
                     if (list.isTemplate) return setEditing(item.id);
                     if (remote) return;
@@ -136,7 +150,7 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView({ 
         </div>
       )}
 
-      {editItem && <ItemEditor key={editItem.id} item={editItem} users={users} isTemplate={list.isTemplate} onClose={() => setEditing(null)} />}
+      {editItem && <ItemEditor key={editItem.id} item={editItem} list={list} items={items} users={users} onClose={() => setEditing(null)} />}
     </section>
   );
 });

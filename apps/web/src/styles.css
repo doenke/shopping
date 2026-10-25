@@ -1059,3 +1059,73 @@ img.avatar {
 .review__candidate--doubtful .icon-preview {
   opacity: 0.55;
 }
+
+/* ---- Packing lists ---- */
+
+.tile--packed {
+  background: var(--surface-2);
+  opacity: 0.6;
+}
+.tile--packed .tile__name {
+  text-decoration: line-through;
+}
+.tile--packed .item-icon {
+  filter: grayscale(0.6);
+}
+.tile__extra {
+  font-style: italic;
+}
+.group__count {
+  margin-left: 6px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.packing-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 4px 0 8px;
+}
+.packing-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.packing-progress progress {
+  width: 140px;
+  height: 8px;
+  accent-color: var(--primary);
+}
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.segmented button {
+  padding: 5px 12px;
+  border: none;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.segmented button + button {
+  border-left: 1px solid var(--border);
+}
+.segmented button.active {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+.empty--inline {
+  margin: 12px auto;
+}
+.sidebar__archive summary {
+  cursor: pointer;
+  list-style: none;
+}

@@ -54,5 +54,4 @@ wie die REST-API.
 - Der MCP-Client handelt im Namen des angemeldeten Nutzers und sieht nur
   dessen Listen (eigene + über Link beigetretene).
 - Scopes wie bei API-Tokens; standardmäßig kein Löschen ganzer Listen per MCP.
-- Noch nicht umgesetzt: MCP-Änderungen mit Client-Namen kennzeichnen
-  („hinzugefügt von Claude“). Derzeit erscheinen sie als Änderung des Nutzers.
+- MCP-Änderungen sind mit dem Client-Namen gekennzeichnet („hinzugefügt von Anna über Claude“).

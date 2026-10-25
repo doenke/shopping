@@ -57,6 +57,20 @@
       "when": 1792871029766,
       "tag": "0007_drop_cost_milli",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792919326339,
+      "tag": "0008_packing",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792919845952,
+      "tag": "0009_webhooks",
+      "breakpoints": true
     }
   ]
 }

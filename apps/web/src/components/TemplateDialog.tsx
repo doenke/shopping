@@ -1,6 +1,6 @@
-import { itemSpecification, type ItemRow, type ListRow } from '@shopping/shared';
+import { itemSpecification, packingInfo, type ItemRow, type ListRow, type ListType } from '@shopping/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { addItems, createList, type NewItem } from '../actions';
+import { addItems, createList, itemToNew, type NewItem } from '../actions';
 import { navigate, useItems } from '../hooks';
 import { ItemIcon } from './Tile';
 
@@ -8,26 +8,24 @@ interface Props {
   templates: ListRow[];
   /** Apply into this list; without it a new list is created. */
   targetList?: ListRow;
+  /** Type of a new list (packing lists only use packing templates). */
+  listType?: ListType;
   onClose: () => void;
 }
 
 function toNewItem(i: ItemRow, template: ListRow): NewItem {
-  return {
-    name: i.name,
-    catalogItemId: i.catalogItemId,
-    categoryId: i.categoryId,
-    amounts: i.amounts,
-    properties: i.properties,
-    note: i.note,
-    sources: [{ type: 'template', label: template.name }],
-  };
+  return { ...itemToNew(i), sources: [{ type: 'template', label: template.name }] };
 }
 
 /** "Neue Liste" (optionally from a template) and "Vorlage übernehmen" with a checklist. */
-export function TemplateDialog({ templates, targetList, onClose }: Props) {
+export function TemplateDialog({ templates: allTemplates, targetList, listType: newType = 'shopping', onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [name, setName] = useState('Einkauf');
-  const [templateId, setTemplateId] = useState(targetList ? (templates[0]?.id ?? '') : '');
+  const listType = targetList?.listType ?? newType;
+  const packing = listType === 'packing';
+  const templates = allTemplates.filter((t) => t.listType === listType);
+  const [name, setName] = useState(packing ? 'Urlaub' : 'Einkauf');
+  // A new packing list is "new from template": the first packing template is preselected.
+  const [templateId, setTemplateId] = useState(targetList || packing ? (templates[0]?.id ?? '') : '');
   const template = templates.find((t) => t.id === templateId);
   const items = useItems(template?.id);
   const sorted = useMemo(() => [...(items ?? [])].sort((a, b) => a.position.localeCompare(b.position)), [items]);
@@ -42,7 +40,7 @@ export function TemplateDialog({ templates, targetList, onClose }: Props) {
     let listId = targetList?.id;
     if (!listId) {
       if (!name.trim()) return;
-      listId = await createList(name.trim());
+      listId = await createList(name.trim(), false, listType);
       navigate({ page: 'list', listId });
     }
     if (chosen.length) await addItems(listId, chosen);
@@ -67,7 +65,7 @@ export function TemplateDialog({ templates, targetList, onClose }: Props) {
         }}
       >
         <header className="sheet__header row">
-          <h2 className="spacer">{targetList ? `Vorlage in „${targetList.name}“` : 'Neue Liste'}</h2>
+          <h2 className="spacer">{targetList ? `Vorlage in „${targetList.name}“` : packing ? 'Neue Packliste' : 'Neue Liste'}</h2>
           <button type="button" className="icon-btn" aria-label="Schließen" onClick={() => ref.current?.close()}>
             ✕
           </button>
@@ -78,6 +76,10 @@ export function TemplateDialog({ templates, targetList, onClose }: Props) {
             <span>Name</span>
             <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
           </label>
+        )}
+
+        {packing && templates.length === 0 && !targetList && (
+          <p className="muted">Tipp: Lege unter „Vorlagen“ eine Packvorlage an (z. B. „Wochenend-Trip“) – neue Packlisten entstehen dann daraus.</p>
         )}
 
         {templates.length > 0 && (
@@ -103,7 +105,7 @@ export function TemplateDialog({ templates, targetList, onClose }: Props) {
                   <ItemIcon name={i.name} categoryId={i.categoryId} catalogItemId={i.catalogItemId} size="sm" />
                   <span className="spacer">
                     {i.name}
-                    <small className="muted"> {itemSpecification(i)}</small>
+                    <small className="muted"> {[itemSpecification(i), packingInfo(i).person, packingInfo(i).container].filter(Boolean).join(' · ')}</small>
                     {i.optional && <small className="muted"> · optional</small>}
                   </span>
                 </label>

@@ -25,8 +25,42 @@ export const CATEGORIES: CategoryDef[] = [
 
 export const DEFAULT_CATEGORY = 'eigene';
 
-const byId = new Map(CATEGORIES.map((c) => [c.id, c]));
+/** Categories of packing lists (list type "packing"). */
+export const PACKING_CATEGORIES: CategoryDef[] = [
+  { id: 'dokumente', name: 'Dokumente & Geld', color: '#4A90C9', order: 10 },
+  { id: 'kleidung', name: 'Kleidung', color: '#C2569A', order: 20 },
+  { id: 'schuhe', name: 'Schuhe', color: '#8C6D4F', order: 30 },
+  { id: 'koerperpflege', name: 'Körperpflege', color: '#9B6FC4', order: 40 },
+  { id: 'reiseapotheke', name: 'Reiseapotheke', color: '#D2544B', order: 50 },
+  { id: 'technik', name: 'Technik', color: '#7A7FD1', order: 60 },
+  { id: 'unterwegs', name: 'Unterwegs & Proviant', color: '#C98A3E', order: 70 },
+  { id: 'freizeit', name: 'Freizeit & Sport', color: '#3FA7A0', order: 80 },
+  { id: 'kinder', name: 'Kinder', color: '#E3B505', order: 90 },
+  { id: 'ausruestung', name: 'Ausrüstung', color: '#6B8E3D', order: 100 },
+  { id: 'packen-sonstiges', name: 'Sonstiges', color: '#8A8F98', order: 110 },
+];
+
+export const DEFAULT_PACKING_CATEGORY = 'packen-sonstiges';
+
+/** All categories of all list types (ids are unique across types). */
+export const ALL_CATEGORIES: CategoryDef[] = [...CATEGORIES, ...PACKING_CATEGORIES];
+
+const byId = new Map(ALL_CATEGORIES.map((c) => [c.id, c]));
 
 export function getCategory(id: string | null | undefined): CategoryDef {
   return byId.get(id ?? DEFAULT_CATEGORY) ?? byId.get(DEFAULT_CATEGORY)!;
+}
+
+export function categoriesFor(listType: string): CategoryDef[] {
+  return listType === 'packing' ? PACKING_CATEGORIES : CATEGORIES;
+}
+
+export function defaultCategoryFor(listType: string): string {
+  return listType === 'packing' ? DEFAULT_PACKING_CATEGORY : DEFAULT_CATEGORY;
+}
+
+/** Category of an item shown in a list of the given type (unknown/other-type ones go to "Sonstiges"). */
+export function categoryInList(id: string | null | undefined, listType: string): CategoryDef {
+  const own = categoriesFor(listType);
+  return own.find((c) => c.id === id) ?? getCategory(defaultCategoryFor(listType));
 }

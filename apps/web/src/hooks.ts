@@ -35,9 +35,27 @@ export function useUsers(): Map<string, UserInfo> {
   return useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
 }
 
-export function useCatalog(): { items: CatalogItem[]; byId: Map<string, CatalogItem>; index: CatalogIndex } {
+export interface Catalog {
+  items: CatalogItem[];
+  byId: Map<string, CatalogItem>;
+  /** Groceries. */
+  index: CatalogIndex;
+  /** Packing items (packing lists have their own catalog). */
+  packingIndex: CatalogIndex;
+}
+
+export function useCatalog(): Catalog {
   const items = useLiveQuery(() => db.catalog.toArray()) ?? [];
-  return useMemo(() => ({ items, byId: new Map(items.map((i) => [i.id, i])), index: new CatalogIndex(items) }), [items]);
+  return useMemo(() => {
+    // Older cached rows have no kind yet: they are groceries.
+    const packing = items.filter((i) => i.kind === 'packing');
+    return {
+      items,
+      byId: new Map(items.map((i) => [i.id, i])),
+      index: new CatalogIndex(items.filter((i) => i.kind !== 'packing')),
+      packingIndex: new CatalogIndex(packing),
+    };
+  }, [items]);
 }
 
 export function useIcons(catalog: CatalogItem[]): IconIndex {

@@ -1,4 +1,4 @@
-import { itemSpecification, parseInput, type CatalogIndex, type CatalogItem } from '@shopping/shared';
+import { extractPackingTokens, itemSpecification, parseInput, type CatalogIndex, type CatalogItem } from '@shopping/shared';
 import { forwardRef, useMemo, useState } from 'react';
 import { addItems, catalogToParsed } from '../actions';
 import { Tile } from './Tile';
@@ -8,17 +8,20 @@ interface Props {
   index: CatalogIndex;
   /** Ranks frequently used items higher. */
   boost: (item: CatalogItem) => number;
+  placeholder?: string;
 }
 
 /** One input for everything: "2 kg Kartoffeln", "Milch, Butter, 6 Eier" or a search. */
-export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ listId, index, boost }, ref) {
+export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ listId, index, boost, placeholder }, ref) {
   const [text, setText] = useState('');
   const parsed = useMemo(() => parseInput(text, index), [text, index]);
   const single = parsed.length === 1 ? parsed[0] : undefined;
   const hasAmount = !!single && (single.amounts.length > 0 || single.properties.length > 0 || !!single.note);
+  // "@Anna" / "#Koffer" (packing lists) are not part of the search.
+  const packing = useMemo(() => extractPackingTokens(text), [text]);
   const suggestions = useMemo(
-    () => (text.trim() && !text.includes(',') && !hasAmount ? index.search(text, 12, boost) : []),
-    [text, index, boost, hasAmount],
+    () => (packing.text && !text.includes(',') && !hasAmount ? index.search(packing.text, 12, boost) : []),
+    [text, packing, index, boost, hasAmount],
   );
 
   // Clear the field first, so fast typing never loses the next entry.
@@ -30,7 +33,7 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
 
   const pick = async (c: CatalogItem) => {
     setText('');
-    await addItems(listId, [catalogToParsed(c)]);
+    await addItems(listId, [{ ...catalogToParsed(c), person: packing.person, container: packing.container }]);
   };
 
   const freeText = single && !single.catalogItemId && !suggestions.some((s) => s.name.toLowerCase() === single.name.toLowerCase());
@@ -48,7 +51,7 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
           type="search"
           enterKeyHint="done"
           autoComplete="off"
-          placeholder="Was brauchst du? z. B. 2 kg Kartoffeln"
+          placeholder={placeholder ?? 'Was brauchst du? z. B. 2 kg Kartoffeln'}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {

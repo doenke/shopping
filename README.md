@@ -4,7 +4,7 @@ Selbst gehostete, offline-fähige Einkaufslisten-App im Stil von Bring!,
 mit nativer Mealie-Anbindung, Login über Pocket ID, REST-API für Home Assistant und
 eingebautem MCP-Server.
 
-> Status: **Phase 1 bis 4** umgesetzt – siehe [Roadmap](docs/konzept/13-roadmap-und-entscheidungen.md).
+> Status: **Phase 1 bis 5** umgesetzt (ohne Android-App) – siehe [Roadmap](docs/konzept/13-roadmap-und-entscheidungen.md).
 
 ## Was die App kann
 
@@ -31,12 +31,18 @@ eingebautem MCP-Server.
   Vorrat (Salz, Öl …) vorab abgewählt, gleiche Zutaten zusammengefasst
 - **Vorlagen** (◇): nicht abhakbar, „Neue Liste“ aus Vorlage, „Vorlage übernehmen“ mit
   Auswahl, „Als Vorlage speichern“, optionale Artikel
+- **Packlisten** 🧳 mit eigenem Katalog (Kleidung, Dokumente, Technik …): Abgehakt heißt
+  „eingepackt“ und bleibt durchgestrichen stehen, Fortschritt „12 von 30 eingepackt“, gruppiert nach
+  Kategorie, **Packstück** oder **Person**. Beim Tippen ordnen „@Anna“ und „#Koffer“ zu
+  („3 T-Shirts @Anna #Koffer“). Neue Packlisten entstehen aus Packvorlagen, erledigte kommen ins Archiv.
 
 - **REST-API** mit API-Tokens (lesen / ändern / Mealie), OpenAPI-Doku unter `/api/docs`,
   Echtzeit-Ereignisse per Server-Sent Events
 - **Home Assistant**: Listen als To-do-Listen (auch für Assist: „Füge Milch zur
   Einkaufsliste hinzu“), Live-Updates per Push, Sensor „offene Artikel“, Aktionen
 - **MCP-Server** für Claude & Co. mit OAuth-Anmeldung über Pocket ID
+- Was über ein Token oder einen KI-Assistenten hinzukommt, ist gekennzeichnet („hinzugefügt von Anna über Claude“)
+- **Webhooks** für eigene Automationen (z. B. n8n), HMAC-signiert, mit Nachlieferung; `Idempotency-Key` in der API
 
 ### Icons erzeugen
 

@@ -321,18 +321,179 @@ Grillkohle|Kohle
 `,
 };
 
+/** Packing list catalog (list type "packing"), same line format. */
+const PACKING_DATA: Record<string, string> = {
+  dokumente: `
+Personalausweis|Ausweis,Perso
+Reisepass|Pass
+Führerschein
+Krankenversicherungskarte|Versichertenkarte,Gesundheitskarte
+Auslandskrankenversicherung
+Bargeld|Geld
+EC-Karte|Bankkarte,Girokarte
+Kreditkarte
+Tickets|Fahrkarten,Bordkarte,Boardingpass
+Buchungsbestätigung|Hotelbuchung,Reservierung
+Impfpass
+Kinderreisepass
+Fahrzeugschein
+Visum
+`,
+  kleidung: `
+T-Shirts|T-Shirt,Shirt,Shirts
+Unterhosen|Unterhose,Unterwäsche
+Socken
+Hosen|Hose,Jeans
+Kurze Hosen|Shorts,kurze Hose
+Pullover|Pulli,Sweatshirt
+Hemden|Hemd,Bluse,Blusen
+Kleid|Kleider,Rock
+Jacke|Regenjacke
+Winterjacke
+Schlafanzug|Pyjama,Nachthemd
+Badesachen|Badehose,Badeanzug,Bikini
+Mütze|Kappe,Cap
+Sonnenhut|Hut
+Schal
+Handschuhe
+Gürtel
+Sportkleidung|Sportsachen
+`,
+  schuhe: `
+Turnschuhe|Sneaker,Laufschuhe
+Wanderschuhe
+Sandalen
+Badelatschen|Flip-Flops,Badeschlappen
+Hausschuhe|Puschen
+Gummistiefel
+Gute Schuhe|Lederschuhe
+`,
+  koerperpflege: `
+Zahnbürste
+Zahnpasta|Zahncreme
+Duschgel
+Shampoo
+Deo|Deodorant
+Haarbürste|Kamm
+Rasierer|Rasierapparat
+Sonnencreme|Sonnenschutz
+After-Sun
+Gesichtscreme|Creme
+Bodylotion
+Kontaktlinsen|Kontaktlinsenmittel
+Brille|Ersatzbrille
+Taschentücher
+Haargummis
+Make-up|Schminke
+Nagelschere|Nagelfeile
+Kulturbeutel
+Handtuch|Handtücher
+Lippenpflege|Labello
+`,
+  reiseapotheke: `
+Medikamente|Tabletten
+Schmerztabletten|Ibuprofen,Paracetamol
+Pflaster
+Mückenschutz|Autan,Insektenschutz
+Desinfektionsmittel
+Fieberthermometer
+Mittel gegen Reiseübelkeit|Reisetabletten
+Durchfallmittel
+Zeckenzange
+Verbandszeug
+`,
+  technik: `
+Handy|Smartphone
+Ladekabel|Kabel
+Ladegerät|Netzteil
+Powerbank
+Kopfhörer
+Laptop|Notebook
+Tablet
+Kamera|Fotoapparat
+Reiseadapter|Adapter,Steckdosenadapter
+Mehrfachsteckdose
+E-Book-Reader|Kindle
+Taschenlampe|Stirnlampe
+Uhr|Smartwatch
+`,
+  unterwegs: `
+Wasserflasche|Trinkflasche
+Snacks|Proviant
+Reisekissen|Nackenkissen
+Buch|Bücher
+Sonnenbrille
+Regenschirm|Schirm
+Rucksack|Tagesrucksack
+Taschen|Einkaufstasche,Beutel
+Schlüssel|Hausschlüssel
+Thermoskanne
+Brotdose
+`,
+  freizeit: `
+Spiele|Kartenspiel,Brettspiel
+Strandtuch|Badetuch
+Schwimmbrille|Taucherbrille
+Fahrradhelm|Helm
+Wanderkarte|Karte
+Fernglas
+Yogamatte
+Skiausrüstung|Skier,Skibrille
+`,
+  kinder: `
+Windeln
+Feuchttücher
+Schnuller
+Kuscheltier
+Fläschchen|Babyflasche
+Babynahrung|Brei
+Kinderwagen|Buggy
+Kindersitz
+Spielzeug
+Malsachen|Buntstifte
+Wickelunterlage
+Babyphone
+`,
+  ausruestung: `
+Zelt
+Schlafsack
+Isomatte
+Campingkocher|Gaskocher
+Geschirr|Besteck
+Taschenmesser
+Kühlbox
+Wäscheleine|Wäscheklammern
+Müllbeutel
+Bettwäsche|Bettzeug
+Grill
+`,
+  'packen-sonstiges': `
+Geschenk|Mitbringsel
+Notizbuch|Stift
+Wäschesack|Wäschebeutel
+Ohrstöpsel|Oropax
+Schlafmaske
+Vorhängeschloss|Schloss
+`,
+};
+
 export interface SeedItem {
   name: string;
   aliases: string[];
   categoryId: string;
   defaultUnit: string | null;
   pantry: boolean;
+  kind: 'shopping' | 'packing';
 }
 
 export function seedCatalog(): SeedItem[] {
+  return [...parse(DATA, 'shopping'), ...parse(PACKING_DATA, 'packing')];
+}
+
+function parse(data: Record<string, string>, kind: SeedItem['kind']): SeedItem[] {
   const out: SeedItem[] = [];
   const seen = new Set<string>();
-  for (const [categoryId, block] of Object.entries(DATA)) {
+  for (const [categoryId, block] of Object.entries(data)) {
     for (const line of block.split('\n')) {
       if (!line.trim()) continue;
       const [name, aliases = '', unit = '', flags = ''] = line.split('|').map((s) => s.trim());
@@ -344,6 +505,7 @@ export function seedCatalog(): SeedItem[] {
         categoryId,
         defaultUnit: unit || null,
         pantry: flags.includes('p'),
+        kind,
       });
     }
   }

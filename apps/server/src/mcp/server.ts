@@ -4,7 +4,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { ApiError } from '../api/errors.js';
 import type { ApiItem } from '../api/format.js';
-import type { ShoppingApi } from '../api/service.js';
+import { actorContext, type ShoppingApi } from '../api/service.js';
 import type { Principal, Scope } from '../auth/principal.js';
 import { MealieError } from '../mealie/client.js';
 
@@ -13,12 +13,13 @@ const listParam = z.string().optional().describe('Liste: Name, ID oder weglassen
 function itemLine(i: ApiItem): string {
   const spec = i.specification ? ` – ${i.specification}` : '';
   const from = i.sources.length ? ` (für ${i.sources.join(', ')})` : '';
-  return `- ${i.checked ? '~~' : ''}${i.name}${spec}${i.checked ? '~~' : ''}${from}`;
+  const packing = [i.person && `@${i.person}`, i.container && `#${i.container}`].filter(Boolean).join(' ');
+  return `- ${i.checked ? '~~' : ''}${i.name}${spec}${i.checked ? '~~' : ''}${packing ? ` ${packing}` : ''}${from}`;
 }
 
 /** A list as Markdown, grouped by category – easy to read for models and people. */
-function listMarkdown(list: { name: string; isMain: boolean; items: ApiItem[] }): string {
-  const lines = [`# ${list.name}${list.isMain ? ' (Hauptliste)' : ''}`];
+function listMarkdown(list: { name: string; type: string; isMain: boolean; items: ApiItem[] }): string {
+  const lines = [`# ${list.name}${list.isMain ? ' (Hauptliste)' : ''}${list.type === 'packing' ? ' (Packliste, durchgestrichen = eingepackt)' : ''}`];
   if (list.items.length === 0) lines.push('', '_Nichts auf der Liste._');
   let cat = '';
   for (const i of list.items) {
@@ -39,7 +40,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     { name: 'shopping', title: 'Shopping – Einkaufslisten', version: '1.0.0' },
     {
       instructions:
-        'Einkaufslisten des Haushalts. Ohne Angabe einer Liste ist immer die Hauptliste gemeint. Artikel am besten als natürlichen Text übergeben („2 kg Kartoffeln festkochend“) – Menge, Einheit und Eigenschaften werden erkannt. Gleiche Artikel werden zusammengeführt statt doppelt angelegt.',
+        'Einkaufslisten und Packlisten des Haushalts. Ohne Angabe einer Liste ist immer die Hauptliste (Einkauf) gemeint. Artikel am besten als natürlichen Text übergeben („2 kg Kartoffeln festkochend“) – Menge, Einheit und Eigenschaften werden erkannt. Gleiche Artikel werden zusammengeführt statt doppelt angelegt. In Packlisten bedeutet abgehakt „eingepackt“; „@Anna“ im Text ordnet einer Person zu, „#Koffer“ einem Packstück. Neue Packlisten am besten aus einer Packvorlage anlegen.',
     },
   );
   const userId = principal.userId;
@@ -50,7 +51,8 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     async (args: A) => {
       if (!principal.scopes.has(scope)) return { ...text(`Dafür fehlt die Berechtigung „${scope}“.`), isError: true };
       try {
-        return await fn(args);
+        // New items remember the assistant ("hinzugefügt über Claude").
+        return await actorContext.run({ via: principal.tokenName ?? (principal.via === 'token' ? 'KI-Assistent' : null) }, () => fn(args));
       } catch (err) {
         if (err instanceof ApiError || err instanceof MealieError) {
           const candidates = err instanceof ApiError && err.extra.candidates ? `\nKandidaten: ${JSON.stringify(err.extra.candidates)}` : '';
@@ -73,15 +75,22 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     'list_lists',
     {
       title: 'Listen anzeigen',
-      description: 'Alle Einkaufslisten (und optional Vorlagen) mit Anzahl offener Artikel.',
-      inputSchema: { include_templates: z.boolean().default(false) },
+      description: 'Alle Einkaufs- und Packlisten (und optional Vorlagen, archivierte Packlisten) mit Anzahl offener Artikel.',
+      inputSchema: {
+        include_templates: z.boolean().default(false),
+        type: z.enum(['shopping', 'packing']).optional().describe('Nur Einkaufslisten (shopping) oder Packlisten (packing)'),
+        include_archived: z.boolean().default(false),
+      },
       annotations: { readOnlyHint: true },
     },
-    guard('read', async ({ include_templates }: { include_templates: boolean }) => {
-      const lists = await api.lists(userId, include_templates ? 'include' : 'exclude');
+    guard('read', async ({ include_templates, type, include_archived }: { include_templates: boolean; type?: 'shopping' | 'packing'; include_archived: boolean }) => {
+      const lists = await api.lists(userId, include_templates ? 'include' : 'exclude', { type, archived: include_archived });
       return text(
         lists
-          .map((l) => `- ${l.isTemplate ? '◇ ' : ''}${l.name}${l.isMain ? ' ⭐ Hauptliste' : ''} – ${l.openItems} offen (id: ${l.id})`)
+          .map(
+            (l) =>
+              `- ${l.isTemplate ? '◇ ' : ''}${l.name}${l.type === 'packing' ? ' [Packliste]' : ''}${l.isMain ? ' ⭐ Hauptliste' : ''}${l.archived ? ' (archiviert)' : ''} – ${l.openItems} offen (id: ${l.id})`,
+          )
           .join('\n') || 'Keine Listen.',
       );
     }),
@@ -154,6 +163,8 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         properties: z.array(z.string()).optional(),
         note: z.string().nullable().optional(),
         category: z.string().optional().describe('z. B. „Milch & Käse“'),
+        person: z.string().nullable().optional().describe('Packliste: für wen (leer = niemand)'),
+        container: z.string().nullable().optional().describe('Packliste: Packstück, z. B. „Koffer“'),
       },
     },
     guard('write', async ({ item, list, ...patch }: { item: string; list?: string } & Record<string, unknown>) => {
@@ -163,7 +174,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
   );
 
   for (const [name, checked, title] of [
-    ['check_items', true, 'Abhaken (gekauft)'],
+    ['check_items', true, 'Abhaken (gekauft bzw. eingepackt)'],
     ['uncheck_items', false, 'Wieder auf die Liste'],
   ] as const) {
     server.registerTool(
@@ -191,12 +202,29 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     'create_list',
     {
       title: 'Liste anlegen',
-      description: 'Legt eine neue Einkaufsliste an, optional vorbefüllt aus einer Vorlage.',
-      inputSchema: { name: z.string().min(1).max(80), template: z.string().optional().describe('Name einer Vorlage') },
+      description: 'Legt eine neue Einkaufs- oder Packliste an, optional vorbefüllt aus einer Vorlage (dann gilt deren Typ).',
+      inputSchema: {
+        name: z.string().min(1).max(80),
+        template: z.string().optional().describe('Name einer Vorlage'),
+        type: z.enum(['shopping', 'packing']).optional().describe('Ohne Vorlage: Einkaufsliste (Standard) oder Packliste'),
+      },
     },
-    guard('write', async ({ name, template }: { name: string; template?: string }) => {
-      const l = await api.createList(userId, name, { template });
-      return text(`Liste „${l.name}“ angelegt (${l.openItems} Artikel).`);
+    guard('write', async ({ name, template, type }: { name: string; template?: string; type?: 'shopping' | 'packing' }) => {
+      const l = await api.createList(userId, name, { template, type });
+      return text(`${l.type === 'packing' ? 'Packliste' : 'Liste'} „${l.name}“ angelegt (${l.openItems} Artikel).`);
+    }),
+  );
+
+  server.registerTool(
+    'archive_list',
+    {
+      title: 'Liste archivieren',
+      description: 'Archiviert eine erledigte Packliste (oder holt sie mit archived=false zurück).',
+      inputSchema: { list: z.string().min(1), archived: z.boolean().default(true) },
+    },
+    guard('write', async ({ list, archived }: { list: string; archived: boolean }) => {
+      await api.archiveList(userId, list, archived);
+      return text(archived ? 'Archiviert.' : 'Wieder aktiv.');
     }),
   );
 

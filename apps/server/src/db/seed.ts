@@ -16,7 +16,9 @@ export function stableUuid(namespace: string, name: string): string {
 /** Inserts missing built-in catalog items. Existing (possibly edited) items are left alone. */
 export async function seedBaseCatalog(db: DbOrTx): Promise<number> {
   const rows = seedCatalog().map((s) => ({
-    id: stableUuid('shopping-seed', s.name.toLowerCase()),
+    // Packing items may share a name with groceries ("Zahnpasta") – own namespace keeps them apart.
+    id: stableUuid(s.kind === 'packing' ? 'shopping-seed-packing' : 'shopping-seed', s.name.toLowerCase()),
+    kind: s.kind,
     name: s.name,
     categoryId: s.categoryId,
     defaultUnit: s.defaultUnit,

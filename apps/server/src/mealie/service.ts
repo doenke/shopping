@@ -98,7 +98,7 @@ export class MealieService {
   }
 
   private async converter(cfg: MealieConfig): Promise<Converter> {
-    const catalog = (await this.db.select().from(catalogItems)).map(toCatalogItem);
+    const catalog = (await this.db.select().from(catalogItems).where(eq(catalogItems.kind, 'shopping'))).map(toCatalogItem);
     return new Converter(catalog, cfg.labelMapping ?? {});
   }
 
