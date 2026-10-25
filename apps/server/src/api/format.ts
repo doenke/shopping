@@ -1,4 +1,4 @@
-import { categoryInList, formatAmounts, getCategory, itemSpecification, packingInfo, type ItemRow, type ItemSource, type ListRow, type ListType } from '@shopping/shared';
+import { categoryInList, formatAmounts, getCategory, itemSpecification, listDescription, packingInfo, type ItemRow, type ItemSource, type ListRow, type ListType } from '@shopping/shared';
 
 /** The public shape of an item in the REST API, SSE and MCP. */
 export interface ApiItem {
@@ -21,6 +21,9 @@ export interface ApiItem {
   /** Packing lists: for whom, and in which Packstück. */
   person: string | null;
   container: string | null;
+  /** Merklisten: who the tip is from, and where to find it (same values as person/container). */
+  tipFrom: string | null;
+  where: string | null;
   /** Token or AI assistant the item was added through ("Claude", "Home Assistant"). */
   addedVia: string | null;
 }
@@ -28,8 +31,9 @@ export interface ApiItem {
 export interface ApiList {
   id: string;
   name: string;
-  /** "shopping" or "packing". */
+  /** "shopping", "packing" or "memo" (Merkliste). */
   type: ListType;
+  description: string | null;
   isTemplate: boolean;
   archived: boolean;
   isMain: boolean;
@@ -60,6 +64,8 @@ export function toApiItem(i: ItemRow, userNames: Map<string, string>, listType?:
     catalogItemId: i.catalogItemId,
     person: packing.person,
     container: packing.container,
+    tipFrom: packing.person,
+    where: packing.container,
     addedVia: typeof i.attributes.via === 'string' ? i.attributes.via : null,
   };
 }
@@ -69,6 +75,7 @@ export function toApiList(l: ListRow, userId: string, mainListId: string | null,
     id: l.id,
     name: l.name,
     type: l.listType,
+    description: listDescription(l),
     isTemplate: l.isTemplate,
     archived: !!l.archivedAt,
     isMain: l.id === mainListId,

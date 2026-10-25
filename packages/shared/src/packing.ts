@@ -1,8 +1,9 @@
 import type { ItemRow } from './model.js';
 
 /**
- * Packing lists: an item can belong to a person ("Anna") and a Packstück
- * ("Koffer", "Handgepäck"). Both are free text, kept in `attributes`.
+ * Two free-text fields per item, kept in `attributes`, typed as "@…" and "#…":
+ * - packing lists: person ("Anna") and Packstück ("Koffer");
+ * - Merklisten: who the tip is from ("Anna") and where to find it ("Netflix").
  */
 export interface PackingInfo {
   person: string | null;
@@ -49,4 +50,17 @@ export function extractPackingTokens(text: string): { text: string; person: stri
     return pre;
   });
   return { text: rest.replace(/\s+/g, ' ').trim(), person, container };
+}
+
+/** What the two fields are called in a list type (null: not used). */
+export function attributeLabels(listType: string): { person: string; container: string } | null {
+  if (listType === 'packing') return { person: 'Für wen', container: 'Packstück' };
+  if (listType === 'memo') return { person: 'Tipp von', container: 'Wo' };
+  return null;
+}
+
+/** The list's description ("Filme und Serien, die wir sehen wollen"), kept in its settings. */
+export function listDescription(list: { settings: Record<string, unknown> }): string | null {
+  const d = list.settings.description;
+  return typeof d === 'string' && d.trim() ? d.trim() : null;
 }

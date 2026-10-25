@@ -130,6 +130,8 @@ export const listItems = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
     deleted: boolean('deleted').notNull().default(false),
     mergedInto: uuid('merged_into'),
+    /** Merklisten: version token of the entry's own icon (maintained by the server, not synced as a field). */
+    icon: text('icon'),
     hlc: jsonb('hlc').$type<FieldClock>().notNull().default({}),
     seq: seq(),
   },
@@ -221,7 +223,8 @@ export const appSettings = pgTable('app_settings', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export type IconTarget = 'item' | 'category';
+/** item = catalog item, category, entry = an entry of a Merkliste (list item). */
+export type IconTarget = 'item' | 'category' | 'entry';
 export type IconStatus = 'candidate' | 'approved' | 'rejected' | 'retired';
 
 /** Generated icons: candidates waiting for review, the approved one, rejected ones (without image data). */

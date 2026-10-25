@@ -1,6 +1,6 @@
 # Shopping – Einkaufslisten-App
 
-Selbst gehostete, offline-fähige Einkaufslisten-App im Stil von Bring!,
+Selbst gehostete, offline-fähige Listen-App für Einkauf, Packen und Merken,
 mit nativer Mealie-Anbindung, Login über Pocket ID, REST-API für Home Assistant und
 eingebautem MCP-Server.
 
@@ -18,13 +18,13 @@ eingebautem MCP-Server.
 - **Echtzeit**: Abhaken erscheint bei anderen in ~0,1 s, mit „✓ von Anna“
 - PWA zum Installieren auf Android; am Laptop drei Spalten mit Katalog zum Durchklicken
 - Lebensmittel-Katalog (Grundkatalog + **Import aus Mealie**, Labels → Kategorien)
-- Kategorien wie bei Bring!, **generierte Icons** im einheitlichen Stil (Kategorie-Icon bzw.
+- Kategorien nach Supermarkt-Bereichen, **generierte Icons** im einheitlichen Stil (Kategorie-Icon bzw.
   Anfangsbuchstabe, solange ein Artikel noch keins hat), offline verfügbar
 - **Teilen per Link** über den Teilen-Dialog des Handys: Wer den Link angemeldet öffnet,
   ist dabei (Besitzer kann den Link erneuern, Mitglieder können die Liste verlassen)
 - **Gäste ohne Account**: Link öffnen, Namen eingeben, nur diese Liste; Link erneuern wirft Gäste raus.
   „Wer ist dabei?“ zeigt Mitglieder, der Besitzer kann Leute entfernen.
-- **Mealie-Eingangskorb** (ersetzt den n8n-Flow „mealie2bring“): Was in Mealie auf der
+- **Mealie-Eingangskorb** (ersetzt einen n8n-Flow): Was in Mealie auf der
   Einkaufsliste landet, kommt strukturiert (Menge, Einheit, Kategorie, „für Chili“) in die
   Zielliste und wird in Mealie abgehakt – per Notifier sofort, sonst alle 15 Minuten
 - **Rezept und Wochenplan aus Mealie**: Portionen anpassen, Zutaten-Checkliste,
@@ -35,6 +35,10 @@ eingebautem MCP-Server.
   „eingepackt“ und bleibt durchgestrichen stehen, Fortschritt „12 von 30 eingepackt“, gruppiert nach
   Kategorie, **Packstück** oder **Person**. Beim Tippen ordnen „@Anna“ und „#Koffer“ zu
   („3 T-Shirts @Anna #Koffer“). Neue Packlisten entstehen aus Packvorlagen, erledigte kommen ins Archiv.
+- **Merklisten** 📌 für Filme, Bücher, Restaurants …: mit **Tipp von** und **Wo** („Dune @Ben #Netflix“),
+  gruppierbar nach Ort oder Tippgeber, Erledigtes (gesehen, gelesen, besucht) bleibt unter „Erledigt“.
+  Jede Liste hat eine Beschreibung („Filme und Serien, die wir sehen wollen“); jeder Eintrag bekommt ein
+  **eigenes Icon**, das mit dieser Beschreibung entsteht – bei Filmen also ein Motiv aus dem Film.
 
 - **REST-API** mit API-Tokens (lesen / ändern / Mealie), OpenAPI-Doku unter `/api/docs`,
   Echtzeit-Ereignisse per Server-Sent Events
@@ -72,7 +76,7 @@ In der App kann jeder über das Artikel-Menü „Icon gefällt mir nicht“ meld
 2. *Eingangskorb einschalten*, Mealie-Einkaufsliste und Zielliste wählen, speichern.
 3. Die angezeigte Apprise-URL in Mealie unter *Haushalt → Benachrichtigungen* als
    Notifier eintragen, Ereignis *Einkaufsliste* aktivieren.
-4. Den n8n-Flow „mealie2bring“ abschalten.
+4. Einen bisherigen n8n-Flow für Mealie-Einkaufslisten abschalten.
 
 ### Home Assistant
 

@@ -10,16 +10,21 @@ import { MealieError } from '../mealie/client.js';
 
 const listParam = z.string().optional().describe('Liste: Name, ID oder weglassen für die Hauptliste');
 
-function itemLine(i: ApiItem): string {
+function itemLine(i: ApiItem, type = 'shopping'): string {
   const spec = i.specification ? ` – ${i.specification}` : '';
   const from = i.sources.length ? ` (für ${i.sources.join(', ')})` : '';
-  const packing = [i.person && `@${i.person}`, i.container && `#${i.container}`].filter(Boolean).join(' ');
+  const packing =
+    type === 'memo'
+      ? [i.tipFrom && `Tipp von ${i.tipFrom}`, i.where && `bei ${i.where}`, i.note].filter(Boolean).join(', ')
+      : [i.person && `@${i.person}`, i.container && `#${i.container}`].filter(Boolean).join(' ');
   return `- ${i.checked ? '~~' : ''}${i.name}${spec}${i.checked ? '~~' : ''}${packing ? ` ${packing}` : ''}${from}`;
 }
 
 /** A list as Markdown, grouped by category – easy to read for models and people. */
-function listMarkdown(list: { name: string; type: string; isMain: boolean; items: ApiItem[] }): string {
-  const lines = [`# ${list.name}${list.isMain ? ' (Hauptliste)' : ''}${list.type === 'packing' ? ' (Packliste, durchgestrichen = eingepackt)' : ''}`];
+function listMarkdown(list: { name: string; type: string; description: string | null; isMain: boolean; items: ApiItem[] }): string {
+  const kind = list.type === 'packing' ? ' (Packliste, durchgestrichen = eingepackt)' : list.type === 'memo' ? ' (Merkliste, durchgestrichen = erledigt)' : '';
+  const lines = [`# ${list.name}${list.isMain ? ' (Hauptliste)' : ''}${kind}`];
+  if (list.description) lines.push('', `_${list.description}_`);
   if (list.items.length === 0) lines.push('', '_Nichts auf der Liste._');
   let cat = '';
   for (const i of list.items) {
@@ -27,7 +32,7 @@ function listMarkdown(list: { name: string; type: string; isMain: boolean; items
       cat = i.category.name;
       lines.push('', `## ${cat}`);
     }
-    lines.push(itemLine(i));
+    lines.push(itemLine(i, list.type));
   }
   return lines.join('\n');
 }
@@ -40,7 +45,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     { name: 'shopping', title: 'Shopping – Einkaufslisten', version: '1.0.0' },
     {
       instructions:
-        'Einkaufslisten und Packlisten des Haushalts. Ohne Angabe einer Liste ist immer die Hauptliste (Einkauf) gemeint. Artikel am besten als natürlichen Text übergeben („2 kg Kartoffeln festkochend“) – Menge, Einheit und Eigenschaften werden erkannt. Gleiche Artikel werden zusammengeführt statt doppelt angelegt. In Packlisten bedeutet abgehakt „eingepackt“; „@Anna“ im Text ordnet einer Person zu, „#Koffer“ einem Packstück. Neue Packlisten am besten aus einer Packvorlage anlegen.',
+        'Einkaufslisten und Packlisten des Haushalts. Ohne Angabe einer Liste ist immer die Hauptliste (Einkauf) gemeint. Artikel am besten als natürlichen Text übergeben („2 kg Kartoffeln festkochend“) – Menge, Einheit und Eigenschaften werden erkannt. Gleiche Artikel werden zusammengeführt statt doppelt angelegt. In Packlisten bedeutet abgehakt „eingepackt“; „@Anna“ im Text ordnet einer Person zu, „#Koffer“ einem Packstück. Neue Packlisten am besten aus einer Packvorlage anlegen. Merklisten (Typ memo) sammeln Filme, Bücher, Restaurants usw.: „@Anna“ heißt dort „Tipp von Anna“, „#Netflix“ heißt „gibt es bei Netflix“; abgehakt = erledigt (gesehen, gelesen, besucht).',
     },
   );
   const userId = principal.userId;
@@ -78,18 +83,18 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
       description: 'Alle Einkaufs- und Packlisten (und optional Vorlagen, archivierte Packlisten) mit Anzahl offener Artikel.',
       inputSchema: {
         include_templates: z.boolean().default(false),
-        type: z.enum(['shopping', 'packing']).optional().describe('Nur Einkaufslisten (shopping) oder Packlisten (packing)'),
+        type: z.enum(['shopping', 'packing', 'memo']).optional().describe('Nur Einkaufslisten (shopping), Packlisten (packing) oder Merklisten (memo)'),
         include_archived: z.boolean().default(false),
       },
       annotations: { readOnlyHint: true },
     },
-    guard('read', async ({ include_templates, type, include_archived }: { include_templates: boolean; type?: 'shopping' | 'packing'; include_archived: boolean }) => {
+    guard('read', async ({ include_templates, type, include_archived }: { include_templates: boolean; type?: 'shopping' | 'packing' | 'memo'; include_archived: boolean }) => {
       const lists = await api.lists(userId, include_templates ? 'include' : 'exclude', { type, archived: include_archived });
       return text(
         lists
           .map(
             (l) =>
-              `- ${l.isTemplate ? '◇ ' : ''}${l.name}${l.type === 'packing' ? ' [Packliste]' : ''}${l.isMain ? ' ⭐ Hauptliste' : ''}${l.archived ? ' (archiviert)' : ''} – ${l.openItems} offen (id: ${l.id})`,
+              `- ${l.isTemplate ? '◇ ' : ''}${l.name}${l.type === 'packing' ? ' [Packliste]' : l.type === 'memo' ? ' [Merkliste]' : ''}${l.isMain ? ' ⭐ Hauptliste' : ''}${l.archived ? ' (archiviert)' : ''} – ${l.openItems} offen${l.description ? ` – ${l.description}` : ''} (id: ${l.id})`,
           )
           .join('\n') || 'Keine Listen.',
       );
@@ -165,6 +170,8 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         category: z.string().optional().describe('z. B. „Milch & Käse“'),
         person: z.string().nullable().optional().describe('Packliste: für wen (leer = niemand)'),
         container: z.string().nullable().optional().describe('Packliste: Packstück, z. B. „Koffer“'),
+        tipFrom: z.string().nullable().optional().describe('Merkliste: von wem der Tipp kommt'),
+        where: z.string().nullable().optional().describe('Merkliste: wo es das gibt, z. B. „Netflix“'),
       },
     },
     guard('write', async ({ item, list, ...patch }: { item: string; list?: string } & Record<string, unknown>) => {
@@ -202,16 +209,17 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     'create_list',
     {
       title: 'Liste anlegen',
-      description: 'Legt eine neue Einkaufs- oder Packliste an, optional vorbefüllt aus einer Vorlage (dann gilt deren Typ).',
+      description: 'Legt eine neue Einkaufs-, Pack- oder Merkliste an, optional vorbefüllt aus einer Vorlage (dann gilt deren Typ).',
       inputSchema: {
         name: z.string().min(1).max(80),
         template: z.string().optional().describe('Name einer Vorlage'),
-        type: z.enum(['shopping', 'packing']).optional().describe('Ohne Vorlage: Einkaufsliste (Standard) oder Packliste'),
+        type: z.enum(['shopping', 'packing', 'memo']).optional().describe('Ohne Vorlage: Einkaufsliste (Standard), Packliste oder Merkliste'),
+        description: z.string().max(300).optional().describe('Worum es geht, z. B. „Filme und Serien, die wir sehen wollen“ (wichtig für die Icons von Merklisten)'),
       },
     },
-    guard('write', async ({ name, template, type }: { name: string; template?: string; type?: 'shopping' | 'packing' }) => {
-      const l = await api.createList(userId, name, { template, type });
-      return text(`${l.type === 'packing' ? 'Packliste' : 'Liste'} „${l.name}“ angelegt (${l.openItems} Artikel).`);
+    guard('write', async ({ name, template, type, description }: { name: string; template?: string; type?: 'shopping' | 'packing' | 'memo'; description?: string }) => {
+      const l = await api.createList(userId, name, { template, type, description });
+      return text(`${l.type === 'packing' ? 'Packliste' : l.type === 'memo' ? 'Merkliste' : 'Liste'} „${l.name}“ angelegt (${l.openItems} Einträge).`);
     }),
   );
 

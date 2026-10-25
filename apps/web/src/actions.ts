@@ -5,7 +5,7 @@ import { sync } from './sync/engine';
 export type { NewItem };
 
 /**
- * Adds parsed items to a list like Bring! does (see planAdd): open items get
+ * Adds parsed items to a list (see planAdd): open items get
  * the amount added, recently bought ones come back, the rest is new.
  */
 export async function addItems(listId: string, parsed: NewItem[]): Promise<void> {
@@ -30,10 +30,18 @@ export async function deleteItem(id: string): Promise<void> {
   await sync.mutateItem(id, { deleted: true });
 }
 
-export async function createList(name: string, isTemplate = false, listType: ListType = 'shopping'): Promise<string> {
+export async function createList(name: string, isTemplate = false, listType: ListType = 'shopping', description?: string | null): Promise<string> {
   const id = crypto.randomUUID();
-  await sync.mutateList(id, { name, listType, isTemplate });
+  await sync.mutateList(id, { name, listType, isTemplate, ...(description?.trim() ? { settings: { description: description.trim() } } : {}) });
   return id;
+}
+
+/** What the list is about (Merklisten: also guides the icons). */
+export async function describeList(list: ListRow, description: string): Promise<void> {
+  const settings = { ...list.settings };
+  if (description.trim()) settings.description = description.trim();
+  else delete settings.description;
+  await sync.mutateList(list.id, { settings });
 }
 
 /** Done packing lists go to the archive instead of being deleted. */
@@ -91,7 +99,7 @@ export async function shareList(list: ListRow, renew = false): Promise<void> {
     return;
   }
   const { url } = (await res.json()) as { url: string };
-  const text = `${list.listType === 'packing' ? 'Unsere Packliste' : 'Unsere Einkaufsliste'} „${list.name}“`;
+  const text = `${list.listType === 'packing' ? 'Unsere Packliste' : list.listType === 'memo' ? 'Unsere Merkliste' : 'Unsere Einkaufsliste'} „${list.name}“`;
   if (navigator.share) {
     await navigator.share({ title: list.name, text, url }).catch(() => undefined);
   } else {

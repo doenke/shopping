@@ -132,7 +132,7 @@ export class ClaudeSvgGenerator implements IconGenerator {
     this.client = anthropicClient(opts.apiKey, opts.fetchImpl);
   }
 
-  async generate({ subject, style, hint, references, referenceSvgs }: GenerateRequest): Promise<GenerateResult> {
+  async generate({ subject, style, hint, context, references, referenceSvgs }: GenerateRequest): Promise<GenerateResult> {
     // Style references first and stable (cached across icons), the task last.
     const refs: Anthropic.Beta.BetaContentBlockParam[] = [];
     if (referenceSvgs?.length) {
@@ -143,7 +143,9 @@ export class ClaudeSvgGenerator implements IconGenerator {
     }
     if (refs.length) refs[refs.length - 1] = { ...refs[refs.length - 1]!, cache_control: { type: 'ephemeral' } } as Anthropic.Beta.BetaContentBlockParam;
 
-    const task = [`Draw: ${subject}.`, hint ? `Extra wish: ${hint}.` : null, `Style notes: ${style}`].filter(Boolean).join('\n');
+    const task = [`Draw: ${subject}.`, context ? `It stands for ${context}.` : null, hint ? `Extra wish: ${hint}.` : null, `Style notes: ${style}`]
+      .filter(Boolean)
+      .join('\n');
     let msg: Anthropic.Beta.BetaMessage;
     try {
       msg = await this.client.beta.messages.create({
@@ -163,6 +165,35 @@ export class ClaudeSvgGenerator implements IconGenerator {
     return { image: await renderSvg(clean), costMicro: cost, svg: clean };
   }
 }
+
+// ---- Merkliste entries --------------------------------------------------------------
+
+/** An entry of a Merkliste with what the list is about (films, books, restaurants …). */
+export interface EntryContext {
+  name: string;
+  listName: string;
+  description: string | null;
+  where: string | null;
+  note: string | null;
+}
+
+/** One line of context for prompts: what the entry is and what kind of list it is on. */
+export function entryContext(e: EntryContext): string {
+  return [
+    `"${e.name}" on the personal list "${e.listName}"`,
+    e.description ? `(the list is about: ${e.description})` : null,
+    e.where ? `– available at ${e.where}` : null,
+    e.note ? `– note: ${e.note}` : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+export const ENTRY_SYSTEM =
+  'You write the subject line for an icon that stands for an entry on a personal list (films, series, books, restaurants, places, games, music …). ' +
+  'Use the list description to understand what the entry is. Name ONE simple, recognisable object or motif that evokes it: for a film or series a key object or ' +
+  'motif from its story (no actors, no faces, no logos, no title text); for a book a closed book whose plain cover shows such a motif; for a restaurant or café a typical ' +
+  'dish of its cuisine; for a place a characteristic object of it. One short English noun phrase, no style words, no names of real people, no text.';
 
 // ---- pre-review -------------------------------------------------------------------
 
@@ -232,6 +263,27 @@ export class ClaudeReviewer {
       verdict: { ok: r.recognizable && !r.has_text && !r.defects && r.style_match, shows: r.shows, reason: r.reason, model: msg.model },
       costMicro: costMicro(msg.model, msg.usage),
     };
+  }
+
+  /** Picture description for a Merkliste entry, from the list's description (a film gets a film motif). */
+  async describeEntry(entry: EntryContext): Promise<{ subject: string; costMicro: number }> {
+    let msg: Anthropic.Beta.BetaMessage;
+    try {
+      msg = await this.client.beta.messages.create({
+        model: 'claude-haiku-5-5',
+        max_tokens: 1000,
+        system: ENTRY_SYSTEM,
+        messages: [{ role: 'user', content: `Entry: ${entryContext(entry)}` }],
+        output_config: {
+          effort: 'low',
+          format: { type: 'json_schema', schema: { type: 'object', properties: { subject: { type: 'string' } }, required: ['subject'], additionalProperties: false } },
+        },
+      });
+    } catch (err) {
+      mapError(err);
+    }
+    const { subject } = jsonText(msg) as { subject: string };
+    return { subject: subject.trim().slice(0, 200), costMicro: costMicro(msg.model, msg.usage) };
   }
 
   /** English picture description for a German item (instead of the Cloudflare text model). */

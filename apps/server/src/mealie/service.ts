@@ -102,7 +102,7 @@ export class MealieService {
     return new Converter(catalog, cfg.labelMapping ?? {});
   }
 
-  // ---- inbox (replaces the n8n flow "mealie2bring") ------------------------
+  // ---- inbox (Mealie shopping list → Shopping, then checked off in Mealie) ---
 
   /** Called by the Mealie notifier. The payload is only a hint; we always re-read the list. */
   async webhook(secret: string): Promise<boolean> {

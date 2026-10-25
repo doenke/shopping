@@ -1,4 +1,18 @@
-import { categoriesFor, categoryInList, formatAmount, packingInfo, SUGGESTED_PROPERTIES, UNITS, withPacking, type Amount, type ItemRow, type ItemSource, type ListRow, type UserInfo } from '@shopping/shared';
+import {
+  attributeLabels,
+  categoriesFor,
+  categoryInList,
+  formatAmount,
+  packingInfo,
+  SUGGESTED_PROPERTIES,
+  UNITS,
+  withPacking,
+  type Amount,
+  type ItemRow,
+  type ItemSource,
+  type ListRow,
+  type UserInfo,
+} from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { deleteItem, updateItem } from '../actions';
 import { useMe } from '../hooks';
@@ -22,6 +36,8 @@ function parseQuantity(s: string): number | null {
 export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const isTemplate = list.isTemplate;
   const packing = list.listType === 'packing';
+  const memo = list.listType === 'memo';
+  const labels = attributeLabels(list.listType);
   const categories = categoriesFor(list.listType);
   const ref = useRef<HTMLDialogElement>(null);
   const first = item.amounts[0];
@@ -56,7 +72,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
       note: note.trim() || null,
       categoryId,
       ...(isTemplate ? { optional } : {}),
-      ...(packing ? { attributes: withPacking(item.attributes, { person, container }) } : {}),
+      ...(labels ? { attributes: withPacking(item.attributes, { person, container }) } : {}),
     });
     if (forAll && item.catalogItemId && categoryId !== item.categoryId) {
       await fetch(`/api/v1/catalog/${item.catalogItemId}`, {
@@ -88,21 +104,23 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
           <input className="sheet__title" value={name} onChange={(e) => setName(e.target.value)} aria-label="Name" />
         </header>
 
-        <label className="field">
-          <span>Menge</span>
-          <div className="field__row">
-            <input inputMode="decimal" placeholder="–" value={quantity} onChange={(e) => setQuantity(e.target.value)} aria-label="Menge" />
-            <select value={unit} onChange={(e) => setUnit(e.target.value)} aria-label="Einheit">
-              <option value="">Stück / ohne</option>
-              {UNITS.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          {item.amounts.length > 1 && <small>Dazu: {item.amounts.slice(1).map(formatAmount).join(' + ')}</small>}
-        </label>
+        {!memo && (
+          <label className="field">
+            <span>Menge</span>
+            <div className="field__row">
+              <input inputMode="decimal" placeholder="–" value={quantity} onChange={(e) => setQuantity(e.target.value)} aria-label="Menge" />
+              <select value={unit} onChange={(e) => setUnit(e.target.value)} aria-label="Einheit">
+                <option value="">Stück / ohne</option>
+                {UNITS.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {item.amounts.length > 1 && <small>Dazu: {item.amounts.slice(1).map(formatAmount).join(' + ')}</small>}
+          </label>
+        )}
 
         <div className="field">
           <span>Eigenschaften</span>
@@ -133,15 +151,20 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="z. B. die von Oma" />
         </label>
 
-        {packing && (
+        {labels && (
           <div className="field__row">
             <label className="field">
-              <span>Für wen</span>
-              <input value={person} onChange={(e) => setPerson(e.target.value)} list="packing-people" placeholder="alle" />
+              <span>{labels.person}</span>
+              <input value={person} onChange={(e) => setPerson(e.target.value)} list="packing-people" placeholder={memo ? 'z. B. Ben' : 'alle'} />
             </label>
             <label className="field">
-              <span>Packstück</span>
-              <input value={container} onChange={(e) => setContainer(e.target.value)} list="packing-containers" placeholder="z. B. Koffer" />
+              <span>{labels.container}</span>
+              <input
+                value={container}
+                onChange={(e) => setContainer(e.target.value)}
+                list="packing-containers"
+                placeholder={memo ? 'z. B. Netflix' : 'z. B. Koffer'}
+              />
             </label>
             <datalist id="packing-people">
               {[...new Set(items.map((i) => packingInfo(i).person).filter(Boolean))].map((p) => (
@@ -156,26 +179,28 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
           </div>
         )}
 
-        <label className="field">
-          <span>Kategorie</span>
-          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          {item.catalogItemId && categoryId !== categoryInList(item.categoryId, list.listType).id && (
-            <label className="check">
-              <input type="checkbox" checked={forAll} onChange={(e) => setForAll(e.target.checked)} /> für diesen Artikel immer verwenden
-            </label>
-          )}
-        </label>
+        {!memo && (
+          <label className="field">
+            <span>Kategorie</span>
+            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            {item.catalogItemId && categoryId !== categoryInList(item.categoryId, list.listType).id && (
+              <label className="check">
+                <input type="checkbox" checked={forAll} onChange={(e) => setForAll(e.target.checked)} /> für diesen Artikel immer verwenden
+              </label>
+            )}
+          </label>
+        )}
 
         {isTemplate && (
           <label className="check field">
-            <input type="checkbox" checked={optional} onChange={(e) => setOptional(e.target.checked)} /> optional – beim Übernehmen erst
-            einmal abgewählt
+            <input type="checkbox" checked={optional} onChange={(e) => setOptional(e.target.checked)} /> optional – beim Übernehmen erst einmal
+            abgewählt
           </label>
         )}
 
@@ -202,7 +227,9 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
                 type="button"
                 className="link"
                 onClick={() => {
-                  fetch(`/api/v1/catalog/${item.catalogItemId}/icon-report`, { method: 'POST' })
+                  fetch(`/api/v1/catalog/${item.catalogItemId}/icon-report`, {
+                    method: 'POST',
+                  })
                     .then((res) => setReported(res.ok ? 'done' : 'error'))
                     .catch(() => setReported('error'));
                 }}

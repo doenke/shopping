@@ -42,6 +42,8 @@ export interface Catalog {
   index: CatalogIndex;
   /** Packing items (packing lists have their own catalog). */
   packingIndex: CatalogIndex;
+  /** Merklisten have no catalog. */
+  emptyIndex: CatalogIndex;
 }
 
 export function useCatalog(): Catalog {
@@ -54,6 +56,7 @@ export function useCatalog(): Catalog {
       byId: new Map(items.map((i) => [i.id, i])),
       index: new CatalogIndex(items.filter((i) => i.kind !== 'packing')),
       packingIndex: new CatalogIndex(packing),
+      emptyIndex: new CatalogIndex([]),
     };
   }, [items]);
 }

@@ -49,6 +49,7 @@ export function toItemRow(r: ItemRecord): ItemRow {
     createdAt: iso(r.createdAt),
     deleted: r.deleted,
     mergedInto: r.mergedInto,
+    icon: r.icon,
     hlc: r.hlc,
     seq: r.seq,
   };

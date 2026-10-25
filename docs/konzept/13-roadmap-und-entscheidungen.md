@@ -122,6 +122,15 @@ Umsetzungsdetails:
   nach Ausfall/Neustart), Signatur `t=…,v1=HMAC-SHA256`, 3 Wiederholungen, nach 20 Fehlschlägen aus.
 - `Idempotency-Key` für schreibende REST-Aufrufe (24 h).
 
+### Merklisten ✅ umgesetzt
+- Dritter Listentyp `memo` für Filme, Bücher, Restaurants …; kein Katalog, Einträge sind freier Text.
+- „Tipp von“ und „Wo“ nutzen dieselben Felder wie Person/Packstück (`@…`, `#…`), API-Namen `tipFrom`/`where`.
+- Abgehakt = erledigt (gesehen, gelesen, besucht), bleibt unter „Erledigt“.
+- Listen haben eine Beschreibung (`settings.description`, für alle Typen).
+- Jeder Eintrag bekommt ein eigenes Icon (Icon-Ziel `entry`, Token in `list_items.icon`, vom Server
+  gesetzt und mitsynchronisiert). Die Bildbeschreibung entsteht aus Eintrag, Listenname,
+  **Listenbeschreibung** und „Wo“ (Claude Haiku bzw. Cloudflare-Textmodell) und steht auch im Bildprompt.
+
 ## Noch offen
 
 Nichts Blockierendes. Beim Bau zu klären:

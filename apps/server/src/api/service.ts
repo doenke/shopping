@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import {
   categoriesFor,
   CatalogIndex,
+  listDescription,
   packingInfo,
   withPacking,
   type CatalogKind,
@@ -39,6 +40,9 @@ export type ItemInput =
       /** Packing lists: who it is for, and the Packstück ("Koffer"). */
       person?: string | null;
       container?: string | null;
+      /** Merklisten: who the tip is from, and where to find it ("Netflix") – same fields as above. */
+      tipFrom?: string | null;
+      where?: string | null;
     };
 
 /**
@@ -64,7 +68,7 @@ const REJECTIONS: Record<string, [number, string]> = {
  * All writes go through the sync engine, so the apps see them in real time.
  */
 export class ShoppingApi {
-  private catalogCache: { at: number; items: CatalogItem[]; index: Record<CatalogKind, CatalogIndex> } | undefined;
+  private catalogCache: { at: number; items: CatalogItem[]; index: Record<ListType, CatalogIndex> } | undefined;
 
   constructor(
     private readonly db: Db,
@@ -87,6 +91,8 @@ export class ShoppingApi {
         index: {
           shopping: new CatalogIndex(items.filter((i) => i.kind === 'shopping')),
           packing: new CatalogIndex(items.filter((i) => i.kind === 'packing')),
+          // Merklisten have no catalog: entries are whatever you type.
+          memo: new CatalogIndex([]),
         },
       };
     }
@@ -175,7 +181,7 @@ export class ShoppingApi {
     const pick = open.length === 1 ? open[0] : matches.length === 1 ? matches[0] : undefined;
     if (pick) return pick;
     if (matches.length > 1) throw new ApiError(409, 'ambiguous', `Mehrere Artikel heißen „${ref}“`, { candidates: matches.map((i) => i.id) });
-    const fuzzy = (await this.catalog()).index[list.listType === 'packing' ? 'packing' : 'shopping'].match(ref);
+    const fuzzy = (await this.catalog()).index[list.listType].match(ref);
     const viaCatalog = fuzzy ? items.find((i) => i.catalogItemId === fuzzy.id && !i.checked) : undefined;
     if (viaCatalog) return viaCatalog;
     throw notFound(`Artikel „${ref}“`);
@@ -200,8 +206,8 @@ export class ShoppingApi {
         amounts: input.quantity || unit ? [{ q: input.quantity ?? null, u: unit }] : [],
         properties: input.properties ?? [],
         note: input.note ?? null,
-        person: input.person?.trim() || null,
-        container: input.container?.trim() || null,
+        person: (input.person ?? input.tipFrom)?.trim() || null,
+        container: (input.container ?? input.where)?.trim() || null,
       });
     }
     return out;
@@ -281,12 +287,19 @@ export class ShoppingApi {
   // ---- writes --------------------------------------------------------------
 
   /** A new list; from a template it takes the template's type (packing template → packing list). */
-  async createList(userId: string, name: string, opts: { template?: string; isTemplate?: boolean; type?: ListType } = {}): Promise<ApiList> {
+  async createList(
+    userId: string,
+    name: string,
+    opts: { template?: string; isTemplate?: boolean; type?: ListType; description?: string | null } = {},
+  ): Promise<ApiList> {
     const template = opts.template ? await this.resolveList(userId, opts.template, { templates: true }) : undefined;
     if (template && !template.isTemplate) throw new ApiError(400, 'not_a_template', `„${template.name}“ ist keine Vorlage`);
     const listType = template?.listType ?? opts.type ?? 'shopping';
     const id = randomUUID();
-    await this.mutate(userId, 'list', [{ id, patch: { name, listType, isTemplate: opts.isTemplate ?? false } }]);
+    const description = opts.description?.trim() || (template ? listDescription(template) : null);
+    await this.mutate(userId, 'list', [
+      { id, patch: { name, listType, isTemplate: opts.isTemplate ?? false, ...(description ? { settings: { description } } : {}) } },
+    ]);
     if (template) await this.applyTemplate(userId, id, template.id, false);
     return (await this.lists(userId, 'include', { archived: true })).find((l) => l.id === id)!;
   }
@@ -300,6 +313,15 @@ export class ShoppingApi {
   async renameList(userId: string, ref: string, name: string): Promise<void> {
     const list = await this.resolveList(userId, ref);
     await this.mutate(userId, 'list', [{ id: list.id, patch: { name } }]);
+  }
+
+  /** What the list is about – Merklisten use it for the icons ("Filme, die wir sehen wollen"). */
+  async describeList(userId: string, ref: string, description: string | null): Promise<void> {
+    const list = await this.resolveList(userId, ref);
+    const settings = { ...list.settings };
+    if (description?.trim()) settings.description = description.trim();
+    else delete settings.description;
+    await this.mutate(userId, 'list', [{ id: list.id, patch: { settings } }]);
   }
 
   async deleteList(userId: string, ref: string): Promise<void> {
@@ -335,10 +357,12 @@ export class ShoppingApi {
     }
     if (input.properties !== undefined) patch.properties = input.properties;
     if (input.note !== undefined) patch.note = input.note;
-    if (input.person !== undefined || input.container !== undefined) {
+    const person = input.person !== undefined ? input.person : input.tipFrom;
+    const container = input.container !== undefined ? input.container : input.where;
+    if (person !== undefined || container !== undefined) {
       patch.attributes = withPacking(item.attributes, {
-        ...(input.person !== undefined ? { person: input.person } : {}),
-        ...(input.container !== undefined ? { container: input.container } : {}),
+        ...(person !== undefined ? { person } : {}),
+        ...(container !== undefined ? { container } : {}),
       });
     }
     if (input.category !== undefined) {

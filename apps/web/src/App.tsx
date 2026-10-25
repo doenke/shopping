@@ -1,6 +1,6 @@
-import { parseInput, type ListRow, type ListType, type Me } from '@shopping/shared';
+import { listDescription, parseInput, type ListRow, type ListType, type Me } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, archiveList, createList, deleteList, leaveList, renameList, saveAsTemplate, setMainList, shareList } from './actions';
+import { addItems, archiveList, createList, deleteList, describeList, leaveList, renameList, saveAsTemplate, setMainList, shareList } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
@@ -59,6 +59,7 @@ function Shell({ me }: { me: Me }) {
   const [templateDialog, setTemplateDialog] = useState<{ mode: 'new' | 'apply'; type: ListType } | null>(null);
   const shoppingLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'shopping');
   const packingLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'packing');
+  const memoLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'memo');
   const archived = lists.filter((l) => !l.isTemplate && l.archivedAt);
   const templates = lists.filter((l) => l.isTemplate);
   const mainList = shoppingLists.find((l) => l.id === me.defaultListId) ?? shoppingLists[0];
@@ -100,6 +101,16 @@ function Shell({ me }: { me: Me }) {
 
   const newList = (type: ListType = 'shopping') => {
     setTemplateDialog({ mode: 'new', type });
+    setDrawer(false);
+  };
+
+  /** Merklisten: name and what they are about (the description also guides the icons). */
+  const newMemo = async () => {
+    const name = prompt('Name der Merkliste', 'Filme');
+    if (!name?.trim()) return;
+    const description = prompt('Worum geht es? (hilft auch bei den Bildern)', name.trim() === 'Filme' ? 'Filme und Serien, die wir sehen wollen' : '');
+    const id = await createList(name.trim(), false, 'memo', description);
+    navigate({ page: 'list', listId: id });
     setDrawer(false);
   };
 
@@ -157,6 +168,22 @@ function Shell({ me }: { me: Me }) {
       {!guest && (
         <button type="button" className="btn btn--ghost" onClick={() => void newList('packing')}>
           + Neue Packliste
+        </button>
+      )}
+      {(memoLists.length > 0 || !guest) && <h3 className="sidebar__section">Merklisten</h3>}
+      <ul>
+        {memoLists.map((l) => (
+          <li key={l.id}>
+            <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
+              <span>📌 {l.name}</span>
+              <OpenCount listId={l.id} />
+            </a>
+          </li>
+        ))}
+      </ul>
+      {!guest && (
+        <button type="button" className="btn btn--ghost" onClick={() => void newMemo()}>
+          + Neue Merkliste
         </button>
       )}
       {!guest && <h3 className="sidebar__section">Vorlagen</h3>}
@@ -217,7 +244,7 @@ function Shell({ me }: { me: Me }) {
 
   return (
     <IconContext.Provider value={icons}>
-    <div className={`shell${wide ? ' shell--wide' : ''}${extraWide && route.page === 'list' && list ? ' shell--catalog' : ''}`}>
+    <div className={`shell${wide ? ' shell--wide' : ''}${extraWide && route.page === 'list' && list && list.listType !== 'memo' ? ' shell--catalog' : ''}`}>
       {wide ? sidebar : drawer && <div className="drawer" onClick={() => setDrawer(false)}>{sidebar}</div>}
 
       <div className="main">
@@ -238,7 +265,7 @@ function Shell({ me }: { me: Me }) {
                 <ListMenu
                   list={list}
                   me={me}
-                  hasTemplates={templates.some((t) => t.listType === list.listType)}
+                  hasTemplates={list.listType !== 'memo' && templates.some((t) => t.listType === list.listType)}
                   onClose={() => setMenu(false)}
                   onImport={() => setImporting(true)}
                   onApplyTemplate={() => setTemplateDialog({ mode: 'apply', type: list.listType })}
@@ -260,7 +287,7 @@ function Shell({ me }: { me: Me }) {
               key={list.id}
               list={list}
               items={items}
-              index={list.listType === 'packing' ? catalog.packingIndex : catalog.index}
+              index={list.listType === 'packing' ? catalog.packingIndex : list.listType === 'memo' ? catalog.emptyIndex : catalog.index}
               users={users}
               remoteChecks={remoteChecks}
             />
@@ -294,7 +321,7 @@ function Shell({ me }: { me: Me }) {
       )}
       {showMembers && list && <MembersDialog list={list} me={me} onClose={() => setShowMembers(false)} />}
       {importing && list && <ImportDialog listId={list.id} onClose={() => setImporting(false)} />}
-      {extraWide && route.page === 'list' && list && (
+      {extraWide && route.page === 'list' && list && list.listType !== 'memo' && (
         <CatalogPanel key={list.listType} listId={list.id} listType={list.listType} catalog={catalog.items} items={items ?? []} />
       )}
     </div>
@@ -350,6 +377,17 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
         type="button"
         role="menuitem"
         onClick={() => {
+          const d = prompt('Worum geht es in dieser Liste?', listDescription(list) ?? '');
+          if (d !== null) void describeList(list, d);
+          onClose();
+        }}
+      >
+        Beschreibung …
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        onClick={() => {
           onMembers();
           onClose();
         }}
@@ -380,7 +418,7 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
           Vorlage übernehmen …
         </button>
       )}
-      {!list.isTemplate && !guest && (
+      {!list.isTemplate && list.listType !== 'memo' && !guest && (
         <button
           type="button"
           role="menuitem"

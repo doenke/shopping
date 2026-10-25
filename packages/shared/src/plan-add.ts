@@ -38,7 +38,7 @@ function withSources(attributes: Record<string, unknown>, add: ItemSource[] | un
 }
 
 /**
- * Works out what "add these items to the list" means, like Bring! does:
+ * Works out what "add these items to the list" means:
  * an item that is already open gets the new amount added, a recently bought
  * one comes back, anything else is created. Pure function – used by the app,
  * the REST API and the MCP server alike.

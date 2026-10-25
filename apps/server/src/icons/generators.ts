@@ -20,6 +20,8 @@ export interface GenerateRequest {
   subject: string;
   style: string;
   hint?: string | null;
+  /** Merkliste entries: what the entry is and what the list is about. */
+  context?: string | null;
 }
 
 export interface GenerateResult {
@@ -127,6 +129,21 @@ export class CloudflareGenerator implements IconGenerator {
     const body = (await res.json()) as { result?: { image?: string }; success?: boolean };
     if (!body.result?.image) throw new Error('Cloudflare: keine Bilddaten in der Antwort');
     return { image: Buffer.from(body.result.image, 'base64'), costMicro: 0 };
+  }
+
+  /** Like describe(), for a Merkliste entry with its list's description as context. */
+  async describeEntry(system: string, context: string): Promise<string> {
+    const res = await this.fetch(this.url(CLOUDFLARE_TEXT_MODEL), {
+      method: 'POST',
+      headers: { authorization: `Bearer ${this.opts.token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'system', content: system }, { role: 'user', content: `Entry: ${context}` }], max_tokens: 60 }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) await this.check(res);
+    const body = (await res.json()) as { result?: { response?: string } };
+    const text = body.result?.response?.trim().replace(/^["'„]|["'“]$/g, '').split('\n')[0]?.trim();
+    if (!text) throw new Error('Cloudflare: keine Beschreibung erhalten');
+    return text.slice(0, 200);
   }
 
   /** Asks a small text model how to draw a German grocery item (used when the catalog has no description). */

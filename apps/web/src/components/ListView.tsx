@@ -4,6 +4,7 @@ import { clearChecked, setChecked } from '../actions';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
+import { MemoView } from './MemoView';
 import { PackingView } from './PackingView';
 import { Tile } from './Tile';
 
@@ -20,6 +21,7 @@ const RECENT_LIMIT = 40;
 export const ListView = forwardRef<HTMLInputElement, Props>(function ListView(props, addRef) {
   // Packing lists work differently: packed items stay visible (templates are shown like any template).
   if (props.list.listType === 'packing' && !props.list.isTemplate) return <PackingView ref={addRef} {...props} />;
+  if (props.list.listType === 'memo') return <MemoView ref={addRef} {...props} />;
   return <ShoppingView ref={addRef} {...props} />;
 });
 

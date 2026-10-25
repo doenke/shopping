@@ -1129,3 +1129,8 @@ img.avatar {
   cursor: pointer;
   list-style: none;
 }
+.list-description {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-style: italic;
+}

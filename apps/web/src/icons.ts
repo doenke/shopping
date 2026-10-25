@@ -19,8 +19,14 @@ export function buildIconIndex(catalog: CatalogItem[], categories: Record<string
   return { items, categories: categories ?? {} };
 }
 
-/** Item icon, else category icon, else null (letter placeholder). */
-export function iconUrl(index: IconIndex, catalogItemId: string | null | undefined, categoryId: string | null | undefined): string | null {
+/** Entry icon (Merkliste), else item icon, else category icon, else null (letter placeholder). */
+export function iconUrl(
+  index: IconIndex,
+  catalogItemId: string | null | undefined,
+  categoryId: string | null | undefined,
+  entry?: { id: string; icon?: string | null },
+): string | null {
+  if (entry?.icon) return `/icons/entry/${entry.id}.webp?v=${entry.icon}`;
   const v = catalogItemId ? index.items.get(catalogItemId) : undefined;
   if (v) return `/icons/item/${catalogItemId}.webp?v=${v}`;
   const c = categoryId ? index.categories[categoryId] : undefined;

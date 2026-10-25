@@ -5,7 +5,7 @@ export interface CategoryDef {
   order: number;
 }
 
-/** The categories as known from Bring!. */
+/** Grocery categories, roughly in the order of a supermarket. */
 export const CATEGORIES: CategoryDef[] = [
   { id: 'obst-gemuese', name: 'Obst & Gemüse', color: '#5BAA45', order: 10 },
   { id: 'brot-gebaeck', name: 'Brot & Gebäck', color: '#C98A3E', order: 20 },
@@ -42,8 +42,11 @@ export const PACKING_CATEGORIES: CategoryDef[] = [
 
 export const DEFAULT_PACKING_CATEGORY = 'packen-sonstiges';
 
+/** Merklisten (films, books, restaurants …) have no categories of their own – one group. */
+export const MEMO_CATEGORIES: CategoryDef[] = [{ id: 'merkliste', name: 'Merkliste', color: '#5C7CBA', order: 10 }];
+
 /** All categories of all list types (ids are unique across types). */
-export const ALL_CATEGORIES: CategoryDef[] = [...CATEGORIES, ...PACKING_CATEGORIES];
+export const ALL_CATEGORIES: CategoryDef[] = [...CATEGORIES, ...PACKING_CATEGORIES, ...MEMO_CATEGORIES];
 
 const byId = new Map(ALL_CATEGORIES.map((c) => [c.id, c]));
 
@@ -52,11 +55,11 @@ export function getCategory(id: string | null | undefined): CategoryDef {
 }
 
 export function categoriesFor(listType: string): CategoryDef[] {
-  return listType === 'packing' ? PACKING_CATEGORIES : CATEGORIES;
+  return listType === 'packing' ? PACKING_CATEGORIES : listType === 'memo' ? MEMO_CATEGORIES : CATEGORIES;
 }
 
 export function defaultCategoryFor(listType: string): string {
-  return listType === 'packing' ? DEFAULT_PACKING_CATEGORY : DEFAULT_CATEGORY;
+  return listType === 'packing' ? DEFAULT_PACKING_CATEGORY : listType === 'memo' ? 'merkliste' : DEFAULT_CATEGORY;
 }
 
 /** Category of an item shown in a list of the given type (unknown/other-type ones go to "Sonstiges"). */

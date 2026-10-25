@@ -3,7 +3,7 @@ export interface Amount {
   u: string | null;
 }
 
-export const LIST_TYPES = ['shopping', 'packing'] as const;
+export const LIST_TYPES = ['shopping', 'packing', 'memo'] as const;
 export type ListType = (typeof LIST_TYPES)[number];
 
 /** Per-field HLC timestamps, used for last-writer-wins merging per field. */
@@ -53,6 +53,8 @@ export interface ItemRow {
   mergedInto: string | null;
   hlc: FieldClock;
   seq: number;
+  /** Merklisten: version token of the entry's own generated icon (set by the server). */
+  icon?: string | null;
 }
 
 export interface UserInfo {

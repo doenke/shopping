@@ -12,15 +12,18 @@ export interface PromptInput {
   withReferences: boolean;
   /** Extra wish from the review, e.g. "only one carrot". */
   hint?: string | null;
+  /** Merkliste entries: what it stands for, incl. the list description. */
+  context?: string | null;
 }
 
-export function buildPrompt({ subject, style, background, withReferences, hint }: PromptInput): string {
+export function buildPrompt({ subject, style, background, withReferences, hint, context }: PromptInput): string {
   const bg =
     background === 'key'
       ? `Centered on a solid flat pure magenta (${KEY_COLOR_HEX}) background with generous empty margin, nothing touches the edges.`
       : 'Centered on a fully transparent background with generous empty margin, nothing touches the edges.';
   return [
     `Icon of ${subject.replace(/\.$/, '')}.`,
+    context ? `It stands for ${context}, drawn as an object, without any title or text.` : null,
     hint ? `${hint.replace(/\.$/, '')}.` : null,
     style,
     bg,

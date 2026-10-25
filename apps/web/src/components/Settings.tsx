@@ -203,8 +203,7 @@ export function Settings({ me }: { me: Me }) {
           <>
             <h3>Eingangskorb</h3>
             <p className="muted">
-              Was in Mealie auf der gewählten Einkaufsliste landet, wird hierher übernommen und in Mealie abgehakt – wie bisher der
-              n8n-Flow nach Bring!.
+              Was in Mealie auf der gewählten Einkaufsliste landet, wird hierher übernommen und in Mealie abgehakt.
             </p>
             <label className="check">
               <input type="checkbox" checked={inboxEnabled} onChange={(e) => setInboxEnabled(e.target.checked)} /> Eingangskorb einschalten
@@ -249,7 +248,7 @@ export function Settings({ me }: { me: Me }) {
                   Apprise-URL eintragen und das Ereignis <em>Einkaufsliste</em> aktivieren. Ohne Notifier wird alle 15 Minuten abgeglichen.
                 </p>
                 <Copy text={mealie.inbox.appriseUrl} />
-                <p className="muted">Danach kann der n8n-Flow „mealie2bring“ abgeschaltet werden.</p>
+                <p className="muted">Ein bisheriger n8n-Flow für Mealie-Einkaufslisten kann danach abgeschaltet werden.</p>
               </div>
             )}
 
