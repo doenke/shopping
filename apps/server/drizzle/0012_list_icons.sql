@@ -1,0 +1,1 @@
+ALTER TABLE "lists" ADD COLUMN "icon_name" text;

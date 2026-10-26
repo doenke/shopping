@@ -11,7 +11,7 @@ interface Options {
 }
 
 const Target = z.object({
-  targetType: z.enum(['item', 'category', 'entry']),
+  targetType: z.enum(['item', 'category', 'entry', 'list']),
   targetId: z.string().min(1).max(64),
 });
 
@@ -56,7 +56,7 @@ export async function iconRoutes(app: FastifyInstance, { icons, requireAccount }
   // Not secret, and needed before login, by guests and by the service worker. The
   // version in the query string changes with every new icon, so caching forever is safe.
 
-  const serve = (type: 'item' | 'category' | 'entry') => async (request: FastifyRequest, reply: FastifyReply) => {
+  const serve = (type: 'item' | 'category' | 'entry' | 'list') => async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = z.object({ id: z.string().max(64) }).parse(request.params);
     const { v } = z.object({ v: z.string().optional() }).parse(request.query);
     const icon = await icons.approvedImage(type, id.replace(/\.webp$/, ''));
@@ -68,6 +68,7 @@ export async function iconRoutes(app: FastifyInstance, { icons, requireAccount }
   app.get('/icons/item/:id', serve('item'));
   app.get('/icons/category/:id', serve('category'));
   app.get('/icons/entry/:id', serve('entry'));
+  app.get('/icons/list/:id', serve('list'));
 
   // ---- review & settings (accounts only) ---------------------------------------------
 

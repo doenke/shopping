@@ -80,7 +80,10 @@ export const lists = pgTable(
     name: text('name').notNull(),
     listType: text('list_type').notNull().default('shopping'),
     isTemplate: boolean('is_template').notNull().default(false),
+    /** Version token of the list's generated icon (set by the server; replaces the type's emoji). */
     icon: text('icon'),
+    /** The name the icon was last requested for: a renamed list gets a new one. */
+    iconName: text('icon_name'),
     color: text('color'),
     settings: jsonb('settings').$type<Record<string, unknown>>().notNull().default({}),
     archivedAt: text('archived_at'),
@@ -242,7 +245,7 @@ export const appSettings = pgTable('app_settings', {
 });
 
 /** item = catalog item, category, entry = an entry of a Merkliste (list item). */
-export type IconTarget = 'item' | 'category' | 'entry';
+export type IconTarget = 'item' | 'category' | 'entry' | 'list';
 export type IconStatus = 'candidate' | 'approved' | 'rejected' | 'retired';
 
 /** Generated icons: candidates waiting for review, the approved one, rejected ones (without image data). */

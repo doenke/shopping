@@ -5,6 +5,7 @@ import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
 import { startShopping, stopShopping, useShopping, useWakeLock } from './shopMode';
+import { ListIcon } from './components/ListIcon';
 import { ListAvatars } from './components/ListAvatars';
 import { MembersDialog } from './components/MembersDialog';
 import { NewListDialog } from './components/NewListDialog';
@@ -76,7 +77,7 @@ function Shell({ me }: { me: Me }) {
     { title: 'Packlisten', lists: packingLists, prefix: () => '🧳 ' },
     { title: 'Merklisten', lists: memoLists, prefix: () => '📌 ' },
     { title: 'ToDo', lists: todoLists, prefix: () => '✅ ' },
-    { title: 'Vorlagen', lists: templates, prefix: (l) => `◇ ${TYPE_ICON[l.listType]}` },
+    { title: 'Vorlagen', lists: templates, prefix: (l) => TYPE_ICON[l.listType] },
   ];
   const mainList = shoppingLists.find((l) => l.id === me.defaultListId) ?? shoppingLists[0];
   const listId = route.page === 'list' ? (route.listId ?? (mainList ?? packingLists[0])?.id) : undefined;
@@ -147,7 +148,8 @@ function Shell({ me }: { me: Me }) {
                     <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
                       <span>
                         {l.id === me.defaultListId && <span title="Hauptliste">⭐ </span>}
-                        {sec.prefix(l)}
+                        {l.isTemplate && '◇ '}
+                        <ListIcon list={l} fallback={sec.prefix(l)} />
                         {l.name}
                         {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
                       </span>
@@ -167,7 +169,7 @@ function Shell({ me }: { me: Me }) {
               <li key={l.id}>
                 <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
                   <span>
-                    {l.listType === 'packing' ? '🧳 ' : ''}
+                    <ListIcon list={l} fallback={TYPE_ICON[l.listType]} />
                     {l.name}
                   </span>
                 </a>
@@ -195,7 +197,10 @@ function Shell({ me }: { me: Me }) {
               ☰
             </button>
           )}
-          <h1 className="topbar__title">{route.page === 'settings' ? 'Einstellungen' : route.page === 'icons' ? 'Icons' : (list?.name ?? 'Shopping')}</h1>
+          <h1 className="topbar__title">
+            {route.page === 'list' && list && <ListIcon list={list} size="md" />}
+            {route.page === 'settings' ? 'Einstellungen' : route.page === 'icons' ? 'Icons' : (list?.name ?? 'Shopping')}
+          </h1>
           {shopList &&
             (shopping ? (
               <button type="button" className="shop-toggle shop-toggle--on" onClick={stopShopping} aria-label="Einkauf beenden, zurück zu Zuhause">
@@ -340,6 +345,22 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
       >
         Wer ist dabei?
       </button>
+      {!guest && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onClose();
+            void fetch('/api/v1/icons/generate', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ targetType: 'list', targetId: list.id }),
+            });
+          }}
+        >
+          🖼 Neues Listen-Icon
+        </button>
+      )}
       {!list.isTemplate && list.listType === 'shopping' && !guest && (
         <button
           type="button"

@@ -85,6 +85,13 @@
       "when": 1792998017588,
       "tag": "0011_households",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793028075582,
+      "tag": "0012_list_icons",
+      "breakpoints": true
     }
   ]
 }

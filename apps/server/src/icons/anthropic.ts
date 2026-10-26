@@ -195,6 +195,30 @@ export const ENTRY_SYSTEM =
   'motif from its story (no actors, no faces, no logos, no title text); for a book a closed book whose plain cover shows such a motif; for a restaurant or café a typical ' +
   'dish of its cuisine; for a place a characteristic object of it. One short English noun phrase, no style words, no names of real people, no text.';
 
+export interface ListContext {
+  name: string;
+  listType: string;
+  description: string | null;
+}
+
+const LIST_KIND: Record<string, string> = {
+  shopping: 'shopping list',
+  packing: 'packing list for a trip',
+  memo: 'list of things to remember (films, books, restaurants …)',
+  todo: 'to-do list',
+};
+
+export function listContext(l: ListContext): string {
+  return [`"${l.name}" – a ${LIST_KIND[l.listType] ?? 'list'}`, l.description ? `(about: ${l.description})` : null].filter(Boolean).join(' ');
+}
+
+export const LIST_SYSTEM =
+  'You write the subject line for an icon that stands for a whole personal list in an app; it is shown small next to the list name. ' +
+  'The name is German and usually says what the list is for ("Wocheneinkauf", "Baumarkt", "Skiurlaub", "Filme", "Garten"). Name ONE simple, ' +
+  'recognisable object or motif that captures it: a shop or occasion by its most typical object (a hardware store: a hammer; a ski trip: skis; ' +
+  'films: a film clapperboard; a garden: a watering can; a weekly shop: a paper bag with groceries). If the name is a person or place, pick what the ' +
+  'type and description suggest. One short English noun phrase, no style words, no names of real people, no text.';
+
 // ---- pre-review -------------------------------------------------------------------
 
 export interface ReviewVerdict {
@@ -267,13 +291,22 @@ export class ClaudeReviewer {
 
   /** Picture description for a Merkliste entry, from the list's description (a film gets a film motif). */
   async describeEntry(entry: EntryContext): Promise<{ subject: string; costMicro: number }> {
+    return this.describeWith(ENTRY_SYSTEM, `Entry: ${entryContext(entry)}`);
+  }
+
+  /** Picture description for a whole list, from its name, type and description. */
+  async describeList(list: ListContext): Promise<{ subject: string; costMicro: number }> {
+    return this.describeWith(LIST_SYSTEM, `List: ${listContext(list)}`);
+  }
+
+  private async describeWith(system: string, content: string): Promise<{ subject: string; costMicro: number }> {
     let msg: Anthropic.Beta.BetaMessage;
     try {
       msg = await this.client.beta.messages.create({
         model: 'claude-haiku-5-5',
         max_tokens: 1000,
-        system: ENTRY_SYSTEM,
-        messages: [{ role: 'user', content: `Entry: ${entryContext(entry)}` }],
+        system,
+        messages: [{ role: 'user', content }],
         output_config: {
           effort: 'low',
           format: { type: 'json_schema', schema: { type: 'object', properties: { subject: { type: 'string' } }, required: ['subject'], additionalProperties: false } },

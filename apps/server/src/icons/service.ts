@@ -10,7 +10,7 @@ import { currentSeq, stableUuid } from '../db/seed.js';
 import type { SyncHub } from '../sync/hub.js';
 import type { SyncService } from '../sync/service.js';
 import { ApiError } from '../api/errors.js';
-import { ClaudeReviewer, ClaudeSvgGenerator, entryContext, ENTRY_SYSTEM, type EntryContext, type ReviewVerdict } from './anthropic.js';
+import { ClaudeReviewer, ClaudeSvgGenerator, entryContext, ENTRY_SYSTEM, LIST_SYSTEM, listContext, type EntryContext, type ReviewVerdict } from './anthropic.js';
 import { CloudflareGenerator, OpenAiGenerator, QuotaExceeded, type IconGenerator, type ProviderId } from './generators.js';
 import { processIcon, referenceImage } from './image.js';
 import { buildPrompt, DEFAULT_STYLE } from './prompt.js';
@@ -307,6 +307,13 @@ export class IconService {
         ORDER BY lower(trim(li.name)), li.created_at
         LIMIT 500`);
       jobs.push(...free.map((r) => ({ targetType: 'entry' as const, targetId: r.id, priority: 950, candidates: s.candidates })));
+      // Lists: a picture from the name, again after a rename. The name is noted right away, so a failed
+      // or rejected picture is not drawn over and over.
+      const named = await this.db.execute<{ id: string }>(sql`
+        UPDATE ${lists} SET icon_name = name
+        WHERE deleted = false AND archived_at IS NULL AND icon_name IS DISTINCT FROM name
+        RETURNING id`);
+      jobs.push(...named.map((r) => ({ targetType: 'list' as const, targetId: r.id, priority: 970, candidates: s.candidates })));
     }
     if (!jobs.length) return 0;
     const inserted = await this.db.insert(iconJobs).values(jobs).onConflictDoNothing().returning({ id: iconJobs.id });
@@ -347,8 +354,17 @@ export class IconService {
       if (!(await this.entry(targetId))) throw new ApiError(404, 'not_found', 'Unbekannter Eintrag');
       return;
     }
+    if (targetType === 'list') {
+      if (!(await this.listOf(targetId))) throw new ApiError(404, 'not_found', 'Unbekannte Liste');
+      return;
+    }
     const [row] = await this.db.select({ id: catalogItems.id }).from(catalogItems).where(eq(catalogItems.id, targetId));
     if (!row) throw new ApiError(404, 'not_found', 'Unbekannter Artikel');
+  }
+
+  private async listOf(listId: string) {
+    const [row] = await this.db.select().from(lists).where(and(eq(lists.id, listId), eq(lists.deleted, false)));
+    return row ? { name: row.name, listType: row.listType, description: typeof row.settings.description === 'string' ? row.settings.description : null } : null;
   }
 
   /** A Merkliste entry or a free-text entry with its list (for the context of its picture). */
@@ -382,6 +398,33 @@ export class IconService {
   ): Promise<{ subject: string; name: string; context?: string }> {
     if (targetType === 'category') {
       return { subject: CATEGORY_SUBJECTS[targetId] ?? 'plain shopping bag', name: getCategory(targetId).name };
+    }
+    if (targetType === 'list') {
+      const l = await this.listOf(targetId);
+      if (!l) throw new Error('Liste nicht gefunden');
+      const context = listContext(l);
+      let subject: string | undefined;
+      const claude = this.claude(s);
+      if (claude && (await this.withinBudget(s, 'claude', 1_000))) {
+        subject = await claude
+          .describeList(l)
+          .then(async (r) => {
+            await this.recordUsage('claude', 0, r.costMicro);
+            return r.subject;
+          })
+          .catch((err: Error) => {
+            this.log.warn({ err: err.message }, 'Bildbeschreibung (Claude) fehlgeschlagen');
+            return undefined;
+          });
+      }
+      if (!subject && gen instanceof CloudflareGenerator) {
+        subject = await gen.describeEntry(LIST_SYSTEM, context).catch((err: Error) => {
+          if (err instanceof QuotaExceeded) throw err;
+          this.log.warn({ err: err.message }, 'Bildbeschreibung fehlgeschlagen');
+          return undefined;
+        });
+      }
+      return { subject: subject ?? `a simple object that stands for ${context}`, name: l.name, context };
     }
     if (targetType === 'entry') {
       // Merkliste: the list's description tells what "Dune" is (a film here, a book elsewhere).
@@ -692,6 +735,9 @@ export class IconService {
         if (icon.targetType === 'item') {
           await tx.update(catalogItems).set({ icon: iconToken(iconId), seq: sql`nextval('sync_seq')` }).where(eq(catalogItems.id, icon.targetId));
         }
+        if (icon.targetType === 'list') {
+          await tx.update(lists).set({ icon: iconToken(iconId), seq: sql`nextval('sync_seq')` }).where(eq(lists.id, icon.targetId));
+        }
         if (icon.targetType === 'entry') {
           // A free-text entry's picture also goes to every other free-text entry of that name.
           await tx.execute(sql`
@@ -721,6 +767,9 @@ export class IconService {
         if (icon.status === 'approved' && icon.targetType === 'item') {
           await tx.update(catalogItems).set({ icon: null, seq: sql`nextval('sync_seq')` }).where(eq(catalogItems.id, icon.targetId));
         }
+        if (icon.status === 'approved' && icon.targetType === 'list') {
+          await tx.update(lists).set({ icon: null, seq: sql`nextval('sync_seq')` }).where(eq(lists.id, icon.targetId));
+        }
         if (icon.status === 'approved' && icon.targetType === 'entry') {
           await tx.update(listItems).set({ icon: null, seq: sql`nextval('sync_seq')` }).where(eq(listItems.icon, iconToken(iconId)));
         }
@@ -730,9 +779,13 @@ export class IconService {
     await this.broadcastCatalog();
   }
 
-  /** Entry icons travel with the list (sync), not with the catalog. Returns true if it was one. */
+  /** Entry and list icons travel with the lists (sync), not with the catalog. Returns true if it was one. */
   private async notifyEntry(iconId: string): Promise<boolean> {
     const [icon] = await this.db.select({ targetType: icons.targetType, targetId: icons.targetId }).from(icons).where(eq(icons.id, iconId));
+    if (icon?.targetType === 'list') {
+      await this.notifyLists([icon.targetId]);
+      return true;
+    }
     if (icon?.targetType !== 'entry') return false;
     // Shared pictures reach several lists: everyone on a list holding the entry or one of the same name.
     const rows = await this.db.execute<{ list_id: string }>(sql`
@@ -803,7 +856,11 @@ export class IconService {
           .where(inArray(listItems.id, entryIds))
       : [];
     const entryById = new Map(entries.map((e) => [e.id, e]));
+    const listIds = targets.filter((t) => t.targetType === 'list').map((t) => t.targetId);
+    const listRows = listIds.length ? await this.db.select({ id: lists.id, name: lists.name }).from(lists).where(inArray(lists.id, listIds)) : [];
+    const listById = new Map(listRows.map((l) => [l.id, l.name]));
     return (t: { targetType: IconTarget; targetId: string }) => {
+      if (t.targetType === 'list') return { name: `${listById.get(t.targetId) ?? '?'} (Liste)`, categoryId: 'eigene', subject: null };
       if (t.targetType === 'entry') {
         const e = entryById.get(t.targetId);
         return { name: e ? `${e.name} (${e.list})` : '?', categoryId: e && e.listType !== 'memo' ? (e.categoryId ?? 'eigene') : 'merkliste', subject: null };

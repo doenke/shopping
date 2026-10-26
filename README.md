@@ -79,6 +79,9 @@ eingebautem MCP-Server.
    Neue Einträge kommen sofort dran (vor den übrigen Katalogartikeln): Merklisten-Einträge und frei
    getippte Einträge auf Einkaufs- und Packlisten, die nicht im Katalog stehen. Ein frei getippter Name
    bekommt ein Bild, das jeder Eintrag mit diesem Namen auf jeder Liste mitbenutzt.
+   Auch jede **Liste** bekommt ein Icon aus ihrem Namen (und ihrer Beschreibung), das in der Seitenleiste
+   und der Titelzeile das Typ-Symbol ersetzt; nach dem Umbenennen entsteht ein neues, und über
+   *⋮ → Neues Listen-Icon* lässt es sich jederzeit neu erzeugen.
 5. Optional einen **Anthropic-Key** (Claude): Claude zeichnet Icons als SVG (Sonnet, etwa 3–4 Cent
    pro Entwurf), prüft jeden Entwurf vorab („erkennbar? Schrift? passt zum Stil?“, Haiku, unter 0,1 Cent)
    und beschreibt Artikel aus Mealie. Was die Vorprüfung aussortiert, steht hinten und ist

@@ -19,7 +19,7 @@ const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => 
 
 let t: Awaited<ReturnType<typeof createTestApp>>;
 let cookie: string;
-const req = (method: 'GET' | 'POST' | 'PUT', url: string, payload?: unknown) =>
+const req = (method: 'GET' | 'POST' | 'PUT' | 'PATCH', url: string, payload?: unknown) =>
   t.app.inject({ method, url, headers: { cookie }, ...(payload !== undefined ? { payload: payload as object } : {}) });
 
 const itemsOf = async (listId: string) => (await req('GET', `/api/v1/lists/${listId}`)).json().items as { id: string; name: string; catalogItemId: string | null }[];
@@ -81,4 +81,28 @@ describe('free-text entries', () => {
     expect((await pulled(third)).icon).toBe((await pulled(first)).icon);
   });
 
+});
+
+describe('list icons', () => {
+  const listJobs = (id: string) => t.db.select().from(iconJobs).where(and(eq(iconJobs.targetType, 'list'), eq(iconJobs.targetId, id)));
+
+  it('come from the name, and again after a rename', async () => {
+    const id = (await req('POST', '/api/v1/lists', { name: 'Baumarkt' })).json().id;
+    await t.icons.enqueueMissing();
+    expect(await listJobs(id)).toHaveLength(1);
+    // Planned once, not on every round.
+    await t.icons.enqueueMissing();
+    expect(await listJobs(id)).toHaveLength(1);
+
+    await req('POST', '/api/v1/icons/generate', { targetType: 'list', targetId: id, candidates: 1 });
+    expect((await req('POST', '/api/v1/icons/run')).json().result).toBe('done');
+    expect(described.at(-1)).toContain('"Baumarkt" – a shopping list');
+    const pulled = (await req('GET', '/api/v1/sync/pull?since=0')).json().lists.find((l: { id: string }) => l.id === id);
+    expect(pulled.icon).toMatch(/^[0-9a-f]{10}$/);
+    expect((await t.app.inject({ method: 'GET', url: `/icons/list/${id}.webp?v=${pulled.icon}` })).statusCode).toBe(200);
+
+    await req('PATCH', `/api/v1/lists/${id}`, { name: 'Gartencenter' });
+    await t.icons.enqueueMissing();
+    expect((await listJobs(id)).filter((j) => j.status === 'queued')).toHaveLength(1);
+  });
 });
