@@ -73,6 +73,7 @@ Laptop-Ansicht.
 |---------|-|
 | ✏️ Bearbeiten … | Name, Beschreibung, Kategorie (ToDo), Icon mit „Neues Icon erzeugen“ |
 | 👥 Berechtigungen … | sichtbar für Haushalt oder nur mich, wer dabei ist (entfernen), Link teilen und erneuern |
+| 📋 Als Text teilen … | offene Einträge als Text in den Teilen-Dialog bzw. die Zwischenablage |
 | ↕ Kategorien sortieren … | Einkauf und Packliste |
 | Aus Mealie hinzufügen … | Rezept oder Wochenplan |
 | Mit Vorlage abgleichen … | in beide Richtungen |

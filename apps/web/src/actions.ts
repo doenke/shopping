@@ -1,4 +1,4 @@
-import { categoriesFor, defaultVisibility, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem, type SectionKey } from '@shopping/shared';
+import { categoriesFor, defaultVisibility, listAsText, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem, type SectionKey } from '@shopping/shared';
 import { db } from './db';
 import { sync } from './sync/engine';
 
@@ -173,6 +173,31 @@ export async function shareList(list: ListRow, renew = false): Promise<void> {
   } else {
     await navigator.clipboard?.writeText(url).catch(() => undefined);
     prompt('Link kopiert – zum Weitergeben:', url);
+  }
+}
+
+/**
+ * The list as plain text into the phone's share dialog (messenger, notes …), on the laptop to the
+ * clipboard. Works offline: it only reads the local copy. Returns what happened, for a hint.
+ */
+export async function shareListAsText(list: ListRow, categoryOrder?: readonly string[]): Promise<'shared' | 'copied' | 'failed'> {
+  const items = await db.items.where('listId').equals(list.id).toArray();
+  const text = listAsText(list, items, categoryOrder);
+  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+    try {
+      await navigator.share({ title: list.name, text });
+      return 'shared';
+    } catch (err) {
+      // Closed the dialog: nothing to do. Anything else: fall back to the clipboard.
+      if ((err as Error).name === 'AbortError') return 'shared';
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    return 'copied';
+  } catch {
+    prompt('Zum Kopieren:', text);
+    return 'failed';
   }
 }
 

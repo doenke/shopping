@@ -10,6 +10,8 @@ import { extractDue, formatDue, parseDue } from './due.js';
 import { defaultVisibility } from './packing.js';
 import { planAdd } from './plan-add.js';
 import { suggestedProperties } from './properties.js';
+import { listAsText } from './list-text.js';
+import type { ItemRow } from './model.js';
 import { seedCatalog } from './seed-catalog.js';
 
 const catalog: CatalogItem[] = seedCatalog()
@@ -250,5 +252,54 @@ describe('properties per list type', () => {
     expect(suggestedProperties('packing')).toContain('Handgepäck');
     expect(suggestedProperties('memo')).not.toContain('bio');
     expect(suggestedProperties('todo')).toContain('dringend');
+  });
+});
+
+describe('list as text', () => {
+  let n = 0;
+  const item = (p: Partial<ItemRow>): ItemRow => ({
+    id: `i${++n}`,
+    listId: 'l',
+    catalogItemId: null,
+    name: '?',
+    amounts: [],
+    properties: [],
+    note: null,
+    categoryId: null,
+    checked: false,
+    checkedAt: null,
+    checkedBy: null,
+    position: `a${n}`,
+    optional: false,
+    attributes: {},
+    createdBy: null,
+    createdAt: '',
+    deleted: false,
+    mergedInto: null,
+    hlc: {},
+    seq: 0,
+    ...p,
+  });
+  const list = (listType: 'shopping' | 'packing' | 'memo' | 'todo', settings = {}) => ({ name: 'Wocheneinkauf', listType, isTemplate: false, settings });
+
+  it('groups open items by category, in the user order', () => {
+    const items = [
+      item({ name: 'Milch', categoryId: 'milch-kaese', amounts: [{ q: 1, u: 'l' }], properties: ['laktosefrei'] }),
+      item({ name: 'Kartoffeln', categoryId: 'obst-gemuese', amounts: [{ q: 2, u: 'kg' }] }),
+      item({ name: 'Butter', categoryId: 'milch-kaese', checked: true }),
+    ];
+    expect(listAsText(list('shopping', { description: 'Für die Woche' }), items, ['milch-kaese'])).toBe(
+      'Wocheneinkauf\nFür die Woche\n\nMilch & Käse\n• Milch – 1 l · laktosefrei\n\nObst & Gemüse\n• Kartoffeln – 2 kg',
+    );
+  });
+
+  it('shows who and where, due dates on ToDo lists, and nothing open', () => {
+    expect(listAsText(list('memo'), [item({ name: 'Dune', attributes: { person: 'Ben', container: 'Netflix' } })])).toBe(
+      'Wocheneinkauf\n\n• Dune (Tipp von Ben, Netflix)',
+    );
+    const now = new Date(2026, 9, 26);
+    const todo = [item({ name: 'Steuer' }), item({ name: 'Reifen', attributes: { due: '2026-10-27', person: 'Ben' } })];
+    expect(listAsText(list('todo'), todo, [], now)).toBe('Wocheneinkauf\n\n• Reifen – Morgen (Ben)\n• Steuer');
+    expect(listAsText(list('shopping'), [item({ name: 'Milch', checked: true })])).toBe('Wocheneinkauf\n\nAlles erledigt.');
   });
 });

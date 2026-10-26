@@ -58,6 +58,9 @@
 - **Offline-first**: lokale Datenbank im Browser, Änderungen werden gepuffert und nachgeliefert (auch per
   Background Sync, wenn die App schon zu ist).
 - **Haushalte, Teilen, Gäste**: siehe [haushalte-und-teilen.md](haushalte-und-teilen.md).
+- **Als Text teilen** (*⋮ → Als Text teilen …*): die offenen Einträge als lesbarer Text, nach Kategorien in
+  der eigenen Reihenfolge – auf dem Handy in den Teilen-Dialog (Messenger, Notizen), am Laptop in die
+  Zwischenablage. Für alle, die ohne App einkaufen; geht auch offline.
 - Was über ein Token oder einen KI-Assistenten hinzukommt, ist gekennzeichnet („hinzugefügt von Anna über
   Claude“).
 

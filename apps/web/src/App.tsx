@@ -1,6 +1,6 @@
 import { categoriesInOrder, groupLists, inUserOrder, listGroup, parseInput, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, archiveList, createList, deleteList, leaveList, saveAsTemplate, setCategoryOrder, setListOrder, setSectionOrder, setMainList } from './actions';
+import { addItems, archiveList, createList, deleteList, leaveList, saveAsTemplate, setCategoryOrder, setListOrder, setSectionOrder, setMainList, shareListAsText } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
@@ -76,6 +76,12 @@ function Shell({ me }: { me: Me }) {
   const archived = ordered.filter((l) => !l.isTemplate && l.archivedAt);
   const templates = ordered.filter((l) => l.isTemplate);
   const [editing, setEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 2500);
+    return () => clearTimeout(t);
+  }, [copied]);
   const [sorting, setSorting] = useState<'lists' | ListType | null>(null);
   const TYPE_ICON: Record<ListType, string> = { shopping: '', packing: '🧳 ', memo: '📌 ', todo: '✅ ' };
   /** Sidebar: only sections that have lists. */
@@ -264,6 +270,7 @@ function Shell({ me }: { me: Me }) {
                   onMembers={() => setShowMembers(true)}
                   onSortCategories={() => setSorting(list.listType)}
                   onEdit={() => setEditing(true)}
+                  onCopied={() => setCopied(true)}
                 />
               )}
             </div>
@@ -307,6 +314,11 @@ function Shell({ me }: { me: Me }) {
         />}
       {syncDialog && list && (
         <SyncTemplateDialog list={list} templates={templates.filter((t) => t.listType === list.listType)} onClose={() => setSyncDialog(false)} />
+      )}
+      {copied && (
+        <div className="snackbar" role="status">
+          <span>Liste als Text kopiert</span>
+        </div>
       )}
       {editing && list && (
         <ListEditDialog
@@ -375,9 +387,10 @@ interface ListMenuProps {
   onMembers: () => void;
   onSortCategories: () => void;
   onEdit: () => void;
+  onCopied: () => void;
 }
 
-function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories, onEdit }: ListMenuProps) {
+function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories, onEdit, onCopied }: ListMenuProps) {
   const guest = me.isGuest;
   const isOwner = list.ownerId === me.id;
 
@@ -410,6 +423,16 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
         }}
       >
         👥 Berechtigungen …
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        onClick={() => {
+          onClose();
+          void shareListAsText(list, me.categoryOrder).then((r) => r === 'copied' && onCopied());
+        }}
+      >
+        📋 Als Text teilen …
       </button>
       {(list.listType === 'shopping' || list.listType === 'packing') && (
         <button
