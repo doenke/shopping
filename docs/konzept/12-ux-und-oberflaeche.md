@@ -1,104 +1,101 @@
 # 12 – UX & Oberfläche
 
-Vorbild Bring!: **Kachel-Raster**, ein Tipp = hinzufügen/abhaken,
-„Zuletzt verwendet“ als schnelle Nachkauf-Quelle. Ergänzt um echte
-Mengen/Einheiten und eine Laptop-taugliche Ansicht.
+*Stand: Oktober 2026.*
 
-## Handy (Fokus Android)
+**Kachel-Raster**, ein Tipp hinzufügen oder abhaken, „Zuletzt verwendet“ als schnelle
+Nachkauf-Quelle – ergänzt um echte Mengen und Einheiten, vier Listentypen und eine
+Laptop-Ansicht.
+
+## Handy
 
 ```
 ┌─────────────────────────────┐
-│ ☰  Einkauf ▾        ☁✓  👤 │   Listenwahl, Sync-Status
+│ ☰  🛍 Einkauf  🛒 Ⓐ+2  ●  ⋮ │   Listen-Icon, Einkaufen-Modus, Mitglieder, Sync, Menü
 ├─────────────────────────────┤
-│ 🔍 Was brauchst du?         │   Suche/Eingabe mit Parser
+│ Was brauchst du?            │   eine Zeile für alles (Parser)
 ├─────────────────────────────┤
-│ Obst & Gemüse               │
+│ OBST & GEMÜSE               │   Kategorien in eigener Reihenfolge
 │ ┌────┐ ┌────┐ ┌────┐        │
-│ │ 🥔 │ │ 🍅 │ │ 🧅 │        │   Kacheln, nach Kategorie gruppiert
-│ │Kart│ │Toma│ │Zwie│        │
-│ │2 kg│ │    │ │3 St│        │
+│ │ 🥔 │ │ 🍅 │ │ 🧅 │        │   Kacheln mit Icon, Name, Menge · Eigenschaften
+│ │2 kg│ │    │ │ 3  │        │
 │ └────┘ └────┘ └────┘        │
-│ Milch & Käse                │
-│ ┌────┐ ┌────┐               │
-│ │ 🥛 │ │ 🧀 │               │
-│ └────┘ └────┘               │
-├─────────────────────────────┤
-│ Zuletzt verwendet  ▸        │   eingeklappt; Tipp = wieder auf Liste
+│ ▸ Zuletzt verwendet (12)    │   eingeklappt; Tipp = wieder auf die Liste
 └─────────────────────────────┘
 ```
 
-- **Tipp auf Kachel** = abhaken (Kachel animiert raus, „Rückgängig“-Snackbar).
-- **Langer Druck** = Details: Menge (Stepper + Einheitenwahl), Eigenschaften
-  (Chips), Notiz, Kategorie, Herkunft („für Lasagne“).
-- **Eingabe:** Tippen zeigt Katalogtreffer als Kacheln; Enter übernimmt den
-  geparsten Text („2 kg Kartoffeln“).
-- **Einkaufsmodus** (optional, automatisch beim Abhaken): Bildschirm bleibt an
-  (Wake Lock), große Kacheln, Bearbeiten-Funktionen ausgeblendet.
-- Daumenfreundlich: wichtige Aktionen unten, Wischen zwischen Listen.
-- Teilen-Ziel: Text aus anderer App „teilen“ → landet als Artikel(liste).
+- **Eingabe:** Tippen zeigt Katalogtreffer als Kacheln mit ihren Icons; Enter übernimmt den
+  geparsten Text („2 kg Kartoffeln“), auch mehrere mit Komma.
+- **Zuhause / Einkaufen:** Zu Hause öffnet ein Tipp den Artikel (Editor), damit nichts versehentlich
+  abgehakt wird. Im Laden 🛒: grüner Kopf, ein Tipp hakt ab („Rückgängig“ in der Leiste unten),
+  Bildschirm bleibt an. Zurück auf Zuhause, wenn alles gekauft ist oder eine Stunde nichts abgehakt
+  wurde. Pro Gerät gemerkt.
+- **Editor** (Tipp zu Hause, langer Druck im Laden): Menge mit Einheit, Eigenschaften als Chips
+  (Vokabular je Listentyp), Notiz, Kategorie, Person/Packstück bzw. Tipp von/Wo bzw. Wer/Bereich,
+  ToDo: „+ Fälligkeit“, Herkunft („für Lasagne“), „hinzugefügt von Anna über Claude“.
+- **Teilen-Ziel:** Text aus einer anderen App „teilen“ → landet auf der Hauptliste.
+- **Installieren:** Knopf in der Titelzeile, solange die App im Browser läuft (iPhone: Anleitung).
+
+## Ansichten je Listentyp
+
+| Typ | Ansicht |
+|-----|---------|
+| Einkauf | Kacheln nach Kategorien, „Zuletzt verwendet“ |
+| Packliste | Kacheln, eingepackt bleibt durchgestrichen stehen; Fortschritt „12 von 30 eingepackt“; gruppiert nach Kategorie, Packstück oder Person; erledigte Packliste ins Archiv |
+| Merkliste | Kacheln mit eigenem Icon je Eintrag, Tipp von und Wo darunter; gruppiert nach Ort oder Tippgeber; „Erledigt“ eingeklappt |
+| ToDo | Checkliste; ohne Fälligkeiten schlicht, mit Fälligkeiten gruppiert nach Überfällig / Heute / Diese Woche / Später, wahlweise nach Bereich oder Person; „Erledigt“ eingeklappt |
 
 ## Laptop
 
 ```
 ┌──────────────┬──────────────────────────────────┬──────────────────────┐
-│ Listen       │ Einkauf                ☁✓        │ Katalog / Mealie     │
-│ ⭐ Einkauf 12│ 🔍 Hinzufügen… (Strg+K)           │ 🔍 Suche             │
-│ ○ Drogerie  3│                                  │ Obst & Gemüse        │
-│ ○ Getränke   │ Obst & Gemüse                    │ 🍎 🍌 🥕 🥦 🍋 …      │
-│              │  🥔 Kartoffeln   2 kg  festk.  ⋯ │                      │
-│ Vorlagen     │  🍅 Tomaten            klein  ⋯  │ Mealie ▸ Rezepte     │
-│ ◇ Basis      │  🧅 Zwiebeln     3 Stk        ⋯  │        ▸ Wochenplan  │
-│ ◇ Grillen    │ Milch & Käse                     │                      │
-│              │  🥛 Milch        2 l  laktosefr. │ Zuletzt verwendet    │
-│ Später:      │                                  │ 🧈 🥚 ☕ …            │
-│ Packlisten   │                                  │                      │
+│ Shopping     │ 🛍 Wocheneinkauf      🛒 ⒷⒸⒶ ● ⋮ │ Obst & Gemüse ▾      │
+│ + Neu        │ Was brauchst du?                 │ 🍍 🍎 🍑 🍆 🥑 🍌 …    │
+│ ⭐ Einkauf 10 │ OBST & GEMÜSE                    │                      │
+│ Baumarkt     │  🥔 Kartoffeln  🍎 Äpfel  🍌 …    │ Katalog zum          │
+│ PACKLISTEN   │ MILCH & KÄSE                     │ Durchklicken         │
+│ 🧳 Skiurlaub │  🥛 Milch  🥚 Eier  🧈 Butter     │                      │
+│ TODO         │                                  │                      │
+│  Arbeit      │                                  │                      │
+│ ✅ Projekt X  │                                  │                      │
+│ ↕ Listen sortieren                              │                      │
+│ ⚙ Einstellungen                                 │                      │
 └──────────────┴──────────────────────────────────┴──────────────────────┘
 ```
 
-- Drei Spalten, Liste wahlweise als **Kacheln** oder **kompakte Tabelle**
-  (Inline-Bearbeitung von Menge/Einheit).
-- Tastatur: `Strg+K` Eingabe, `↑/↓` navigieren, `Leertaste` abhaken,
-  `E` bearbeiten, `Entf` löschen, `Strg+Z` rückgängig.
-- Drag & Drop von Katalog/„Zuletzt verwendet“ in die Liste und zwischen Listen.
-- Mehrfachauswahl (z. B. 5 Artikel in die Drogerie-Liste verschieben).
+- Seitenleiste in Abschnitten (Einkauf, Packlisten, Merklisten, ToDo – dort nach Kategorien wie
+  Arbeit oder Hobby –, Vorlagen, Archiv). Abschnitte und Listen in eigener Reihenfolge, per Ziehen
+  sortierbar; das Listen-Icon ersetzt das Typ-Symbol.
+- Rechts der Katalog des Listentyps zum Durchklicken.
 
-## Hauptliste
+## Listenmenü ⋮
 
-- Die App startet immer in der Hauptliste (⭐).
-- Umstellen über das Listenmenü: „Als Hauptliste festlegen“.
-- Was aus Mealie, Home Assistant oder per MCP ohne Listenangabe kommt,
-  landet hier.
+| Eintrag | |
+|---------|-|
+| ✏️ Bearbeiten … | Name, Beschreibung, Kategorie (ToDo), Icon mit „Neues Icon erzeugen“ |
+| 👥 Berechtigungen … | sichtbar für Haushalt oder nur mich, wer dabei ist (entfernen), Link teilen und erneuern |
+| ↕ Kategorien sortieren … | Einkauf und Packliste |
+| Aus Mealie hinzufügen … | Rezept oder Wochenplan |
+| Mit Vorlage abgleichen … | in beide Richtungen |
+| Als Vorlage speichern, Archivieren, Als Hauptliste festlegen | je nach Typ |
+| Liste verlassen / Liste löschen | Mitglied / Besitzer |
 
-## Vorlagen in der UI
+## Neue Liste
 
-- Eigene Rubrik in der Seitenleiste, Raute-Symbol ◇, keine Checkboxen.
-- „Neue Liste“ → Dialog: leer oder aus Vorlage; Vorschau mit Haken zum
-  Ab-/Anwählen einzelner Artikel (optionale Artikel vorab abgewählt).
-- In jeder Liste: „Vorlage hinzufügen“.
-
-## Teilen & Mitglieder
-
-- „Teilen“ (in jeder Liste) → Teilen-Dialog des Handys mit dem Link; am
-  Laptop „Link kopieren“.
-- Wer den Link öffnet und angemeldet ist, bekommt kurz „Einkauf von Sönke –
-  beitreten?“ → Liste erscheint in der Seitenleiste.
-- Listenmenü zeigt die Mitglieder als Avatare. Besitzer: „Link erneuern“,
-  „Mitglied entfernen“, „Liste löschen“. Mitglieder: „Liste verlassen“.
+Ein Knopf **„+ Neu“**: Typ (Einkauf, Packliste, Merkliste, ToDo), Name mit passendem Vorschlag,
+Beschreibung, Kategorie (ToDo), aus Vorlage (Artikel einzeln wählbar, optionale vorab abgewählt),
+„Als Vorlage anlegen“, privat (bei ToDo vorausgewählt).
 
 ## Mehrere Nutzer sichtbar machen
 
-- Avatare der gerade aktiven Personen in der Liste („Anna ist im Laden“) –
-  nur sichtbar, wenn man selbst in die App schaut.
+- Avatare aller mit Zugriff in der Titelzeile; ein Tipp öffnet „Berechtigungen“.
 - Fremd abgehakte Artikel: kurze Animation + „✓ von Anna“.
-- Neu von anderen hinzugefügt: dezenter Punkt an der Kachel bis zum Ansehen.
 
-**Keine Benachrichtigungen:** kein Push, keine Mails, keine Badges auf dem
-App-Icon. Alles oben passiert nur innerhalb der geöffneten App.
+**Keine Benachrichtigungen:** kein Push, keine Mails, keine Badges auf dem App-Icon. Alles passiert
+nur innerhalb der geöffneten App.
 
 ## Gestaltung
 
-- Hell/Dunkel nach System, große Touch-Ziele (≥ 48 px), gut lesbar im
-  grellen Supermarktlicht (hoher Kontrast).
-- Sprache: Deutsch zuerst, i18n von Anfang an vorgesehen.
-- Barrierefreiheit: Kacheln sind echte Buttons mit Beschriftung,
-  Screenreader-Ansage „Kartoffeln, 2 Kilogramm, abgehakt“.
+- Hell/Dunkel nach System, große Touch-Ziele (≥ 44 px), gut lesbar im grellen Supermarktlicht.
+- Deutsch.
+- Barrierefreiheit: Kacheln sind echte Buttons mit Beschriftung; Sortieren geht auch mit der
+  Tastatur (Pfeiltasten am Griff).

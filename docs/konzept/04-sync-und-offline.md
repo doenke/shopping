@@ -1,5 +1,7 @@
 # 04 – Sync & Offline
 
+*Stand: Oktober 2026.*
+
 Zwei Anforderungen, die sich gegenseitig verstärken:
 
 1. **Abhaken soll sofort bei allen anderen erscheinen.**
@@ -13,121 +15,103 @@ kritischen Pfad eines Tipps.
 
 ```
  Tipp ──► lokale IndexedDB (sofort sichtbar) ──► Outbox ──► WebSocket ──► Server
-                                                                        │
- andere Geräte ◄── WebSocket-Broadcast ◄── change_log (server_seq) ◄────┘
+                                                                         │
+ andere Geräte ◄── persönliches Delta ab ihrem Cursor ◄── seq ◄──────────┘
 ```
 
-- Jede Änderung ist eine kleine **Mutation**: `{id, entity, entityId, patch, hlc}`,
-  z. B. `{entity:"item", entityId:"…", patch:{checked:true}, hlc:"…"}`.
+- Jede Änderung ist eine kleine **Mutation**: `{mid, entity, id, patch, hlc}` mit
+  `entity` = `list`, `item` oder `me` (Hauptliste, Reihenfolgen).
 - Mutationen werden lokal sofort angewendet und in eine **Outbox** (IndexedDB)
   geschrieben. Die Outbox überlebt App-Kill, Neustart, Flugmodus.
-- Der Server wendet an, vergibt eine fortlaufende `server_seq`, bestätigt
-  (`ack`) und verteilt an alle anderen verbundenen Clients der Liste.
-- Jeder Client merkt sich seinen Cursor (`last_seq`). Nach Verbindungsabbruch:
-  `pull since last_seq` → Lücke geschlossen.
+- Der Server wendet an, vergibt eine fortlaufende Nummer (`seq`), bestätigt (`ack`)
+  und schickt jedem verbundenen Gerät der betroffenen Nutzer sein Delta.
+- Jeder Client merkt sich seinen Cursor. Nach einem Abbruch holt er alles seitdem nach.
 
 ## Konfliktauflösung
 
-Einkaufslisten bestehen aus kleinen Datensätzen; echte CRDTs (Yjs,
-Automerge) wären Overkill. Stattdessen:
+Listen bestehen aus kleinen Datensätzen; echte CRDTs (Yjs, Automerge) wären
+Overkill. Stattdessen:
 
 | Fall | Regel |
 |------|-------|
 | Zwei Geräte ändern **verschiedene Felder** desselben Artikels | beide Änderungen bleiben (Merge **pro Feld**) |
 | Zwei Geräte ändern **dasselbe Feld** | Last-Writer-Wins nach **Hybrid Logical Clock** (robust gegen falsch gehende Handyuhren) |
 | A hakt ab, B ändert offline die Menge | beides bleibt: abgehakt mit neuer Menge |
-| A löscht, B ändert | Löschen gewinnt (Tombstone), B sieht „wurde von A entfernt“ |
-| A und B fügen offline beide „Milch“ hinzu | Server führt zusammen (gleicher Katalogartikel, offen, gleiche Eigenschaften) → ein Eintrag, Mengen addiert; Duplikat wird als zusammengeführt markiert |
-| Reihenfolge | Fractional Indexing: Einfügen zwischen zwei Positionen ohne andere Einträge umzuschreiben |
+| A löscht, B ändert | Löschen gewinnt (Markierung `deleted`) |
+| A und B fügen offline beide „Milch“ hinzu | der Server führt zusammen (gleicher Artikel, offen, gleiche Eigenschaften) → ein Eintrag, Mengen addiert, das Duplikat verweist per `merged_into` darauf |
+| Reihenfolge | Fractional Indexing: Einfügen zwischen zwei Positionen, ohne andere umzuschreiben |
 
-IDs sind clientseitig erzeugte UUIDv7 – offline angelegte Artikel brauchen
-kein Server-Roundtrip und keine ID-Umschreibung.
+Felder, die nur der Server setzt (Icons, Mitgliedschaften), kommen als normale Zeilen im Delta mit.
 
 ## Echtzeit
 
-- **WebSocket** pro Gerät, Abo auf alle Listen des Nutzers (eigene + über
-  Link beigetretene). Tritt der Nutzer einer Liste bei, wird sie sofort
-  nachgeladen; wird er entfernt oder verlässt er sie, schickt der Server
-  `removed` und der Client löscht die lokale Kopie.
-- Ziel: Abhaken bei anderen Online-Geräten **< 1 s**.
-- Beim Gegenüber verschwindet der Artikel nicht schlagartig, sondern
-  mit kurzer Animation und Hinweis „✓ von Anna“ – sonst wundert man sich,
-  wohin die Butter verschwunden ist.
-- Fallback, wenn WebSocket durch Proxy/Netz blockiert: SSE + HTTP-POST,
-  zuletzt Polling (alle 10 s, nur bei sichtbarer App).
+- **WebSocket** pro Gerät für alle Listen des Nutzers. Kommt eine Liste dazu (Haushalt, Link),
+  wird sie sofort nachgeladen; fällt eine weg, löscht der Client die lokale Kopie.
+- Abhaken erscheint bei anderen Online-Geräten in etwa 0,1 s. Beim Gegenüber verschwindet der
+  Artikel nicht schlagartig, sondern blendet mit „✓ von Anna“ aus.
+- Integrationen (Home Assistant, Skripte) bekommen dasselbe als **Server-Sent Events**
+  (`/api/v1/events`); ausgehende Webhooks hängen am selben Änderungsstrom.
+- Ohne WebSocket gibt es dasselbe Protokoll per HTTP (`POST /api/v1/sync/push`,
+  `GET /api/v1/sync/pull?since=`) – für Background Sync und als Rückfallebene.
 
 ## Schlechtes Netz im Supermarkt
 
-Das eigentliche Problem ist selten „gar kein Netz“, sondern **„Netz, das
-nicht antwortet“**: Der Browser meldet `online`, Anfragen hängen aber
-30 s+. Maßnahmen:
+Das eigentliche Problem ist selten „gar kein Netz“, sondern **„Netz, das nicht
+antwortet“**: Der Browser meldet `online`, Anfragen hängen aber 30 s und mehr.
 
 | Maßnahme | Wirkung |
 |----------|---------|
-| Niemals auf den Server warten | UI reagiert immer sofort |
-| App-Level-Heartbeat (Ping alle 10 s, Timeout 5 s) | tote Verbindung wird in Sekunden statt Minuten erkannt |
-| Eigene Request-Timeouts (z. B. 8 s) + Retry mit Backoff und Jitter | hängende Requests blockieren nichts |
-| Mutationen gebündelt, winzige Payloads (wenige hundert Byte) | geht auch über EDGE/schwaches LTE |
-| Idempotenz über Mutations-ID | doppelt gesendete Mutation nach Timeout schadet nicht |
-| **Background Sync API** (Chrome/Android) | Outbox wird gesendet, sobald Netz zurück ist – auch wenn die App schon zu ist |
-| Sync beim Wieder-Sichtbarwerden der App (`visibilitychange`) und bei `online` | schneller Aufholvorgang an der Kasse/auf dem Parkplatz |
-| Unaufdringliche Statusanzeige | Wolke-Symbol: ✓ synchron · ↻ 3 ausstehend · ⚠ offline seit 5 min |
+| Niemals auf den Server warten | die Oberfläche reagiert immer sofort |
+| Ping alle paar Sekunden, Antwort binnen 5 s, `ack` binnen 8 s | eine tote Verbindung wird in Sekunden erkannt und neu aufgebaut |
+| Kleine Pakete, gebündelte Mutationen | geht auch über schwaches LTE |
+| Idempotenz über die Mutations-ID | doppelt gesendete Mutation nach Timeout schadet nicht |
+| **Background Sync** (Chrome/Android) | die Outbox wird gesendet, sobald Netz da ist – auch wenn die App schon zu ist |
+| Sync beim Wieder-Sichtbarwerden und bei `online` | schneller Aufholvorgang an der Kasse |
+| Unaufdringliche Statusanzeige | Punkt in der Titelzeile: verbunden, verbinde, offline mit ausstehenden Änderungen |
 
 ## Was liegt offline auf dem Gerät?
 
-| Daten | Speicher | Umfang |
-|-------|----------|--------|
-| App-Shell (HTML/JS/CSS) | Service-Worker-Cache (Precache) | ~300 KB |
-| Alle Listen + Vorlagen des Nutzers inkl. Artikel | IndexedDB | klein |
-| Lebensmittel-Katalog (Namen, Aliase, Kategorien, Einheiten) | IndexedDB | ~1–2 MB, delta-synchronisiert |
-| Icons | Cache Storage, vorab geladen als Sprite/Bündel (WebP) | ~2–5 MB für 1.000 Icons |
-| Verlauf („Zuletzt verwendet“) | IndexedDB | klein |
+| Daten | Speicher |
+|-------|----------|
+| App-Shell (HTML/JS/CSS) | Service-Worker-Cache (Precache) |
+| Alle Listen und Vorlagen inkl. Artikel, Nutzer, eigene Einstellungen | IndexedDB |
+| Katalog (Namen, Aliase, Kategorien) | IndexedDB, bei Änderungen nachgeladen |
+| Icons und Profilbilder | Cache Storage, versionierte URLs, im Hintergrund vorgeladen |
 
-Damit funktioniert offline **alles**: Listen anschauen, abhaken, Artikel aus
-dem Katalog suchen und hinzufügen, Vorlagen anwenden. Nur der Mealie-Import und das
-Erzeugen eines neuen Gast-Links brauchen Netz (werden aber ebenfalls gequeued).
+Offline funktioniert damit alles außer Mealie-Import, Teilen-Link und Icon-Erzeugung.
+`navigator.storage.persist()` wird angefragt, damit Android den Speicher nicht räumt.
 
-`navigator.storage.persist()` wird angefragt, damit Android den Speicher nicht
-bei Platzmangel räumt.
+## Updates der App
 
-## Sync-Protokoll (Skizze)
+Der Service Worker übernimmt eine neue Version sofort (`skipWaiting`, `clients.claim`), und die
+Seite lädt sich einmal neu. Gesucht wird beim Zurückkehren in den Vordergrund und stündlich –
+eine installierte App bleibt sonst tagelang auf dem alten Stand. Offene Änderungen gehen nicht
+verloren, sie liegen in der Outbox.
+
+## Sync-Protokoll
 
 ```jsonc
 // Client → Server
-{ "t": "hello", "clientId": "…", "lastSeq": 18233, "schema": 1 }
+{ "t": "hello", "since": 18233 }
 { "t": "push",  "mutations": [ { "mid": "…", "entity": "item", "id": "…",
-                                 "op": "upsert", "patch": { "checked": true }, "hlc": "…" } ] }
+                                 "patch": { "checked": true }, "hlc": "…" } ] }
 { "t": "ping" }
 
 // Server → Client
-{ "t": "ack",     "mids": ["…"], "seq": 18240 }
-{ "t": "changes", "changes": [ { "seq": 18241, "entity": "item", "id": "…",
-                                 "patch": { "checked": true, "checkedBy": "…" }, "hlc": "…" } ] }
-{ "t": "reject",  "mid": "…", "reason": "forbidden" }   // z. B. Rechte entzogen
-{ "t": "resync" }                                         // Cursor zu alt → Vollabgleich
+{ "t": "ack",     "mids": ["…"], "rejected": [ { "mid": "…", "reason": "forbidden" } ] }
+{ "t": "changes", "seq": 18241, "lists": [ … ], "items": [ … ], "members": [ … ], "me": { … } }
+{ "t": "catalog", "seq": 18242 }   // Katalog oder Icons geändert → nachladen
+{ "t": "resync" }                  // Cursor unbrauchbar → Vollabgleich
 { "t": "pong" }
 ```
 
-Dasselbe Protokoll ist per HTTP verfügbar (`POST /api/v1/sync/push`,
-`GET /api/v1/sync/pull?since=`) – für Background Sync, native Clients und
-Notfälle ohne WebSocket.
+## Umsetzung
 
-## Umsetzung (Phase 1)
+- Schreibzugriffe und Delta-Abfragen laufen im Server hintereinander (In-Process-Mutex).
+  So kann kein Cursor eine später committete Zeile überspringen. Das setzt **eine**
+  Server-Instanz voraus.
+- Die Merge-Logik (HLC, Feld-LWW, `planAdd`) liegt in `packages/shared` und ist in App und
+  Server dieselbe.
 
-- Alle synchronisierten Zeilen tragen eine globale, fortlaufende Nummer
-  (`sync_seq`) und pro Feld einen HLC-Zeitstempel (`hlc`-Spalte).
-- Schreibzugriffe und Delta-Abfragen laufen im Server hintereinander
-  (In-Process-Mutex). So kann kein Client-Cursor eine später committete Zeile
-  überspringen. Das setzt **eine** Server-Instanz voraus – für einen Haushalt
-  mehr als genug.
-- Nach jeder Änderung bekommt jedes verbundene Gerät der betroffenen Nutzer
-  sein persönliches Delta ab seinem Cursor.
-- Ein Ping ohne Antwort binnen 5 s oder ein fehlendes `ack` binnen 8 s
-  beendet die Verbindung und startet sie neu.
-
-## Tests, die das absichern müssen
-
-- Zwei Clients offline, beide ändern, dann online in beliebiger Reihenfolge → gleicher Endzustand.
-- Verbindung „hängt“ (Netzwerk-Throttling, 100 % Paketverlust) → UI bleibt bedienbar, Sync holt nach.
-- App wird mit 20 ausstehenden Mutationen beendet → nach Neustart werden sie gesendet.
-- Doppelte Zustellung einer Mutation → keine doppelten Artikel.
+Abgesichert durch Tests: zwei Clients offline in beliebiger Reihenfolge → gleicher Endzustand;
+doppelte Zustellung → keine doppelten Artikel; Rechte entzogen → Ablehnung statt stiller Änderung.

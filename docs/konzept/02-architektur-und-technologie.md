@@ -1,106 +1,90 @@
 # 02 – Architektur & Technologie
 
+*Stand: Oktober 2026.*
+
 ## Entscheidung: Docker statt PHP-Webspace
 
 | Kriterium | Docker-Container | PHP + MySQL Webspace |
 |-----------|------------------|----------------------|
 | Echtzeit-Sync (WebSocket/SSE) | ✅ dauerhafte Verbindungen problemlos | ❌ meist nur Polling; SSE hält PHP-Worker belegt |
-| Hintergrundjobs (Mealie-Abgleich, Icon-Generierung) | ✅ Worker im selben Prozess | ⚠️ nur per Cron, eingeschränkt |
+| Hintergrundjobs (Mealie-Abgleich, Icon-Generierung) | ✅ im selben Prozess | ⚠️ nur per Cron, eingeschränkt |
 | MCP-Server (Streamable HTTP) | ✅ | ⚠️ machbar, aber fragil |
 | OIDC | ✅ | ✅ |
-| Betrieb | Reverse Proxy + Compose (läuft bei dir schon für Mealie/n8n) | sehr einfach |
+| Betrieb | Reverse Proxy + Compose (läuft für Mealie/n8n ohnehin) | sehr einfach |
 
-**Empfehlung: Docker.** Die Kernanforderung „Abhaken erscheint sofort bei
-allen“ braucht dauerhafte Verbindungen, und das kann klassisches Shared
-Hosting nicht sauber. Da Mealie und n8n bereits selbst gehostet laufen,
-ist die Infrastruktur ohnehin da.
+Die Kernanforderung „Abhaken erscheint sofort bei allen“ braucht dauerhafte
+Verbindungen; das kann klassisches Shared Hosting nicht sauber. Die
+Infrastruktur für Container ist ohnehin vorhanden.
 
 ## Stack
 
-Durchgehend **TypeScript**, damit Datenmodell, Validierung und
+Durchgehend **TypeScript**, damit Datenmodell, Validierung, Eingabe-Parser und
 Sync-Logik zwischen Server, PWA, API und MCP geteilt werden.
 
 | Schicht | Wahl | Warum |
 |---------|------|-------|
-| Server | Node.js 22 LTS + **Fastify** | schnell, gutes Plugin-Ökosystem (WebSocket, Rate-Limit, OpenAPI) |
-| Validierung / Schemas | **Zod** (geteilt) | eine Quelle für API-Validierung, OpenAPI-Generierung, MCP-Tool-Schemas |
-| Datenbank | **PostgreSQL 17** | `pg_trgm` für Fuzzy-Suche im Katalog, `LISTEN/NOTIFY`, JSONB |
-| ORM / Migrationen | **Drizzle** | typsicher, SQL-nah, gute Migrationen |
-| Echtzeit | WebSocket (`@fastify/websocket`), SSE als Fallback/für Integrationen | |
-| Frontend | **React + Vite**, PWA via `vite-plugin-pwa` (Workbox) | großes Ökosystem (Drag & Drop, Virtualisierung) |
-| Lokale Datenhaltung | **IndexedDB via Dexie** | vollständige lokale Replik der Listen |
-| OIDC | `openid-client` gegen **Pocket ID** | zertifizierte Bibliothek, PKCE |
+| Server | Node.js 22 + **Fastify** | schnell, Plugins für WebSocket, statische Dateien |
+| Validierung | **Zod** (geteilt) | eine Quelle für API-Validierung, OpenAPI und MCP-Tool-Schemas |
+| Datenbank | **PostgreSQL 17** | JSONB, robuste Transaktionen; auch Icons und Profilbilder liegen hier |
+| ORM / Migrationen | **Drizzle** | typsicher, SQL-nah, Migrationen laufen beim Start |
+| Echtzeit | WebSocket für die App, Server-Sent Events für Integrationen | |
+| Frontend | **React + Vite**, PWA über `vite-plugin-pwa` (eigener Service Worker, Workbox) | |
+| Lokale Daten | **IndexedDB über Dexie** | vollständige lokale Kopie aller Listen |
+| OIDC | `openid-client` gegen **Pocket ID** | PKCE, Passkeys über Pocket ID |
 | MCP | offizielles `@modelcontextprotocol/sdk` | Streamable HTTP im selben Server |
-| Bildverarbeitung | `sharp` | Icons skalieren/konvertieren |
+| Bilder | `sharp` (auch SVG-Rendering) | Icons freistellen, skalieren, WebP |
+| Bild-KI | Cloudflare Workers AI, Anthropic, OpenAI (austauschbar) | siehe [10](10-icons-plan.md) |
 
-Monorepo-Aufteilung (pnpm workspaces):
+Monorepo mit pnpm workspaces:
 
 ```
 apps/
-  server/      Fastify: REST, WebSocket, MCP, Jobs
+  server/      Fastify: REST, WebSocket, SSE, MCP, OAuth, Jobs (Mealie, Icons, Avatare, Webhooks)
   web/         React-PWA
 packages/
-  shared/      Zod-Schemas, Typen, Sync-Protokoll, Mengen-/Einheiten-Logik, Eingabe-Parser
-  ha/          Home-Assistant-Custom-Integration (Python, eigenes Repo/HACS später)
+  shared/      Datenmodell, Zod-Schemas, Sync (HLC, Feld-LWW), Einheiten, Kategorien, Parser, Grundkatalog
+custom_components/
+  shopping/    Home-Assistant-Integration (HACS), getestet in ha-tests/
 ```
 
 ## Komponenten
 
 ```
-                    ┌────────────────────────────────────────────┐
-  Browser / PWA ───►│  Fastify-Server (1 Container)              │
-  (IndexedDB,       │   ├─ /            statische PWA            │
-   Service Worker)  │   ├─ /auth/*      OIDC-Login               │
-       ▲  ▲         │   ├─ /api/v1/*    REST (OpenAPI)           │
-       │  └─ WS ───►│   ├─ /ws          Echtzeit-Sync            │
-       │            │   ├─ /api/v1/events  SSE für HA & Co.      │
-  Home Assistant ──►│   ├─ /mcp         MCP (Streamable HTTP)    │
-  n8n, Skripte      │   ├─ /hooks/mealie/<secret>  Webhook-Ziel   │
-  KI-Assistenten ──►│   └─ Jobs: Mealie-Abgleich, Icons          │
-                    └──────────────┬─────────────────────────────┘
+                    ┌──────────────────────────────────────────────┐
+  Browser / PWA ───►│  Fastify-Server (1 Container)                │
+  (IndexedDB,       │   ├─ /              statische PWA            │
+   Service Worker)  │   ├─ /auth/*        OIDC-Login, Gäste        │
+       ▲  ▲         │   ├─ /api/v1/*      REST (OpenAPI)           │
+       │  └─ WS ───►│   ├─ /ws            Echtzeit-Sync            │
+       │            │   ├─ /api/v1/events SSE für Integrationen    │
+  Home Assistant ──►│   ├─ /mcp, /oauth/* MCP + OAuth 2.1          │
+  n8n, Skripte      │   ├─ /hooks/mealie/<secret>  Webhook-Ziel     │
+  KI-Assistenten ──►│   ├─ /icons/*, /avatars/*  Bilder (gecacht)  │
+                    │   └─ Jobs: Mealie-Abgleich, Icons, Avatare,  │
+                    │            ausgehende Webhooks               │
+                    └──────────────┬───────────────────────────────┘
                                    │
-                         PostgreSQL (Compose)        Mealie-API
-                         Volume: /data/icons ◄─────  Pocket ID (OIDC)
-                                                     Bild-KI
+                         PostgreSQL (Compose)       Mealie-API, Pocket ID,
+                         auch Icons und Avatare      Bild-KI-Anbieter
 ```
 
-Ein einziger App-Container plus Postgres. Keine weitere Infrastruktur
-(kein Redis nötig: bei einer Instanz verteilt der Prozess Events selbst;
-für mehrere Instanzen stünde Postgres `LISTEN/NOTIFY` bereit).
+Ein App-Container plus Postgres, keine weitere Infrastruktur. Schreibzugriffe
+laufen im Prozess hintereinander (siehe [04](04-sync-und-offline.md)); das setzt
+**eine** Instanz voraus – für einen Haushalt mehr als genug.
 
 ## Deployment
 
-```yaml
-# docker-compose.yml (Skizze)
-services:
-  app:
-    image: ghcr.io/doenke/shopping:latest
-    environment:
-      DATABASE_URL: postgres://shopping:***@db/shopping
-      PUBLIC_URL: https://einkauf.example.org
-      OIDC_ISSUER: https://id.example.org          # Pocket ID
-      OIDC_CLIENT_ID: ***
-      OIDC_CLIENT_SECRET: ***
-      MEALIE_URL: https://mealie.example.org     # optional, auch per UI
-    volumes: [ ./data:/data ]
-    depends_on: [ db ]
-  db:
-    image: postgres:17
-    volumes: [ ./pg:/var/lib/postgresql/data ]
-```
+- Image `ghcr.io/doenke/shopping` (`latest` und Versionsnummer), gebaut von der CI für amd64 und arm64.
+- Vorlage: `docker-compose.example.yml` (App auf `127.0.0.1:38417`, Postgres mit Healthcheck).
+- HTTPS über den vorhandenen Reverse Proxy (Pflicht für Service Worker); WebSocket-Upgrade für `/ws`.
+- Konfiguration per Umgebungsvariablen; Nutzerspezifisches (Mealie-Token, Bild-KI-Schlüssel, API-Tokens)
+  in der Datenbank, Geheimnisse verschlüsselt mit `SECRET_KEY`.
+- Backup: `pg_dump` – Icons und Profilbilder liegen in der Datenbank, es gibt kein Datenverzeichnis.
+- Versionen `x.yy.zzz`, getrennt für App und Integration (siehe [docs/betrieb.md](../betrieb.md#versionen)).
 
-- HTTPS über den vorhandenen Reverse Proxy (Pflicht für Service Worker / PWA).
-- WebSocket-Upgrade im Proxy erlauben.
-- Backups: `pg_dump` + `/data` (Icons).
-- Konfiguration per Umgebungsvariablen; alles Nutzerspezifische (Mealie-Token, API-Tokens) in der DB, Secrets verschlüsselt.
+## Android
 
-## Android / native App
-
-1. **PWA zuerst.** Chrome auf Android installiert PWAs als echte WebAPK:
-   eigenes Icon, Vollbild, Share-Target („Teilen → Shopping“ für Text),
-   Offline, Background Sync. Das deckt praktisch alles ab.
-2. **Bei Bedarf: Trusted Web Activity** (Bubblewrap) – dieselbe PWA im
-   Play Store, null Zusatzcode.
-3. **Erst wenn nötig: Capacitor-Hülle** für Dinge, die das Web nicht kann:
-   Homescreen-Widget mit Liste, Schnell-Kachel, Wear-OS. Das Sync-Protokoll
-   ist so ausgelegt, dass ein nativer Client es ebenfalls sprechen kann.
+Die PWA deckt alles ab: Chrome installiert sie als echte WebAPK (eigenes Icon,
+Vollbild, Teilen-Ziel „Teilen → Shopping“, Offline, Background Sync). Ein
+Knopf „Installieren“ in der Titelzeile bietet das an. Eine native Hülle
+(Trusted Web Activity, Capacitor) ist verworfen.

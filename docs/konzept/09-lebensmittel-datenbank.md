@@ -1,79 +1,56 @@
-# 09 – Lebensmittel-Datenbank
+# 09 – Katalog & Eingabe-Parser
 
-Der Katalog ist das Herz der Bring!-artigen Bedienung: Er liefert Icon,
-Kategorie, Standard-Einheit und macht aus „kartofeln“ den Artikel
-**Kartoffeln** 🥔.
+*Stand: Oktober 2026.*
 
-## Aufbau
+Der Katalog ist das Herz der schnellen Bedienung: Er liefert Icon, Kategorie
+und Standard-Einheit und macht aus „kartofeln“ den Artikel **Kartoffeln**.
 
-### `catalog_item`
+## Aufbau (`catalog_items`)
 
 | Feld | Beispiel |
 |------|----------|
 | `name`, `plural` | Kartoffel / Kartoffeln |
-| `display_name_mode` | `plural` (Kacheln zeigen „Kartoffeln“) |
-| `category_id` | Obst & Gemüse |
-| `default_unit_id`, `default_quantity` | kg, – |
-| `allowed_units` | kg, g, Netz, Stk |
-| `typical_properties` | festkochend, mehligkochend, bio |
-| `pantry` | false (Salz, Öl = true → beim Rezeptimport abgewählt) |
-| `icon_id` | aktuelles Icon |
-| `source` | `seed` (Grundkatalog), `mealie`, `user` (in der App angelegt) |
-| `mealie_food_id` | Verknüpfung |
-| `list_type` | `shopping` (später `packing` für Packartikel) |
+| `category_id` | `obst-gemuese` |
+| `default_unit` | kg |
+| `aliases` | Erdapfel, Grumbeere; Paradeiser → Tomaten |
+| `pantry` | Salz, Öl = `true` → beim Rezeptimport vorab abgewählt |
+| `kind` | `shopping` (Lebensmittel, Drogerie, Haushalt) oder `packing` (Dinge zum Einpacken) |
+| `source` | `seed` (Grundkatalog), `mealie` |
+| `mealie_food_id` | Verknüpfung zu Mealie |
+| `hidden` | ausgeblendet (z. B. „Wasser“ aus Rezepten) |
+| `category_locked` | Kategorie von Hand gesetzt, wird beim Mealie-Abgleich nicht überschrieben |
+| `icon`, `icon_subject` | Versions-Token des Icons; englische Bildbeschreibung dafür |
 
-### `catalog_alias`
-Synonyme, Schreibvarianten, Dialekt: *Erdapfel, Grumbeere, Kartoffel,
-Kartoffeln* → Kartoffeln; *Paradeiser* → Tomaten; *Schlagsahne, Sahne*.
+Merk- und ToDo-Listen haben keinen Katalog – dort sind Einträge freier Text.
 
-### `category`
-Name, Farbe (für Kachelhintergrund), Reihenfolge, Icon.
+## Kategorien
 
-**Kategorien wie bei Bring!** – das reicht für den Anfang:
+Fest im Code (`packages/shared/src/categories.ts`), über alle Listentypen eindeutig:
 
-| # | Kategorie | Beispiele |
-|---|-----------|-----------|
-| 1 | Obst & Gemüse | Äpfel, Tomaten, Kräuter |
-| 2 | Brot & Gebäck | Brot, Brötchen, Toast |
-| 3 | Milch & Käse | Milch, Joghurt, Butter, Eier, Käse |
-| 4 | Fleisch & Fisch | Hack, Hähnchen, Lachs, Wurst |
-| 5 | Zutaten & Gewürze | Mehl, Zucker, Öl, Salz, Brühe |
-| 6 | Fertig- & Tiefkühlprodukte | TK-Erbsen, Pizza, Pesto |
-| 7 | Getreideprodukte | Nudeln, Reis, Haferflocken, Müsli |
-| 8 | Snacks & Süßwaren | Schokolade, Chips, Kekse |
-| 9 | Getränke & Tabak | Wasser, Saft, Kaffee, Wein |
-| 10 | Haushalt & Gesundheit | Spülmittel, Müllbeutel, Batterien |
-| 11 | Pflege & Gesundheit | Zahnpasta, Duschgel, Pflaster |
-| 12 | Tierbedarf | Katzenfutter |
-| 13 | Baumarkt & Garten | Blumenerde, Glühbirnen |
-| 14 | Eigene Artikel | Freitext ohne Katalogtreffer |
+| Listentyp | Kategorien |
+|-----------|------------|
+| Einkauf | Obst & Gemüse · Brot & Gebäck · Milch & Käse · Fleisch & Fisch · Zutaten & Gewürze · Fertig- & Tiefkühlprodukte · Getreideprodukte · Snacks & Süßwaren · Getränke & Tabak · Haushalt & Gesundheit · Pflege & Gesundheit · Tierbedarf · Baumarkt & Garten · Eigene Artikel |
+| Packliste | Dokumente & Geld · Kleidung · Schuhe · Körperpflege · Reiseapotheke · Technik · Unterwegs & Proviant · Freizeit & Sport · Kinder · Ausrüstung · Sonstiges |
+| Merkliste | Merkliste |
+| ToDo | Aufgaben |
 
-Die Reihenfolge ist in der App per Drag & Drop änderbar (eine Reihenfolge
-für alle, kein Laden-Profil). Laden-spezifische Sortierung nur, falls das
-später fehlt.
+Jede Kategorie hat eine Farbe (Kachelhintergrund) und ein generiertes Icon. Die **Reihenfolge**
+stellt sich jeder Nutzer selbst ein (z. B. nach dem Weg durch den Laden); sie gilt auf allen seinen
+Geräten und auch in API und Home Assistant. Ladenprofile gibt es bewusst nicht.
 
 ## Befüllung
 
-1. **Basis aus deiner Mealie-Zutatenliste** (`/api/foods`): Name, Plural,
-   Aliase, Label. Labels werden per Mapping-Dialog auf Kategorien gemappt.
-2. **Bereinigung** (einmalig, halbautomatisch, Pflege-Ansicht in der App):
-   - Dubletten zusammenführen („Zwiebel“, „Zwiebeln“, „rote Zwiebel“ → Zwiebeln + Eigenschaft „rot“ ?)
-   - Rezept-only-Zutaten markieren, die man nicht einkauft („Wasser“ → ausblenden)
-   - Fehlende Kategorien zuordnen – Vorschläge per LLM (Batch, ein Durchlauf, vom Menschen bestätigt)
-3. **Kuratierter Grundkatalog** (~400 gängige Artikel inkl. Drogerie/Haushalt,
-   die in Mealie naturgemäß fehlen: Klopapier, Spülmittel, Batterien …),
-   mitgeliefert als Seed-Datei im Repo.
-4. **Lernen im Betrieb:** Freitext, der oft vorkommt, wird als Vorschlag
-   „In Katalog aufnehmen?“ angeboten. Neue Katalogartikel können optional
-   zurück nach Mealie als Food angelegt werden.
-
-Der Abgleich mit Mealie läuft regelmäßig; neue Foods erscheinen automatisch,
-Shopping-eigene Änderungen (Kategorie, Icon) werden nicht überschrieben.
+1. **Grundkatalog** im Repo (`seed-catalog.ts`): rund 290 gängige Einkaufsartikel inkl. Drogerie und
+   Haushalt, rund 130 Packartikel – mit englischen Bildbeschreibungen für die Icons.
+2. **Mealie**: Lebensmittel aus `/api/foods` (Name, Plural, Aliase, Label); Labels werden auf
+   Kategorien abgebildet. Der Abgleich läuft regelmäßig, Shopping-eigene Änderungen bleiben.
+3. **Im Betrieb**: Frei getippte Artikel ohne Katalogtreffer bleiben freier Text; sie bekommen trotzdem
+   ein eigenes Icon (eins pro Name, siehe [10](10-icons-plan.md)). Die Kategorie lässt sich im Editor
+   ändern, auf Wunsch „für alle“ (dann am Katalogartikel).
 
 ## Eingabe-Parser
 
-Schnelle Eingabe ist am Laptop wie am Handy entscheidend. Ein Feld,
-in das man tippt:
+Ein Feld für alles, am Laptop wie am Handy:
 
 | Eingabe | Ergebnis |
 |---------|----------|
@@ -81,26 +58,30 @@ in das man tippt:
 | `2 l Milch` | Milch · 2 l |
 | `Milch 2l laktosefrei` | Milch · 2 l · laktosefrei |
 | `500g Hack gemischt bio` | Hackfleisch · 500 g · gemischt · bio |
-| `3 Zwiebeln` | Zwiebeln · 3 Stk |
+| `3 Zwiebeln` | Zwiebeln · 3 |
 | `1/2 Bund Petersilie` | Petersilie · ½ Bund |
 | `Tomaten (die kleinen)` | Tomaten · Notiz „die kleinen“ |
 | `Kaffee, Butter, 6 Eier` | drei Artikel |
+| `3 T-Shirts @Anna #Koffer` (Packliste) | T-Shirts · 3 · für Anna · im Koffer |
+| `Dune @Ben #Netflix` (Merkliste) | Dune · Tipp von Ben · bei Netflix |
+| `Reifen wechseln !Fr @Ben #Auto` (ToDo) | fällig Freitag · Ben · Auto |
 
-Vorgehen (deterministisch, läuft offline im Client, Code in `packages/shared`):
+Vorgehen (deterministisch, offline im Client, Code in `packages/shared`):
 
-1. Aufteilen an Komma/Zeilenumbruch.
-2. Menge erkennen (Zahlen, Dezimalkomma, Brüche, „ein/eine/zwei“).
-3. Einheit erkennen über `unit` + `unit_alias`.
-4. Bekannte Eigenschaften (`property`) und Klammerinhalte abtrennen.
-5. Rest gegen Katalog matchen: exakt → Alias → Normalisiert (Kleinschreibung,
-   Umlaute, Singular/Plural) → Fuzzy (Trigramm, Tippfehler) → sonst Freitext.
-6. Unsicherer Treffer → Autocomplete zeigt Vorschläge statt still falsch zu raten.
+1. Aufteilen an Komma und Zeilenumbruch.
+2. `@…`, `#…` und (ToDo) `!…` als Person/Ort/Fälligkeit herausziehen.
+3. Menge erkennen (Zahlen, Dezimalkomma, Brüche, „ein/eine/zwei“), dann die Einheit.
+4. Bekannte Eigenschaften und Klammerinhalte abtrennen – das Vokabular hängt am Listentyp
+   (Einkauf „bio“, Packliste „Handgepäck“, ToDo „dringend“; Merklisten erkennen keine, damit Titel
+   wie „Der kleine Prinz“ ganz bleiben).
+5. Rest gegen den Katalog des Listentyps: exakt → Alias → normalisiert (Kleinschreibung, Umlaute,
+   Singular/Plural) → fuzzy (Trigramme, Tippfehler) → sonst freier Text.
+6. Unsichere Treffer: die Vorschläge beim Tippen zeigen Kacheln zur Auswahl, statt still falsch zu raten.
 
-Serverseitig steht derselbe Parser hinter `POST /api/v1/parse` (HA, MCP, API).
-Optional kann für Rezeptzeilen der Mealie-Parser genutzt werden.
+Serverseitig steht derselbe Parser hinter `POST /api/v1/parse`, `add_items` (MCP) und den
+Home-Assistant-Aktionen.
 
 ## Suche
 
-- Client: lokaler Index über Name + Aliase (offline, sofort), Ranking nach
-  eigener Nutzungshäufigkeit (`item_history`).
-- Server: Postgres `pg_trgm` für API/MCP.
+Ein Index über Name und Aliase (`CatalogIndex`), offline im Client, gerankt nach eigener Nutzung;
+derselbe Index läuft im Server für API und MCP.

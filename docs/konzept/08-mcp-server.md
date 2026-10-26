@@ -1,57 +1,53 @@
 # 08 – MCP-Server
 
-Ein MCP-Server ist **fest eingebaut** (gleicher Prozess, gleiche
-Geschäftslogik wie die REST-API) und erlaubt KI-Assistenten (Claude, HA
-Assist mit LLM, n8n-AI-Agent …), Listen zu lesen und zu bearbeiten.
+*Stand: Oktober 2026.*
+
+Ein MCP-Server ist **fest eingebaut** (gleicher Prozess, gleiche Geschäftslogik wie die REST-API)
+und erlaubt KI-Assistenten (Claude, Home Assistant mit LLM, n8n-Agenten …), Listen zu lesen und zu
+bearbeiten.
 
 ## Transport & Auth
 
-- **Streamable HTTP** unter `https://…/mcp` (aktueller MCP-Standard für
-  Remote-Server).
-- **Auth nach MCP-Spezifikation (OAuth 2.1):** Shopping ist Resource Server und
-  veröffentlicht `/.well-known/oauth-protected-resource`. Zwei Varianten:
-  1. **Umgesetzt:** Shopping agiert selbst als schlanker Authorization Server
-     (Login-Schritt leitet an Pocket ID weiter, Zustimmungsseite „Claude möchte
-     auf Shopping zugreifen“, Dynamic Client Registration, PKCE S256,
-     Refresh-Token-Rotation).
-  2. Verworfen: Pocket ID direkt als Authorization Server – so bleibt Shopping
-     unabhängig davon, was der OIDC-Provider unterstützt.
-- **Fallback:** API-Token als Bearer (für lokale/einfache Clients).
+- **Streamable HTTP** unter `${PUBLIC_URL}/mcp`, zustandslos: pro Anfrage ein Server im Namen des
+  Nutzers, JSON-Antworten.
+- **OAuth 2.1 nach MCP-Spezifikation:** Shopping ist Resource Server
+  (`/.well-known/oauth-protected-resource`) **und** schlanker Authorization Server
+  (`/.well-known/oauth-authorization-server`): Dynamic Client Registration, PKCE S256, Login über
+  Pocket ID, Zustimmungsseite „Claude möchte auf Shopping zugreifen“, Zugriffstoken 1 h,
+  Refresh-Token 90 Tage mit Rotation. So bleibt Shopping unabhängig davon, was der OIDC-Provider
+  kann.
+- Verbundene Assistenten stehen in den Einstellungen und lassen sich dort trennen.
+- **Alternative:** API-Token als Bearer, für einfache Clients.
 
 ## Tools
 
-| Tool | Zweck | Wichtige Parameter |
-|------|-------|--------------------|
-| `list_lists` | Alle Listen und Vorlagen | `type`, `include_templates` |
-| `get_list` | Inhalt einer Liste | `list`, `include_checked` |
-| `add_items` | Artikel hinzufügen; versteht Freitext | `list`, `items: ["2 kg Kartoffeln", "Milch laktosefrei"]` oder strukturiert |
-| `update_item` | Menge/Einheit/Eigenschaften/Notiz ändern | `item_id`, Felder |
-| `check_items` / `uncheck_items` | Abhaken | `item_ids` oder Namen |
-| `remove_items` | Entfernen | `item_ids` |
-| `create_list` | Neue Liste, optional aus Vorlage | `name`, `type`, `template` |
-| `apply_template` | Vorlage in Liste übernehmen | `template`, `list` |
-| `search_catalog` | Lebensmittel nachschlagen | `query` |
-| `search_mealie_recipes` | Rezepte in Mealie finden | `query` |
-| `import_mealie_recipe` | Zutaten eines Rezepts übernehmen | `recipe`, `servings`, `skip_pantry` |
-| `import_mealie_mealplan` | Wochenplan übernehmen | `from`, `to`, `list` |
-| `get_history` | Häufig/zuletzt gekaufte Artikel | `limit` |
+| Tool | Zweck |
+|------|-------|
+| `list_lists` | alle Listen (optional Vorlagen, archivierte) mit offenen Artikeln |
+| `get_list` | Inhalt einer Liste, nach Kategorien |
+| `add_items` | Artikel als natürlicher Text („2 kg Kartoffeln festkochend“) oder strukturiert |
+| `update_item` | Menge, Einheit, Eigenschaften, Notiz, Kategorie ändern |
+| `check_items` / `uncheck_items` | abhaken / zurück auf die Liste |
+| `remove_items` | ganz entfernen |
+| `create_list` | neue Liste (Typ, Beschreibung, Kategorie, privat), optional aus Vorlage |
+| `archive_list` | Packliste archivieren oder zurückholen |
+| `apply_template` | Vorlage in eine Liste übernehmen |
+| `search_catalog` | Lebensmittel nachschlagen |
+| `get_history` | zuletzt gekaufte Artikel |
+| `search_mealie_recipes`, `import_mealie_recipe`, `import_mealie_mealplan` | Mealie |
 
-Ohne Angabe von `list` arbeiten alle Tools mit der **Hauptliste** des Nutzers.
-Listen und Artikel dürfen per Name statt ID angesprochen werden („Einkauf“),
-Mehrdeutigkeiten werden als Fehler mit Kandidaten zurückgegeben.
-Tool-Beschreibungen und Schemas werden aus denselben Zod-Schemas erzeugt
-wie die REST-API.
+Ohne Angabe einer Liste arbeiten alle Tools mit der **Hauptliste**. Listen und Artikel dürfen per
+Name statt ID angesprochen werden; Mehrdeutigkeiten kommen als Fehler mit Kandidaten zurück. Die
+Server-Anweisungen erklären die Listentypen (`@…`, `#…`, `!morgen`).
 
 ## Ressourcen & Prompts
 
-- Ressourcen: `shopping://lists/{id}` (Liste als Markdown, Vorlagen eingeschlossen).
-- Prompt: „Wocheneinkauf planen“ (Mealplan + Vorlage + Verlauf kombinieren).
-- Umgesetzt zustandslos: pro Anfrage ein Server im Namen des Nutzers, daher keine
-  Abos auf Ressourcen.
+- Ressource `shopping://lists/{id}`: eine Liste als Markdown.
+- Prompt „Wocheneinkauf planen“: Wochenplan aus Mealie, Basis-Vorlage und Verlauf zu einer
+  Einkaufsliste zusammenführen.
 
 ## Sicherheit
 
-- Der MCP-Client handelt im Namen des angemeldeten Nutzers und sieht nur
-  dessen Listen (eigene + über Link beigetretene).
-- Scopes wie bei API-Tokens; standardmäßig kein Löschen ganzer Listen per MCP.
-- MCP-Änderungen sind mit dem Client-Namen gekennzeichnet („hinzugefügt von Anna über Claude“).
+- Der Client handelt im Namen des Nutzers und sieht nur dessen Listen.
+- Rechte wie bei API-Tokens; ganze Listen löschen geht per MCP nicht.
+- Änderungen sind mit dem Client-Namen gekennzeichnet („hinzugefügt von Anna über Claude“).

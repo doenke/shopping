@@ -1,63 +1,57 @@
 # 01 – Vision & Anforderungen
 
+*Stand: Oktober 2026 – beschreibt, was gebaut ist und warum.*
+
 ## Vision
 
-Eine Einkaufslisten-App, die sich so schnell und angenehm anfühlt wie Bring!
-(Kachel-Raster mit Icons, ein Tipp zum Hinzufügen, ein Tipp zum Abhaken),
-aber **selbst gehostet**, **offen über API/MCP** und **nativ mit Mealie
-verbunden** ist. Im Supermarkt mit schlechtem Netz muss sie trotzdem
+Eine Listen-App für den ganzen Haushalt, die sich so schnell anfühlt wie ein
+Zettel: Kachel-Raster mit Icons, ein Tipp zum Hinzufügen, ein Tipp zum
+Abhaken. Dazu **selbst gehostet**, **offen über API und MCP** und **direkt mit
+Mealie verbunden**. Im Supermarkt mit schlechtem Netz muss sie trotzdem
 zuverlässig funktionieren.
+
+Begonnen als Einkaufsliste, gewachsen zu vier Listentypen mit gemeinsamem
+Unterbau: Einkauf, Packliste, Merkliste, ToDo.
 
 ## Anforderungen
 
-### Muss (MVP)
-
-| ID | Anforderung | Details in |
-|----|-------------|-----------|
-| A1 | Bring!-ähnliche Bedienung: Kacheln mit Icons, Kategorien, „Zuletzt verwendet“ | [12](12-ux-und-oberflaeche.md) |
-| A2 | Mengen, Einheiten und Eigenschaften pro Artikel (z. B. „500 g Hack, gemischt, bio“) | [03](03-datenmodell.md), [09](09-lebensmittel-datenbank.md) |
+| ID | Anforderung | Umgesetzt in |
+|----|-------------|--------------|
+| A1 | Kacheln mit Icons, nach Kategorien gruppiert, „Zuletzt verwendet“ | [12](12-ux-und-oberflaeche.md) |
+| A2 | Mengen, Einheiten und Eigenschaften pro Artikel („500 g Hack, gemischt, bio“) | [03](03-datenmodell.md), [09](09-lebensmittel-datenbank.md) |
 | A3 | Login per OIDC (Pocket ID) | [05](05-auth-und-teilen.md) |
-| A4 | Jeder angemeldete Nutzer legt eigene Listen an; andere bekommen Zugriff nur über den Link der Liste (verschickt über den Teilen-Dialog des Handys) – mit Pocket-ID-Login dauerhaft, ohne Account als Gast | [05](05-auth-und-teilen.md) |
-| A5 | Abhaken wird nahezu in Echtzeit bei allen anderen Nutzern sichtbar | [04](04-sync-und-offline.md) |
+| A4 | Listen gehören dem Haushalt (oder sind privat); andere kommen über den Link dazu, ohne Konto als Gast | [05](05-auth-und-teilen.md) |
+| A5 | Abhaken ist nahezu sofort bei allen anderen sichtbar | [04](04-sync-und-offline.md) |
 | A6 | Voll offline-fähig, robust bei schlechtem Netz | [04](04-sync-und-offline.md) |
-| A7 | PWA, gut am Handy (Fokus Android) **und** am Laptop | [02](02-architektur-und-technologie.md), [12](12-ux-und-oberflaeche.md) |
-| A8 | Native Mealie-Übernahme (ersetzt den heutigen n8n-Flow mealie2bring) | [06](06-mealie-integration.md) |
-| A9 | Lebensmittel-Datenbank, initial aus Mealie-Zutaten befüllt | [09](09-lebensmittel-datenbank.md) |
-| A10 | Jeder Nutzer markiert eine Liste als seine **Hauptliste**: Standard für Mealie, Home Assistant, MCP und Start-Ansicht der App | [03](03-datenmodell.md) |
-| A11 | Kategorien wie bei Bring! | [09](09-lebensmittel-datenbank.md) |
-
-### Soll (kurz nach MVP)
-
-| ID | Anforderung | Details in |
-|----|-------------|-----------|
-| B1 | Listenvorlagen (nicht abhakbar, dienen nur zum Vorbefüllen) | [03](03-datenmodell.md), [12](12-ux-und-oberflaeche.md) |
-| B2 | REST-API, Bearbeitung der Listen aus Home Assistant | [07](07-api-und-home-assistant.md) |
-| B3 | MCP-Server | [08](08-mcp-server.md) |
-| B4 | Generierte Icons nach einheitlicher Designrichtlinie | [10](10-icons-plan.md), [11](11-icon-designrichtlinie.md) |
-
-### Kann (später, aber jetzt schon im Modell vorgesehen)
-
-| ID | Anforderung |
-|----|-------------|
-| C1 | Weitere Listentypen, z. B. Packlisten, To-dos |
-| C2 | Laden-spezifische Sortierung der Kategorien – nur falls die Bring!-Kategorien nicht reichen |
-| C3 | Native Android-Hülle (TWA/Capacitor) für Homescreen-Widget, Play Store |
+| A7 | PWA, gut am Handy **und** am Laptop | [02](02-architektur-und-technologie.md), [12](12-ux-und-oberflaeche.md) |
+| A8 | Mealie-Anbindung: Eingangskorb, Rezepte, Wochenplan (ersetzt einen n8n-Flow) | [06](06-mealie-integration.md) |
+| A9 | Lebensmittel-Katalog: Grundkatalog plus Zutaten aus Mealie | [09](09-lebensmittel-datenbank.md) |
+| A10 | Jeder Nutzer hat eine **Hauptliste** – Standard für Mealie, Home Assistant, MCP und den Start der App | [03](03-datenmodell.md) |
+| A11 | Vorlagen (nicht abhakbar, füllen Listen vor, Abgleich in beide Richtungen) | [03](03-datenmodell.md), [12](12-ux-und-oberflaeche.md) |
+| A12 | REST-API und Home-Assistant-Integration | [07](07-api-und-home-assistant.md) |
+| A13 | MCP-Server für KI-Assistenten | [08](08-mcp-server.md) |
+| A14 | Generierte Icons nach einheitlicher Richtlinie | [10](10-icons-plan.md), [11](11-icon-designrichtlinie.md) |
+| A15 | Weitere Listentypen: Packliste, Merkliste, ToDo | [03](03-datenmodell.md) |
+| A16 | Eigene Reihenfolge von Kategorien, Listen und Abschnitten je Nutzer | [03](03-datenmodell.md), [12](12-ux-und-oberflaeche.md) |
 
 ## Nicht-Ziele
 
-- Kein iOS-Fokus (die PWA läuft dort trotzdem, wird aber nicht gezielt optimiert).
-- **Keine Benachrichtigungen** – weder Push noch Mail-Hinweise („Liste geändert“, „Ich gehe einkaufen“). Die App ist still.
+- **Keine Benachrichtigungen** – weder Push noch Mails („Liste geändert“, „Ich gehe einkaufen“).
+  Die App ist still; was passiert, sieht man in der geöffneten App.
+- Keine native App: Die PWA reicht (installierbar, offline, Teilen-Ziel). Eine Hülle für den
+  Play Store oder ein Homescreen-Widget ist bewusst verworfen.
+- Kein iOS-Fokus – die PWA läuft dort, wird aber nicht gezielt optimiert.
 - Keine Preise, Angebote, Prospekte, Werbung.
 - Kein Rezept-Management – das bleibt Mealie.
-- Keine Haushalts- oder Rollenverwaltung: Listen gehören ihrem Ersteller, geteilt wird ausschließlich per Link.
-- Keine Übernahme bestehender Bring!-Daten – Start bei null.
+- Keine Übernahme von Daten aus anderen Listen-Apps – Start bei null.
+- Keine Rollen innerhalb einer Liste: Wer drin ist, darf alles außer Löschen und Rechte ändern.
 
 ## Qualitätsziele
 
 | Ziel | Messgröße |
 |------|-----------|
-| Schnell | Abhaken/Hinzufügen fühlt sich sofort an (lokal < 50 ms, nie auf Server warten) |
-| Synchron | Abhaken bei anderen Online-Nutzern sichtbar in < 1 s |
+| Schnell | Abhaken/Hinzufügen fühlt sich sofort an (lokal, nie auf den Server warten) |
+| Synchron | Abhaken bei anderen Online-Nutzern sichtbar in < 1 s (gemessen ~0,1 s) |
 | Robust | Keine verlorenen Änderungen, auch nach Stunden offline oder App-Kill |
 | Leicht | Nach dem ersten Laden startet die App komplett aus dem Cache |
-| Offen | Alles, was die UI kann, kann auch die API (und damit HA/MCP/n8n) |
+| Offen | Was die App kann, kann auch die API (und damit Home Assistant, MCP, n8n) |

@@ -1,116 +1,95 @@
-# 10 – Icons: Plan
+# 10 – Icons: Pipeline
 
-Ziel: Jeder Katalogartikel bekommt ein eigenes, **einheitlich gestaltetes**
-Icon – generiert per Bild-KI, geprüft durch einen Menschen, versioniert.
-Die Gestaltung ist in der [Designrichtlinie](11-icon-designrichtlinie.md)
-festgelegt.
+*Stand: Oktober 2026.* Die Gestaltung steht in der [Designrichtlinie](11-icon-designrichtlinie.md),
+die Einrichtung in [docs/icons.md](../icons.md).
+
+Ziel: Jeder Artikel, jede Kategorie, jeder Merklisten-Eintrag und jede Liste bekommt ein **einheitlich
+gestaltetes** Icon – generiert per Bild-KI, automatisch geprüft, versioniert.
 
 ## Grundsatz: Konsistenz vor Menge
 
 Das größte Risiko generierter Icons ist ein Stil-Flickenteppich. Deshalb:
 
-1. Erst eine kleine **Stil-Referenz** („Anker-Set“) erarbeiten und festschreiben.
-2. Dann alle weiteren Icons **mit diesen Referenzbildern** generieren
-   (Bild-zu-Bild/Style-Reference), nicht nur per Textprompt.
-3. Jedes Icon wird vor Freigabe angesehen.
+1. Erst eine kleine **Stil-Referenz** („Anker-Set“) erarbeiten.
+2. Dann alle weiteren Icons **mit diesen Referenzbildern** erzeugen, nicht nur per Textprompt.
+3. Jeder Entwurf wird automatisch geprüft; Zweifelsfälle bleiben für einen Menschen liegen.
 
-## Phasen
+## Ablauf
 
-### Phase 1 – Stil finden (einmalig, ~1 Abend)
+1. **Stil finden**: zwölf typische Artikel (Apfel, Banane, Karotte, Brot, Milch, Käse, Eier,
+   Hackfleisch, Nudeln, Tomatendose, Klopapier, Kaffee) mit je drei Entwürfen. Die ersten vier
+   freigegebenen werden Stil-Referenz ★; eigene Bilder lassen sich hochladen.
+2. **Kategorie-Icons** als Rückfallebene für Artikel ohne eigenes Icon; letzte Rückfallebene ist
+   der Anfangsbuchstabe auf der Kategoriefarbe.
+3. **Laufend** nach Priorität: Kategorien, neue Listen, neue Einträge (Merklisten-Einträge und frei
+   getippte Einträge), dann die Katalogartikel nach Häufigkeit auf den Listen.
+4. **Im Betrieb**: Neue Einträge werden wenige Sekunden nach der Änderung eingeplant, auch mitten in
+   einem langen Durchlauf. „Icon gefällt mir nicht“ in der App und „Neu erzeugen“ in der Übersicht
+   planen neu ein.
 
-- 12 repräsentative Artikel wählen, die die Spannbreite abdecken:
-  Apfel, Banane, Karotte, Brot, Milch (Tüte), Käse, Eier, Hackfleisch,
-  Nudeln, Tomatendose, Klopapier, Kaffee.
-- 3–4 Stilvarianten nach Richtlinie generieren, nebeneinander auf
-  hellem und dunklem Kachelhintergrund in 32/48/96 px vergleichen.
-- Gewinnerstil verfeinern → **Anker-Set** (12 Icons) freigeben.
-  Diese liegen im Repo unter `assets/icons/anchor/` und sind ab dann
-  Pflicht-Referenz für jede Generierung.
+### Was ein Icon bekommt
 
-### Phase 2 – Kategorie-Icons + Fallback
+| Ziel | Bildbeschreibung aus | Besonderheit |
+|------|----------------------|--------------|
+| Katalogartikel (`item`) | fester Text im Grundkatalog, sonst Claude/Textmodell aus Name und Kategorie | Packartikel mit eigenem Prompt (Dinge zum Einpacken) |
+| Kategorie (`category`) | fest hinterlegt | kleine Komposition aus 2–3 Objekten |
+| Eintrag (`entry`) | Merkliste: Eintrag, Listenname, **Listenbeschreibung**, Ort; frei getippt: Name, Kategorie, **Listentitel** | frei getippte Einträge teilen sich ein Bild pro Name über alle Listen |
+| Liste (`list`) | Name, Typ, Beschreibung, bei ToDo-Listen die **Kategorie** | nach dem Umbenennen neu |
 
-- Ein Icon pro Kategorie (14, wie bei Bring!), dient als Fallback für Artikel ohne eigenes Icon.
-- Letzter Fallback: Anfangsbuchstabe auf Kategoriefarbe (so wie ein Avatar).
-- Damit ist die App ab Tag 1 vollständig bebildert.
-
-### Phase 3 – Massengenerierung nach Priorität
-
-- Reihenfolge nach Nutzung: erst die häufigsten Artikel aus `item_history`
-  und den Mealie-Einkaufslisten, dann der Rest des Katalogs.
-- Batches à 25–50 Artikel. Pro Artikel 2–4 Kandidaten.
-- Umfang und Tempo: siehe „Generierung mit Tagesbudget“ unten.
-
-### Phase 4 – Laufender Betrieb
-
-- Neuer Katalogartikel → Icon-Job wird automatisch eingeplant.
-- Nutzer können „Icon gefällt mir nicht“ melden → Neugenerierung in der Review-Queue.
+Auch Bildprompt und KI-Vorprüfung wissen, wofür das Icon ist (Lebensmittel, etwas zum Einpacken,
+ein Film, eine ganze Liste) – ein Symbol ist bei Merklisten, Listen und Kategorien richtig, es muss
+kein Produkt sein.
 
 ## Pipeline
 
 ```
-catalog_item ──► Prompt-Builder ──► Bild-KI (+ Anker-Referenzen) ──► Rohbild 1024²
-                  (Vorlage aus 11)                                    │
-                                                                      ▼
-                     Nachbearbeitung (sharp): Freistellen/Transparenz prüfen,
-                     auf Objekt zuschneiden, Safe-Area-Padding, 512² PNG Master,
-                     Exporte 192² / 96² WebP, (optional Vektorisierung)
-                                                                      │
-                                                                      ▼
-                     Automatische Checks ──► Review-Queue (App) ───────► freigegeben
-                     (Transparenz, Rand frei,     Kandidaten nebeneinander,  icon.status=approved
-                      Füllgrad, Farbanzahl,       auf hell & dunkel, 32–96 px;
-                      kein Text per OCR)          Freigeben / Neu / Prompt anpassen
+Ziel ──► Bildbeschreibung ──► Bild-KI (+ Stil-Referenzen) ──► Rohbild
+                                                                │
+                Nachbearbeitung (sharp): Magenta freistellen (Flutfüllung vom Rand,
+                weiche Kanten, Farbsaum weg), auf Objekt zuschneiden, Objekt 392 px
+                in 512er-Leinwand, Master 512 px + Kachelbild 192 px als WebP
+                                                                │
+                Automatische Prüfungen: Hintergrund sauber, nichts abgeschnitten,
+                nicht zu klein; mit Anthropic-Key KI-Vorprüfung (erkennbar? Schrift?
+                passt zum Stil?)
+                                                                │
+                Automatische Freigabe des ersten Entwurfs, der alles besteht
+                (abschaltbar) – sonst Review-Ansicht in der App
 ```
 
-### Modellwahl: erst kostenlos, langsam – dann notfalls bezahlt
+## Anbieter: erst kostenlos, dann notfalls bezahlt
 
-Rahmen: **keine GPU**, aber **Zeit**. Also: Gratis-Kontingente von
-Cloud-Diensten nutzen und die Generierung über Tage/Wochen strecken.
+Rahmen: **keine GPU**, aber Zeit – Gratis-Kontingente nutzen und die Erzeugung über Tage strecken.
 
-Anforderungen an das Modell: Stil-Referenzbilder (wichtig für Konsistenz),
-gute Objekttreue bei Lebensmitteln, API-Zugang, transparenter Hintergrund
-oder sauber freistellbar.
+| Anbieter | Kosten | Referenzbilder | Rolle |
+|----------|--------|----------------|-------|
+| **Cloudflare Workers AI, FLUX.2 [klein]** | tägliches Gratis-Kontingent (10.000 Neurons, rund 50 je Icon mit Referenzen) | ✅ bis 4 | Standard; zeichnet auf Magenta, Shopping stellt frei |
+| **Claude (SVG)** | Sonnet, rund 3–4 Cent je Entwurf | ✅ SVG-Quellen der Anker | zeichnet Vektor-Icons; SVGs werden vor dem Rendern auf erlaubte Elemente geprüft |
+| **Claude (Haiku)** | unter 0,1 Cent | – | KI-Vorprüfung und Bildbeschreibungen |
+| OpenAI `gpt-image` | wenige Cent je Bild | ✅, transparent | Bezahl-Alternative |
 
-| Option | Kosten | Referenzbilder | Einschätzung |
-|--------|--------|----------------|--------------|
-| **Cloudflare Workers AI, FLUX.2 [klein]** | tägliches Gratis-Kontingent (10.000 Neurons ≈ 150–200 Icons) | ✅ bis 4 | **Umgesetzt, erste Wahl** |
-| Google Gemini (Bild-Modell) | API inzwischen nur noch bezahlt | ✅ | nicht umgesetzt |
-| **Claude (SVG)** | bezahlt, Sonnet 5.5 ≈ 3–4 Cent/Entwurf | ✅ (SVG-Quellen) | **Umgesetzt**, zeichnet Vektor-Icons; dazu KI-Vorprüfung (Haiku) |
-| OpenAI `gpt-image` | bezahlt, wenige Cent pro Bild | ✅, transparenter Hintergrund nativ | **Bezahl-Option**, falls Gratis nicht reicht oder Qualität fehlt |
-| Replicate / fal (FLUX + Stil-Referenz bzw. LoRA) | bezahlt pro Bild/Training | ✅ | Option, wenn ein trainiertes Stil-LoRA nötig wird |
+Gemini-Bildmodelle haben kein Gratis-Kontingent mehr und sind nicht eingebaut. Der Generator ist eine
+austauschbare Schnittstelle (`IconGenerator`); der Anbieterwechsel ist Einstellung.
 
-Konkrete Gratis-Limits ändern sich häufig – sie werden beim Bau geprüft,
-nicht im Konzept festgeschrieben.
+## Budget
 
-### Generierung mit Tagesbudget
+- **Tageslimit** für Cloudflare (Standard 150 Bilder). Ist es erreicht oder meldet der Dienst sein
+  Kontingent als erschöpft, pausiert die Warteschlange bis Mitternacht (UTC).
+- **Monatsgrenze in €** für Claude und OpenAI; Kosten werden aus den echten Token-Zahlen verbucht.
+- Nach einer Freigabe werden für dieses Ziel keine weiteren Entwürfe bezahlt.
 
-- Der Icon-Job hat ein **Tageskontingent** pro Anbieter (z. B. „max. 80
-  Bilder/Tag“) und arbeitet die Warteschlange nach Priorität ab. Ist das
-  Kontingent erschöpft oder meldet der Dienst `429`, pausiert der Job bis
-  zum nächsten Tag.
-- Rechnung: ~600 relevante Artikel × 3 Kandidaten ≈ 1.800 Bilder → bei
-  ~80/Tag gut drei Wochen. Durch Priorisierung sind die häufigen Artikel
-  schon nach wenigen Tagen fertig; der Rest hat ja Kategorie-Fallbacks.
-- Optional **Bezahl-Schalter** mit Kostenobergrenze (z. B. „max. 10 €“),
-  falls es schneller gehen soll oder ein Artikel im Gratis-Modell nicht
-  gelingt („mit Bezahl-Modell neu erzeugen“ in der Review-Ansicht).
-- Phase 1 (Stil finden) geht auch ganz ohne Code direkt in der Weboberfläche
-  von AI Studio bzw. ChatGPT – die Gewinner werden einfach ins Repo gelegt.
+## Datenhaltung
 
-Der Generator ist im Code eine austauschbare Schnittstelle
-(`IconGenerator` mit Adaptern je Anbieter), Anbieter-Wechsel ist Konfiguration.
+`icons` (Ziel, Status `candidate`/`approved`/`rejected`/`retired`, Stil-Referenz, Anbieter, Modell,
+Prompt, Seed, Referenzen, Prüfergebnisse, KI-Urteil, SVG-Quelle, Master und Kachelbild als WebP
+**in PostgreSQL**), `icon_jobs` (Warteschlange mit Priorität), `icon_usage` (Bilder und Kosten pro Tag).
+Abgelehnte Entwürfe verlieren ihre Bilddaten.
 
-### Datenhaltung (umgesetzt)
+Ausgeliefert unter `/icons/{item|category|entry|list}/{id}.webp?v=…` – öffentlich und mit
+Versions-Token für immer cachebar. Die PWA lädt alle freigegebenen Icons im Hintergrund vor und hat
+sie offline. Das Token steht am Katalogartikel, Eintrag oder an der Liste und wird mitsynchronisiert.
 
-`icons`: id, Ziel (Artikel oder Kategorie), status (`candidate`/`approved`/`rejected`/`retired`),
-Stil-Referenz ja/nein, Anbieter, Modell, Prompt, Seed, verwendete Referenzen, Prüfergebnisse,
-512er-Master und 192er-Kachelbild als WebP **in PostgreSQL** (kein eigenes Volume, steckt im Backup).
-Dazu `icon_jobs` (Warteschlange mit Priorität) und `icon_usage` (Bilder und Kosten pro Tag).
-Statt eines Bündels: versionierte URLs, die PWA lädt alle freigegebenen Icons im Hintergrund
-in den Cache des Service Workers.
+## Rechtliches
 
-### Rechtliches
-
-- Nutzungsbedingungen des gewählten Modells für kommerzielle/öffentliche
-  Nutzung prüfen (bei rein privater Nutzung unkritisch).
-- Keine Markenlogos, keine echten Produktverpackungen (siehe Richtlinie).
+- Nutzungsbedingungen der Anbieter für öffentliche Nutzung prüfen (privat unkritisch).
+- Keine Markenlogos, keine echten Produktverpackungen, keine echten Personen (siehe Richtlinie).

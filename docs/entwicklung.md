@@ -51,18 +51,20 @@ haben. Von Hand ist nichts zu tun.
 
 ## Konzept
 
+Wie es gebaut ist und warum (Stand Oktober 2026):
+
 | # | Dokument | Inhalt |
 | --- | --- | --- |
-| 01 | [Vision & Anforderungen](konzept/01-vision-und-anforderungen.md) | Ziele, Anforderungen, Abgrenzung (u. a. keine Benachrichtigungen) |
-| 02 | [Architektur & Technologie](konzept/02-architektur-und-technologie.md) | Docker vs. PHP-Webspace, Stack, Deployment |
-| 03 | [Datenmodell](konzept/03-datenmodell.md) | Tabellen, Listentypen, Vorlagen, Mengen/Einheiten |
-| 04 | [Sync & Offline](konzept/04-sync-und-offline.md) | Offline-first, Echtzeit-Abhaken, schlechtes Netz im Supermarkt |
-| 05 | [Login & Teilen](konzept/05-auth-und-teilen.md) | Pocket ID, Zugriffsmodell, Teilen per Link |
-| 06 | [Mealie-Integration](konzept/06-mealie-integration.md) | Ersatz für den n8n-Flow, Rezepte, Wochenplan |
-| 07 | [API & Home Assistant](konzept/07-api-und-home-assistant.md) | REST, Echtzeit-Events, HA-Integration |
-| 08 | [MCP-Server](konzept/08-mcp-server.md) | Tools, Ressourcen, Auth |
-| 09 | [Lebensmittel-Datenbank](konzept/09-lebensmittel-datenbank.md) | Katalog, Aliase, Eingabe-Parser |
-| 10 | [Icons – Plan](konzept/10-icons-plan.md) | Generierungs-Pipeline, Review, Rollout |
-| 11 | [Icons – Designrichtlinie](konzept/11-icon-designrichtlinie.md) | Stil, Raster, Farben, Prompt-Vorlage |
-| 12 | [UX & Oberfläche](konzept/12-ux-und-oberflaeche.md) | Handy, Laptop, Einkaufsmodus |
-| 13 | [Roadmap & Entscheidungen](konzept/13-roadmap-und-entscheidungen.md) | Phasen, getroffene Entscheidungen |
+| 01 | [Vision & Anforderungen](konzept/01-vision-und-anforderungen.md) | Ziele, Anforderungen, Nicht-Ziele (u. a. keine Benachrichtigungen) |
+| 02 | [Architektur & Technologie](konzept/02-architektur-und-technologie.md) | Docker statt Webspace, Stack, Komponenten, Deployment |
+| 03 | [Datenmodell](konzept/03-datenmodell.md) | Haushalte, Zugriff, Listentypen, Einträge, Zusammenführen |
+| 04 | [Sync & Offline](konzept/04-sync-und-offline.md) | Offline-first, Konflikte, Echtzeit, schlechtes Netz, Protokoll |
+| 05 | [Login, Haushalte & Teilen](konzept/05-auth-und-teilen.md) | Pocket ID, Haushalte, Link, Gäste, Rechte |
+| 06 | [Mealie-Integration](konzept/06-mealie-integration.md) | Eingangskorb, Rezepte, Wochenplan |
+| 07 | [API & Home Assistant](konzept/07-api-und-home-assistant.md) | REST, SSE, Webhooks, HA-Integration |
+| 08 | [MCP-Server](konzept/08-mcp-server.md) | Transport, OAuth, Tools |
+| 09 | [Katalog & Eingabe-Parser](konzept/09-lebensmittel-datenbank.md) | Katalog, Kategorien, Parser |
+| 10 | [Icons – Pipeline](konzept/10-icons-plan.md) | Ablauf, Anbieter, Budget, Datenhaltung |
+| 11 | [Icons – Designrichtlinie](konzept/11-icon-designrichtlinie.md) | Stil, Raster, Farben, Prompt |
+| 12 | [UX & Oberfläche](konzept/12-ux-und-oberflaeche.md) | Handy, Laptop, Listentypen, Menü |
+| 13 | [Entscheidungen & Verlauf](konzept/13-roadmap-und-entscheidungen.md) | Entscheidungen, umgesetzte Phasen, Offenes |

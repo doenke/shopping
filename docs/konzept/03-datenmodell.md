@@ -1,183 +1,144 @@
 # 03 – Datenmodell
 
-Alle IDs sind **UUIDv7**, vom Client erzeugbar (wichtig für Offline-Anlage,
-siehe [04](04-sync-und-offline.md)). Jede synchronisierte Tabelle hat
-`updated_hlc` (Hybrid Logical Clock), `server_seq` und `deleted_at`
-(Tombstone statt hartem Löschen).
+*Stand: Oktober 2026. Maßgeblich ist `apps/server/src/db/schema.ts`; hier steht das Warum.*
+
+IDs sind UUIDs, die der Client selbst erzeugt – offline angelegte Listen und
+Artikel brauchen keinen Server-Roundtrip (siehe [04](04-sync-und-offline.md)).
+Synchronisierte Zeilen tragen eine globale, fortlaufende Nummer (`seq`), pro
+Feld einen HLC-Zeitstempel (`hlc`) und werden nicht gelöscht, sondern als
+`deleted` markiert.
 
 ## Übersicht
 
-Jeder angemeldete Nutzer darf Listen anlegen. Eine Liste sehen und
-bearbeiten nur ihr **Besitzer** und alle, die den **Link** der Liste
-geöffnet haben (siehe [05](05-auth-und-teilen.md)). Es gibt keine Rollen
-und keine Haushaltsverwaltung.
-
 ```
-user ─┬─ api_token
-      ├─ list (owner)
-      └─ list_member (über Link beigetreten)
-list ─┬─ list_item (Herkunft in attributes.sources)
+household ─── user ─┬─ session, api_token (auch OAuth-Tokens für MCP)
+                    └─ list_member (via owner | link | household)
+list ─┬─ list_item
       ├─ list_member
       └─ share_link (ein aktiver Link pro Liste)
-catalog_item ─┬─ catalog_alias        unit ── unit_alias
-              ├─ category             property (Eigenschaften-Vokabular)
-              └─ icon (Versionen)
-item_history („Zuletzt verwendet“, Vorschläge)
-integration (Mealie)
-change_log (server_seq, für Sync)
+catalog_item (Einkauf und Packen)
+integration (Mealie)     webhook     idempotency_key     oauth_client
+icon, icon_job, icon_usage           app_settings (z. B. Bild-KI)
 ```
 
-## Nutzer
+## Haushalte und Nutzer
 
-| Tabelle | Felder (Auszug) |
-|---------|-----------------|
-| `user` | id, oidc_subject, email, display_name, avatar_url, `default_list_id` (persönliche Hauptliste), is_admin (aus Pocket-ID-Gruppe `admins`, derzeit ohne Auswirkung) |
-| `list_member` | list_id, user_id, joined_at – entsteht, wenn ein angemeldeter Nutzer den Link öffnet |
-| `guest` | id, share_link_id, display_name? – Gast ohne Account, der den Link geöffnet hat |
+| Tabelle | Inhalt |
+|---------|--------|
+| `households` | Name und Schlüssel aus dem OIDC-Claim; Schlüssel `''` ist der Standard-Haushalt |
+| `users` | OIDC-Subjekt, Name, Mail, Profilbild (lokale 128-px-Kopie), `is_admin`, `is_guest`, `household_id`, `default_list_id` (Hauptliste), eigene Reihenfolgen (`category_order`, `list_order`, `section_order`) |
+| `sessions` | Hash des Session-Cookies, 90 Tage gleitend |
 
-Zugriff auf eine Liste = `owner_id = user` **oder** Eintrag in `list_member`
-(bzw. Gast-Session über einen gültigen Link). Katalog, Kategorien, Einheiten
-und Icons sind dagegen für alle angemeldeten Nutzer gemeinsam.
+Hauptliste und Reihenfolgen sind per Feld-LWW synchronisiert (Mutation `me`), damit sie auf allen
+Geräten eines Nutzers gleich sind.
 
-## Listen – generisch von Anfang an
+## Zugriff
+
+Zugriff auf eine Liste haben genau die Nutzer mit einem `list_member`-Eintrag. Die Herkunft
+steht in `via`:
+
+| `via` | Entsteht, wenn … |
+|-------|------------------|
+| `owner` | jemand die Liste anlegt |
+| `household` | die Liste für den Haushalt sichtbar ist (Standard) – alle Mitglieder des Haushalts des Besitzers |
+| `link` | ein angemeldeter Nutzer oder Gast den Link öffnet |
+
+Wer eine Liste verlässt oder entfernt wird, bekommt `removed = true` und bleibt draußen, auch wenn
+der Haushalt neu abgeglichen wird. Sichtbarkeit (`household` / `private`) und Haushaltswechsel beim
+Login werden über diese Einträge abgebildet; Sync, Rechte und Echtzeit brauchen dadurch keine
+Sonderfälle. Katalog, Kategorien, Einheiten und Icons sind für alle gemeinsam.
+
+## Listen
 
 | Feld | Bedeutung |
 |------|-----------|
-| `id`, `name`, `icon`, `color` | |
-| `owner_id` | wer die Liste angelegt hat |
-| `list_type` | `shopping` (MVP), später `packing`, `todo`, … |
-| `is_template` | `true` = Vorlage: nicht abhakbar, nur zum Vorbefüllen |
-| `settings` (JSONB) | typspezifisch, z. B. Sortiermodus, Standard-Laden |
-| `archived_at` | z. B. erledigte Packliste |
+| `name`, `owner_id` | |
+| `list_type` | `shopping`, `packing`, `memo`, `todo` |
+| `is_template` | Vorlage: nicht abhakbar, füllt Listen vor |
+| `visibility`, `household_id` | `household` (Standard, ToDo: `private`) oder `private` |
+| `icon`, `icon_name` | Versions-Token des generierten Listen-Icons; Name, für den es angefordert wurde (Umbenennen → neues Icon) |
+| `settings` (JSONB) | `description` (Beschreibung), `group` (Kategorie einer ToDo-Liste), `templateId` (zuletzt abgeglichene Vorlage) |
+| `archived_at` | erledigte Packliste |
 
-**Listentyp** bestimmt, welche Artikel-Felder und welche UI gelten:
+### Listentypen
 
-| Typ | Abhaken heißt | Typische Zusatzfelder | Katalog |
-|-----|---------------|-----------------------|---------|
-| `shopping` | gekauft → wandert in „Zuletzt verwendet“ | Menge, Einheit, Eigenschaften, Kategorie | Lebensmittel |
-| `packing` (später) | eingepackt, bleibt sichtbar durchgestrichen | Person, Behälter („Koffer“, „Handgepäck“) | Packartikel |
-| `todo` (später) | erledigt | Fälligkeit | – |
+| Typ | Abhaken heißt | `@…` / `#…` | Katalog | Besonderes |
+|-----|---------------|-------------|---------|------------|
+| `shopping` | gekauft → „Zuletzt verwendet“ | – | Lebensmittel | Einkaufen-Modus |
+| `packing` | eingepackt, bleibt durchgestrichen stehen | Für wen / Packstück | Packartikel | Fortschritt, Archiv |
+| `memo` | erledigt (gesehen, gelesen …) | Tipp von / Wo | – | ein Icon pro Eintrag |
+| `todo` | erledigt | Wer / Bereich | – | Fälligkeit `!morgen`, standardmäßig privat |
 
-Der Code behandelt `list_type` über eine kleine Registry
-(`packages/shared/listTypes/*`), die Felder, Abhak-Verhalten und Katalog
-festlegt. Neue Typen = neuer Registry-Eintrag, keine Schema-Migration.
+Person und Packstück (bzw. Tipp von/Wo, Wer/Bereich) teilen sich die Felder `attributes.person` und
+`attributes.container`; die Bezeichnungen hängen am Typ. Kategorien sind über alle Typen eindeutig
+(Packlisten haben eigene, Merk- und ToDo-Listen je eine).
 
 ### Hauptliste
 
-Jeder Nutzer hat **seine** Hauptliste (`user.default_list_id`, ⭐ in der UI,
-umstellbar per „Als Hauptliste festlegen“). Das kann eine eigene oder eine
-über Link beigetretene Liste sein – typischerweise die gemeinsame
-Haushalts-Einkaufsliste. Sie ist der Standard überall dort, wo keine Liste
-angegeben wird:
-
-- Standard für Home Assistant, Sprachbefehle, API ohne `list` und MCP
-  (jeweils die Hauptliste des Nutzers, dem das Token gehört)
-- Vorgeschlagenes Ziel beim Einrichten des Mealie-Eingangskorbs ([06](06-mealie-integration.md))
-- Start-Ansicht der App
-
-Die API bietet den Alias `/api/v1/lists/default`.
-Die Reihenfolge der Listen in der Seitenleiste ist pro Nutzer (`list_member.position` bzw. Besitzer-Einstellung).
+Jeder Nutzer hat **seine** Hauptliste (`users.default_list_id`, ⭐), immer eine Einkaufsliste. Sie ist
+Standard überall dort, wo keine Liste angegeben wird: Home Assistant, API (`/api/v1/lists/default`),
+MCP, Teilen aus anderen Apps, Start der App, Vorschlag als Mealie-Ziel.
 
 ### Vorlagen
 
-- Eine Vorlage ist eine Liste mit `is_template = true` – gleiche Artikel,
-  gleiche Bearbeitung, gleiche Synchronisation.
-- Unterschied: **keine Abhak-Funktion** (UI blendet Checkboxen aus, API lehnt
-  `check` mit `409 template_not_checkable` ab).
-- Aktionen:
-  - **Neue Liste aus Vorlage** – kopiert alle Artikel.
-  - **Vorlage in bestehende Liste übernehmen** – fügt hinzu, gleiche Artikel werden zusammengeführt (Mengen addiert).
-  - **Liste als Vorlage speichern**.
-- Optional pro Vorlagen-Artikel `optional = true`: beim Übernehmen erst mal
-  abgewählt im Übernahme-Dialog (z. B. Packliste „Sonnencreme“ nur im Sommer).
-- Beispiele: „Wocheneinkauf Basis“, „Grillabend“, „Wochenend-Trip“ (Packliste).
+- Eine Vorlage ist eine Liste mit `is_template = true` – gleiche Artikel, gleiche Synchronisation,
+  aber nicht abhakbar.
+- Neue Liste aus Vorlage (Auswahl einzelner Artikel, optionale vorab abgewählt), „Als Vorlage
+  speichern“, **Abgleich in beide Richtungen** (was der Liste fehlt, was der Vorlage fehlt, andere Mengen).
+- `optional` pro Vorlagen-Artikel (z. B. Sonnencreme nur im Sommer).
 
-## Listeneinträge
+## Listeneinträge (`list_items`)
 
-| Feld | Typ | Bedeutung |
-|------|-----|-----------|
-| `id`, `list_id` | uuid | |
-| `catalog_item_id` | uuid? | Verweis in den Katalog (Icon, Kategorie, Einheiten); `null` = Freitext |
-| `name` | text | Anzeigename (Kopie aus Katalog oder Freitext) |
-| `amounts` | JSONB | Liste von Mengen `[{q: 1.5, u: "kg"}]`; meist eine, bei nicht umrechenbaren Einheiten mehrere („2 Stk + 200 g“) |
-| `properties` | text[] | strukturierte Eigenschaften: `bio`, `TK`, `laktosefrei`, … |
-| `note` | text? | Freitext-Spezifikation wie bei Bring („die von Oma“) |
-| `category_id` | uuid? | überschreibt Katalog-Kategorie |
-| `checked` | bool | |
-| `checked_at`, `checked_by` | | für „von Anna abgehakt“ |
-| `position` | text | Fractional Index für manuelle Sortierung |
-| `optional` | bool | nur in Vorlagen relevant |
-| `attributes` | JSONB | typspezifische Felder (Packliste: Person, Behälter) |
-| `created_by`, `updated_hlc`, `server_seq`, `deleted_at` | | Sync |
-
-### Anzeige von Menge/Einheit/Eigenschaften
-
-Auf der Kachel wie bei Bring unter dem Namen, z. B.
-**Hackfleisch** · *500 g · gemischt · bio*.
-Die Formatierung (Dezimalkomma, Brüche „½“, Plural) liegt in `packages/shared`.
+| Feld | Bedeutung |
+|------|-----------|
+| `catalog_item_id` | Verweis in den Katalog (Icon, Kategorie, Einheit); `null` = freier Text |
+| `name` | Anzeigename |
+| `amounts` | Mengen `[{q: 1.5, u: "kg"}]`; mehrere, wenn nicht umrechenbar („2 Stk + 200 g“) |
+| `properties` | Eigenschaften (`bio`, `TK`, `Handgepäck`, `dringend` …), Vokabular je Listentyp |
+| `note` | freie Notiz („die von Oma“) |
+| `category_id` | überschreibt die Katalog-Kategorie |
+| `checked`, `checked_at`, `checked_by` | für „✓ von Anna“ |
+| `position` | Fractional Index |
+| `optional` | nur in Vorlagen |
+| `attributes` | `person`, `container`, `due` (JJJJ-MM-TT), `sources` (Herkunft), `via` (Token- oder MCP-Client-Name) |
+| `icon` | Versions-Token eines eigenen Icons (Merklisten-Einträge, frei getippte Einträge) |
+| `created_by`, `merged_into` | Herkunft; zusammengeführte Duplikate verweisen auf den Eintrag, der bleibt |
 
 ### Herkunft & Zusammenführen
 
-`attributes.sources` merkt sich, woher ein Artikel kommt (umgesetzt als JSON statt eigener Tabelle):
+`attributes.sources` merkt sich, woher ein Artikel kommt (`mealie_recipe`, `mealie_list`,
+`mealie_mealplan`, `template`, … mit Text wie „Chili con Carne“).
 
-| Feld | Beispiel |
-|------|----------|
-| `type` | `mealie_recipe`, `mealie_list`, `mealie_mealplan`, `template`, `api`, `mcp` |
-| `label` | „Chili con Carne“ |
+Kommt derselbe Artikel ein zweites Mal auf eine Liste (offen), wird **zusammengeführt** statt
+dupliziert:
 
-Kommt derselbe Katalogartikel ein zweites Mal auf eine Liste (offen, nicht
-abgehakt), wird **zusammengeführt** statt dupliziert:
+- gleiche oder umrechenbare Einheit (g ↔ kg, ml ↔ l, EL ↔ TL) → addieren und sinnvoll normalisieren (1200 g → 1,2 kg);
+- nicht umrechenbar → mehrere Mengen („2 Stk + 200 g“);
+- andere Eigenschaften (bio vs. nicht bio) oder auf Packlisten andere Person/Packstück → zwei Einträge;
+- ein zuletzt gekaufter Artikel kommt zurück auf die Liste, statt neu angelegt zu werden.
 
-- gleiche oder umrechenbare Einheit (g ↔ kg, ml ↔ l, EL ↔ TL) → addieren und
-  in sinnvolle Einheit normalisieren (1200 g → 1,2 kg);
-- nicht umrechenbar (2 Stk + 200 g) → Anzeige „2 Stk + 200 g“, Teilmengen
-  bleiben als mehrere Mengen erhalten;
-- unterschiedliche Eigenschaften (bio vs. nicht bio) → zwei Einträge.
+Dieselbe Logik (`planAdd` in `packages/shared`) läuft in der App, im Server, in API und MCP.
 
-In der Detailansicht sieht man dann: *Zwiebeln 3 Stk – Chili (2), Salat (1)*.
+## Einheiten und Eigenschaften
 
-## Einheiten
+Einheiten sind fest im Code (`packages/shared/src/units.ts`): g, kg, ml, cl, l, EL, TL, Stk, Pck,
+Dose, Glas, Flasche, Becher, Tüte, Netz, Kiste, Bund, Kopf, Zehe, Scheibe, Prise – mit Aliasen
+(„Stück“, „Päckchen“, „Esslöffel“ …) und Dimension (Masse, Volumen, Anzahl).
 
-| Feld | Beispiel |
-|------|----------|
-| `name`, `plural`, `abbreviation` | Kilogramm / Kilogramm / kg |
-| `dimension` | `mass`, `volume`, `count`, `package`, `other` |
-| `base_factor` | 1000 (in Gramm) |
-| `display_rules` | ab welchem Wert in größere Einheit wechseln |
-| `mealie_unit_id` | Verknüpfung |
-
-Mitgelieferter Grundstock: g, kg, ml, l, Stk, Pck, Dose, Glas, Flasche,
-Bund, Kopf, Becher, Netz, Tüte, Prise, EL, TL, Scheibe, Zehe.
-Aliase (`unit_alias`): „Stück“, „St.“, „Päckchen“, „Esslöffel“ …
-
-## Eigenschaften
-
-`property`-Vokabular (Name, Kurzlabel, optional Farbe):
-`bio`, `TK`, `vegan`, `laktosefrei`, `glutenfrei`, `groß`, `klein`,
-`reif`, `Angebot` … Frei erweiterbar; beim Tippen „Milch laktosefrei“
-erkennt der Parser bekannte Eigenschaften (siehe [09](09-lebensmittel-datenbank.md)).
+Eigenschaften, die der Parser erkennt und der Editor vorschlägt, hängen am Listentyp
+(`packages/shared/src/properties.ts`); Merklisten erkennen keine, damit Titel ganz bleiben.
 
 ## Katalog, Kategorien, Icons
 
 Siehe [09](09-lebensmittel-datenbank.md) und [10](10-icons-plan.md).
 
-## Verlauf & Vorschläge
-
-`item_history` (catalog_item_id/name, quantity, unit, properties,
-last_used_at, use_count) speist „Zuletzt verwendet“, die Autovervollständigung
-(gewichtet nach Häufigkeit) und die Priorisierung der Icon-Generierung.
-
-## Integrationen & Tokens
+## Integrationen & Maschinen-Zugriff
 
 | Tabelle | Inhalt |
 |---------|--------|
-| `integration` | owner_id, type (`mealie`), target_list_id, config (JSONB, Secrets verschlüsselt), status, last_sync_at |
-| `api_token` | user_id, name, token_hash, scopes, list_ids?, last_used_at, expires_at – sieht nur die Listen seines Nutzers |
-| `share_link` | list_id, token_hash, created_at, revoked_at – genau ein aktiver Link pro Liste, keine Rollen |
-
-## Änderungsprotokoll
-
-`change_log(server_seq bigserial, list_id, entity, entity_id, op, patch JSONB, hlc, actor)`
-
-Grundlage für Delta-Sync (`since=server_seq`), SSE-Events und Webhooks.
-Wird nach z. B. 90 Tagen kompaktiert; ältere Clients machen dann einen Voll-Sync.
+| `integrations` | Mealie: Besitzer, Konfiguration (Token verschlüsselt), Status, letzter Abgleich |
+| `api_tokens` | API-Tokens **und** OAuth-Tokens für MCP (`kind`), nur als Hash, Rechte `read`/`write`/`mealie` |
+| `oauth_clients` | per Dynamic Client Registration angemeldete MCP-Clients |
+| `share_links` | ein aktiver Link pro Liste, nur als Hash |
+| `webhooks` | Ziel-URL, Geheimnis, gespeicherte Position im Änderungsstrom, Fehlerzähler |
+| `idempotency_keys` | Antworten auf `Idempotency-Key` (24 h) |

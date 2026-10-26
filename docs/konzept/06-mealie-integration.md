@@ -1,98 +1,61 @@
 # 06 – Mealie-Integration
 
-## Ausgangslage: der heutige n8n-Flow „mealie2bring“
+*Stand: Oktober 2026.*
 
-```
-Mealie Notifier (Apprise jsons://)  ──►  n8n-Webhook
-   bei Shopping-List-Events               │ Parse Event: document_data → shoppingListItemIds
-                                          │   (nur konfigurierte Liste, keine deletes)
-                                          │ Fetch Item: GET /api/households/shopping/items/{id}
-                                          │ Build Payload: Name = food.pluralName|food.name|note
-                                          │                Spezifikation = "Menge Einheit Notiz"
-                                          │ Add to Bring (PUT bringlists/…)
-                                          │ Mark Done in Mealie (PUT …/items, checked=true)
-                                          └ Fehler → Matrix-Nachricht
-```
+## Ausgangslage
 
-Mealie-Einkaufsliste dient also als **Eingangskorb**: Was Mealie (Rezept →
-„Zur Einkaufsliste hinzufügen“) dort ablegt, wird nach Bring geschoben und
-in Mealie abgehakt. Dabei geht heute Struktur verloren: Menge und Einheit
-landen als Text in der Bring-Spezifikation, das Lebensmittel als String.
+Vorher lief ein n8n-Flow: Mealie meldete per Notifier (Apprise `jsons://`)
+Änderungen an seiner Einkaufsliste, der Flow holte die Artikel, schob sie als
+Text in eine andere Listen-App und hakte sie in Mealie ab. Dabei ging Struktur
+verloren – Menge und Einheit landeten als Text, das Lebensmittel als String.
 
-> Nebenbefund: Im Flow steht das Bring-Passwort im Klartext in einem Node
-> statt in einem n8n-Credential. Sollte man unabhängig von diesem Projekt
-> ändern (Passwort rotieren, Credential nutzen).
+Die Mealie-Einkaufsliste ist dabei nur ein **Eingangskorb**: Was Mealie
+(Rezept → „Zur Einkaufsliste hinzufügen“) dort ablegt, soll in die eigentliche
+Einkaufsliste wandern.
 
-## Ziel: dasselbe nativ – aber strukturiert
+## Eingangskorb (ersetzt den n8n-Flow)
 
-### Modus 1: Mealie-Liste als Eingangskorb (1:1-Ersatz für den Flow)
+1. *Einstellungen → Mealie*: Adresse und API-Token (Mealie: *Profil → API-Tokens*).
+2. Mealie-Einkaufsliste wählen (Quelle) und **eine** Zielliste – vorbelegt mit der Hauptliste.
+   Die Integration gehört dem Nutzer, der sie einrichtet, und schreibt nur in Listen, auf die er
+   Zugriff hat.
+3. Shopping zeigt die fertige Apprise-URL (`jsons://…/hooks/mealie/<secret>`); sie kommt in Mealie
+   unter *Haushalt → Benachrichtigungen*, Ereignis „Einkaufsliste“.
+4. Bei jedem Ereignis liest Shopping die Mealie-Liste **komplett** neu (der Webhook ist nur ein
+   Anstoß, gefälschte Payloads bringen nichts) und übernimmt offene Artikel **strukturiert**:
+   `food` → Katalogartikel (über `mealie_food_id`), `unit` → Einheit, `quantity`, `note` → Notiz,
+   `recipeReferences` → Herkunft „für Lasagne“. Gleiches wird zusammengeführt, danach wird in
+   Mealie abgehakt.
+5. **Abgleich alle 15 Minuten** als Sicherheitsnetz (verlorene Webhooks, Server war aus).
+   Jeder Mealie-Artikel bekommt eine feste ID; auch doppelte Webhooks oder ein gescheitertes
+   Abhaken in Mealie erzeugen kein Duplikat.
+6. Fehler sind nur in der App sichtbar (Status in den Einstellungen) – keine Benachrichtigung.
 
-1. In Shopping: *Einstellungen → Integrationen → Mealie* – URL + API-Token
-   (Mealie: *Profil → API-Tokens*), Verbindung testen.
-2. Mealie-Einkaufsliste wählen (Quelle) und **eine** Zielliste – vorbelegt
-   mit der eigenen Hauptliste (siehe [03](03-datenmodell.md#hauptliste)),
-   typischerweise die gemeinsame Einkaufsliste. Alles landet in dieser Liste.
-   Die Integration gehört dem Nutzer, der sie einrichtet; sie kann nur in
-   Listen schreiben, auf die dieser Nutzer Zugriff hat.
-3. Shopping zeigt eine **Webhook-URL** `https://…/hooks/mealie/<secret>` und die
-   fertige Apprise-URL zum Kopieren (`jsons://…`). Diese in Mealie unter
-   *Haushalt → Benachrichtigungen* eintragen, Events „Einkaufsliste“ aktiv.
-4. Ablauf bei einem Event:
-   - Event parsen (`documentType = shopping_list_item`, `operation ≠ delete`,
-     richtige `shoppingListId`) – wie im heutigen Flow;
-   - Items per API holen, nur offene übernehmen;
-   - **strukturiert** übernehmen: `food` → Katalogartikel (über
-     `mealie_food_id`), `unit` → Einheit (über `mealie_unit_id`), `quantity`,
-     `note` → Notiz/Eigenschaften, `recipeReferences` → Herkunft „für Lasagne“;
-   - mit vorhandenen offenen Einträgen **zusammenführen** (Mengen addieren);
-   - in Mealie abhaken (optional: löschen).
-5. **Abgleich-Job als Sicherheitsnetz** (alle 15 min + Button „Jetzt
-   abgleichen“): holt alle offenen Items der Quellliste. Fängt verlorene
-   Webhooks ab (Server down, Netz weg). Idempotent über die Mealie-Item-ID.
-6. Fehler → nur in der App sichtbar (Integrationsstatus in den Einstellungen,
-   kleines Warnsymbol). Keine Benachrichtigung, kein Matrix.
+## Rezept und Wochenplan
 
-Damit entfällt der n8n-Flow.
+- *⋮ → Aus Mealie hinzufügen …* → Rezept suchen → Portionen anpassen → Zutaten-Checkliste
+  („Salz hab ich“) → übernehmen.
+- Zutaten kommen strukturiert; Rezepte ohne geparste Zutaten laufen durch den eigenen Parser.
+- Vorratsartikel (Salz, Pfeffer, Öl … – im Katalog als `pantry` markiert) sind vorab abgewählt.
+- Beim Skalieren werden Stück und Packungen aufgerundet (¾ Dose → 1 Dose).
+- Wochenplan: Zeitraum wählen → alle Rezepte des Mealie-Mealplans, Zutaten über alle Rezepte
+  zusammengeführt.
+- Dasselbe geht über REST, MCP und Home Assistant (`import_mealie_recipe`, `import_mealie_mealplan`).
 
-### Modus 2: Rezept direkt übernehmen
+## Kein Rückkanal
 
-- In Shopping: „Aus Mealie hinzufügen“ → Rezeptsuche (Mealie-API) →
-  Portionen anpassen → Zutaten-Checkliste („Salz hab ich“) → übernehmen.
-- Zutaten kommen strukturiert (`recipeIngredient[].food/unit/quantity/note`);
-  bei Rezepten ohne geparste Zutaten wird `originalText` durch den eigenen
-  Parser geschickt (siehe [09](09-lebensmittel-datenbank.md)).
-- Vorratsartikel (Salz, Pfeffer, Öl …) können im Katalog als „meist
-  vorrätig“ markiert werden und sind im Dialog standardmäßig abgewählt.
-
-### Modus 3: Wochenplan übernehmen
-
-- „Wochenplan übernehmen“ → Zeitraum wählen → alle Rezepte aus dem
-  Mealie-Mealplan → wie Modus 2, aber über alle Rezepte zusammengeführt.
-
-### Kein Rückkanal
-
-Mealie bleibt – wie heute – reiner **Eingangskorb**: Übernommene Items
-werden in Mealie abgehakt, danach gibt es keine Verbindung mehr. Abhaken
-in Shopping wirkt nicht zurück auf Mealie, Listen werden nicht gespiegelt.
+Mealie bleibt reiner Eingangskorb: Übernommene Artikel werden in Mealie abgehakt, danach gibt es
+keine Verbindung mehr. Abhaken in Shopping wirkt nicht zurück, Listen werden nicht gespiegelt.
 
 ## Stammdaten aus Mealie
 
-Einmaliger Import + regelmäßiger Abgleich:
-
-| Mealie | Shopping |
-|--------|------|
-| `GET /api/foods` (name, pluralName, aliases, label, description) | `catalog_item`, `catalog_alias` |
-| `GET /api/units` (name, pluralName, abbreviation, aliases) | `unit`, `unit_alias` (gemappt auf eingebaute Einheiten) |
-| Labels (`/api/groups/labels`) | `category` (Mapping-Dialog: Mealie-Label → Shopping-Kategorie) |
-
-Details zur Katalogpflege in [09](09-lebensmittel-datenbank.md).
+Lebensmittel aus Mealie (`/api/foods`: Name, Plural, Aliase, Label) werden in den Katalog übernommen,
+Labels auf Kategorien abgebildet. Shopping-eigene Änderungen (Kategorie, Icon) werden beim Abgleich
+nicht überschrieben. Mit Anthropic-Key beschreibt Claude neue Artikel für die Icons.
 
 ## Technik
 
-- Mealie-Client in `apps/server/integrations/mealie`, gegen **Mealie v2**
-  (`/api/households/...`, wie im heutigen Flow); Endpunkte beim Bau gegen
-  die laufende Instanz per OpenAPI (`/openapi.json`) verifizieren.
-- Webhook-Endpunkt: kein Login, aber geheimer Pfad-Token + Rate-Limit;
-  Payload wird nur als Hinweis genutzt – die Daten werden immer per
-  authentifizierter API nachgeladen (Fälschung bringt nichts).
-- Mealie-Token verschlüsselt in `integration.config`.
+- Mealie **v2** (`/api/households/...`).
+- Webhook-Endpunkt ohne Login, aber mit geheimem Pfad-Token; Daten werden immer per
+  authentifizierter API nachgeladen.
+- Mealie-Token verschlüsselt in `integrations.config`.

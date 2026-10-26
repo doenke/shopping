@@ -1,6 +1,8 @@
 # 11 – Icon-Designrichtlinie
 
-Gilt für alle Artikel- und Kategorie-Icons. Ziel: freundlich, sofort
+*Stand: Oktober 2026.*
+
+Gilt für alle Icons: Artikel, Kategorien, Merklisten-Einträge und Listen. Ziel: freundlich, sofort
 erkennbar, auch bei 32 px, einheitlich – ein Icon soll nie „herausfallen“.
 
 ## Stil in einem Satz
@@ -13,7 +15,7 @@ kein Text.**
 
 | Regel | Wert |
 |-------|------|
-| Master-Format | 512 × 512 px, PNG mit Alpha (Exporte 192/96 px WebP) |
+| Master-Format | 512 × 512 px mit Alpha, gespeichert als WebP (Kachelbild 192 px) |
 | Safe Area | 448 × 448 px (32 px Rand ringsum frei) |
 | Füllgrad | Objekt nimmt 70–85 % der Safe Area ein, optisch zentriert |
 | Rundliche Objekte (Apfel, Tomate) | Kreisförmig ~ 400 px Durchmesser |
@@ -39,7 +41,7 @@ kein Text.**
 
 ## Farbe & Licht
 
-- Natürliche, leicht entsättigte Lebensmittelfarben (nicht neonbunt, nicht pastellig-blass).
+- Natürliche, leicht entsättigte Farben (nicht neonbunt, nicht pastellig-blass).
 - Je Farbfläche: Grundton + 1 Schatten + 1 Licht (+ optional 1 Akzent).
 - Lichtquelle **oben links**, konsistent über alle Icons.
 - Glanzpunkt (Highlight) klein, weich, oben links – nur bei glatten Oberflächen.
@@ -58,6 +60,16 @@ kein Text.**
 - Keine Kontur-/Outline-Linie; Formen grenzen sich über Tonwerte ab.
 - Maximal 3–5 Detailelemente (z. B. Blatt, Stiel, Glanz).
 - Keine Gesichter, keine Hände, keine Szenen, keine Teller-Arrangements.
+
+## Einträge und Listen
+
+- **Merklisten-Einträge** zeigen ein Motiv, das den Eintrag erkennen lässt: beim Film ein
+  Schlüsselobjekt aus der Geschichte (keine Schauspieler, keine Gesichter, kein Titel), beim Buch ein
+  geschlossenes Buch mit schlichtem Motiv auf dem Umschlag, beim Restaurant ein typisches Gericht der
+  Küche, beim Ort ein typisches Objekt.
+- **Listen** zeigen ein Objekt, das für den Zweck steht: Baumarkt → Hammer, Skiurlaub → Ski,
+  Filme → Filmklappe, Garten → Gießkanne, Wocheneinkauf → Papiertüte mit Einkäufen.
+- Beides nach denselben Regeln wie Artikel-Icons: ein Motiv, kein Text, keine echten Personen.
 
 ## Verboten
 
@@ -83,27 +95,36 @@ und Farbregeln.
 | Name | 1–2 Zeilen, darunter Spezifikation (Menge · Eigenschaften) in kleinerer Schrift |
 | Abgehakt-Zustand | wird von der App gerendert (Animation, Häkchen), nie im Icon |
 
-## Prompt-Vorlage
+## Prompt
+
+Der Prompt entsteht in `apps/server/src/icons/prompt.ts`:
 
 ```
-A single {objekt_en} {gruppierung}, {ansicht}.
+Icon of {bildbeschreibung}.
+[It stands for {kontext}, drawn as an object, without any title or text.]   ← Einträge
+[{Zusatzwunsch aus der Übersicht}.]
 Soft flat vector-style illustration, no outlines, 2-4 tonal shades per color,
-soft light from top-left, small soft highlight, natural slightly desaturated
-food colors, rounded friendly shapes, simple silhouette readable at 32 px.
-Centered on a fully transparent background with generous empty margin.
-No text, no letters, no logos, no labels, no shadow on the ground, no
-background, no frame, no plate, no hands.
-Match the exact style of the reference images.
+soft light from top-left, small soft highlight, natural slightly desaturated colors,
+rounded friendly shapes, simple silhouette readable at 32 px.          ← Stilsatz, in den Einstellungen änderbar
+Centered on a solid flat pure magenta (#FF00FF) background with generous empty margin,
+nothing touches the edges.                                              ← bzw. transparent, je nach Anbieter
+No text, no letters, no logos, no labels, no shadow on the ground, no frame, no plate,
+no hands, no background scene.
+Match the exact drawing style, lighting, color treatment and level of detail of the
+reference images, but draw the new subject.                             ← mit Stil-Referenzen
 ```
 
-Platzhalter je Artikel (im Katalog gepflegt, bei Bedarf per LLM vorgeschlagen):
+Die Bildbeschreibung ist eine kurze englische Phrase, die sagt, was und wie viel zu sehen ist
+(im Grundkatalog fest hinterlegt, sonst von Claude oder einem Textmodell erzeugt und in der Übersicht
+änderbar):
 
-| Platzhalter | Beispiel Kartoffeln | Beispiel Milch |
-|-------------|---------------------|----------------|
-| `objekt_en` | potatoes | carton of milk |
-| `gruppierung` | group of three | – |
-| `ansicht` | front view, slightly from above | three-quarter view |
-| Zusatz | „one potato slightly in front“ | „plain white carton with a small blue color band, no text“ |
+| Ziel | Beispiel |
+|------|----------|
+| Kartoffeln | `group of three potatoes, one slightly in front` |
+| Milch | `plain white carton of milk with a small blue band, three-quarter view` |
+| Ladekabel (Packliste) | `phone charger with a coiled cable` |
+| „Dune“ (Merkliste „Filme“) | `a sandworm rising from desert dunes` |
+| Liste „Baumarkt“ | `a hammer` |
 
 ## Abnahme-Checkliste (pro Icon)
 
