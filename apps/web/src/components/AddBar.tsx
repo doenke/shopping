@@ -72,7 +72,7 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
             {suggestions.map((c) => (
               <Tile
                 key={c.id}
-                item={{ name: c.name, categoryId: c.categoryId, amounts: [], properties: [], note: null }}
+                item={{ name: c.name, categoryId: c.categoryId, catalogItemId: c.id, amounts: [], properties: [], note: null }}
                 variant="suggestion"
                 onTap={() => void pick(c)}
               />
