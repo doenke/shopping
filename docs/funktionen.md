@@ -17,7 +17,7 @@
 ## Einkaufen
 
 - **Kategorien** nach Supermarkt-Bereichen; die Reihenfolge stellt sich jeder selbst ein (z. B. nach dem
-  Weg durch den Laden): *⋮ → Kategorien sortieren …* oder *Einstellungen → Reihenfolge*. Sie gilt auf allen
+  Weg durch den Laden, per Ziehen): *⋮ → Kategorien sortieren …* oder *Einstellungen → Reihenfolge*. Sie gilt auf allen
   eigenen Geräten und auch in API und Home Assistant.
 - **🏠 Zuhause / 🛒 Einkaufen** (pro Gerät): Zu Hause öffnet Antippen den Artikel, statt ihn abzuhaken.
   Im Einkaufen-Modus (Knopf 🛒 in der Titelzeile, grüner Kopf) hakt Antippen ab und der Bildschirm bleibt an.
@@ -44,7 +44,9 @@
   **Wer** („@Ben“) und **Bereich** („#Garten“), gruppiert nach Fälligkeit (Überfällig, Heute, Diese Woche …),
   Bereich oder Person. Die Listen selbst lassen sich in **Kategorien** ordnen (Arbeit, Hobby, Urlaub …; beim
   Anlegen oder *⋮ → Kategorie …*) und stehen in der Seitenleiste darunter gruppiert.
-- **Reihenfolge der Listen** in der Seitenleiste: *↕ Listen sortieren*, je Benutzer.
+- **Reihenfolge der Listen und Abschnitte** in der Seitenleiste (z. B. Merklisten ganz nach unten):
+  *↕ Listen sortieren*, je Benutzer. Sortiert wird per Ziehen am Griff ⠿, mit der Tastatur über die
+  Pfeiltasten.
 - **Wer ist dabei?** zeigt in der Titelzeile die Avatare aller mit Zugriff; ein Tipp öffnet die Liste der
   Mitglieder.
 

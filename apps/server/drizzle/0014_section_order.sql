@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "section_order" jsonb DEFAULT '[]'::jsonb NOT NULL;

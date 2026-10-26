@@ -49,6 +49,7 @@ export const MePatchSchema = z
     defaultListId: id.nullable(),
     categoryOrder: z.array(z.string().min(1).max(64)).max(200),
     listOrder: z.array(id).max(1000),
+    sectionOrder: z.array(z.enum(['shopping', 'packing', 'memo', 'todo', 'templates'])).max(5),
   })
   .partial()
   .strict();

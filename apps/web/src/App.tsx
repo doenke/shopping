@@ -1,6 +1,6 @@
-import { categoriesInOrder, groupLists, inUserOrder, listDescription, listGroup, parseInput, type ListRow, type ListType, type Me } from '@shopping/shared';
+import { categoriesInOrder, groupLists, inUserOrder, listDescription, listGroup, parseInput, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, archiveList, createList, deleteList, describeList, leaveList, renameList, saveAsTemplate, setCategoryOrder, setListGroup, setListOrder, setMainList, setVisibility, shareList } from './actions';
+import { addItems, archiveList, createList, deleteList, describeList, leaveList, renameList, saveAsTemplate, setCategoryOrder, setListGroup, setListOrder, setSectionOrder, setMainList, setVisibility, shareList } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
@@ -77,13 +77,18 @@ function Shell({ me }: { me: Me }) {
   const [sorting, setSorting] = useState<'lists' | ListType | null>(null);
   const TYPE_ICON: Record<ListType, string> = { shopping: '', packing: '🧳 ', memo: '📌 ', todo: '✅ ' };
   /** Sidebar: only sections that have lists. */
-  const sections: { title: string | null; lists: ListRow[]; prefix: (l: ListRow) => string; grouped?: boolean }[] = [
-    { title: null, lists: shoppingLists, prefix: () => '' },
-    { title: 'Packlisten', lists: packingLists, prefix: () => '🧳 ' },
-    { title: 'Merklisten', lists: memoLists, prefix: () => '📌 ' },
-    { title: 'ToDo', lists: todoLists, prefix: () => '✅ ', grouped: true },
-    { title: 'Vorlagen', lists: templates, prefix: (l) => TYPE_ICON[l.listType] },
-  ];
+  /** Sidebar sections, in the user's own order (Merklisten at the bottom, for instance). */
+  const sections: { key: SectionKey; title: string | null; lists: ListRow[]; prefix: (l: ListRow) => string; grouped?: boolean }[] = inUserOrder(
+    [
+      { key: 'shopping', title: null, lists: shoppingLists, prefix: () => '' },
+      { key: 'packing', title: 'Packlisten', lists: packingLists, prefix: () => '🧳 ' },
+      { key: 'memo', title: 'Merklisten', lists: memoLists, prefix: () => '📌 ' },
+      { key: 'todo', title: 'ToDo', lists: todoLists, prefix: () => '✅ ', grouped: true },
+      { key: 'templates', title: 'Vorlagen', lists: templates, prefix: (l: ListRow) => TYPE_ICON[l.listType] },
+    ],
+    me.sectionOrder,
+    (s) => s.key,
+  );
   const listLinks = (ls: ListRow[], prefix: (l: ListRow) => string) => (
     <ul>
       {ls.map((l) => (
@@ -304,9 +309,19 @@ function Shell({ me }: { me: Me }) {
         <SortDialog
           title="Listen sortieren"
           hint="So stehen die Listen in der Seitenleiste – nur bei dir, auf allen deinen Geräten."
-          groups={sections.filter((s) => s.lists.length).map((s) => ({ title: s.title ?? 'Einkaufslisten', items: s.lists.map((l) => ({ id: l.id, label: l.name })) }))}
-          onSave={(ids) => setListOrder([...ids, ...archived.map((l) => l.id)])}
-          onReset={() => setListOrder([])}
+          groups={[
+            // The sections themselves first, then the lists inside each.
+            { title: 'Abschnitte', items: sections.map((s) => ({ id: `section:${s.key}`, label: s.title ?? 'Einkaufslisten' })) },
+            ...sections.filter((s) => s.lists.length).map((s) => ({ title: s.title ?? 'Einkaufslisten', items: s.lists.map((l) => ({ id: l.id, label: l.name })) })),
+          ]}
+          onSave={async (ids) => {
+            await setSectionOrder(ids.filter((id) => id.startsWith('section:')).map((id) => id.slice('section:'.length) as SectionKey));
+            await setListOrder([...ids.filter((id) => !id.startsWith('section:')), ...archived.map((l) => l.id)]);
+          }}
+          onReset={async () => {
+            await setSectionOrder([]);
+            await setListOrder([]);
+          }}
           onClose={() => setSorting(null)}
         />
       )}
@@ -338,9 +353,6 @@ function OpenCount({ listId }: { listId: string }) {
   const n = items?.filter((i) => !i.checked).length ?? 0;
   return n ? <span className="count">{n}</span> : null;
 }
-
-/** Kept outside the menu so the lock survives closing it. */
-let wakeLock: WakeLockSentinel | null = null;
 
 interface ListMenuProps {
   list: ListRow;
@@ -510,23 +522,6 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
           }}
         >
           ⭐ Als Hauptliste festlegen
-        </button>
-      )}
-      {'wakeLock' in navigator && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={async () => {
-            if (wakeLock) {
-              await wakeLock.release();
-              wakeLock = null;
-            } else {
-              wakeLock = await navigator.wakeLock.request('screen').catch(() => null);
-            }
-            onClose();
-          }}
-        >
-          {wakeLock ? 'Bildschirm darf ausgehen' : 'Einkaufsmodus: Bildschirm anlassen'}
         </button>
       )}
       {isOwner && !guest && (

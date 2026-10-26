@@ -1325,6 +1325,8 @@ img.avatar {
 
 /* Sorting (lists, categories) */
 .sortlist {
+  /* Row positions (offsetTop) are measured from the list itself while dragging. */
+  position: relative;
   list-style: none;
   margin: 0 0 12px;
   padding: 0;
@@ -1333,15 +1335,33 @@ img.avatar {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 0 4px 8px;
+  padding: 2px 8px 2px 0;
   border-bottom: 1px solid var(--surface-2);
 }
-.sortlist li.sortlist__moved {
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
-  border-radius: 8px;
+.sortlist li {
+  background: var(--surface);
+  user-select: none;
 }
-.sortlist .icon-btn:disabled {
-  opacity: 0.25;
+.sortlist li.sortlist__dragging {
+  position: relative;
+  z-index: 2;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
+}
+.sortlist__handle {
+  flex: none;
+  width: 44px;
+  height: 40px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 1.3rem;
+  cursor: grab;
+  /* The finger drags the row instead of scrolling the dialog. */
+  touch-action: none;
+}
+.sortlist__dragging .sortlist__handle {
+  cursor: grabbing;
 }
 .row--wrap {
   flex-wrap: wrap;

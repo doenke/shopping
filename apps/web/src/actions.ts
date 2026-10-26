@@ -1,4 +1,4 @@
-import { categoriesFor, defaultVisibility, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem } from '@shopping/shared';
+import { categoriesFor, defaultVisibility, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem, type SectionKey } from '@shopping/shared';
 import { db } from './db';
 import { sync } from './sync/engine';
 
@@ -114,6 +114,11 @@ export async function setMainList(id: string): Promise<void> {
 export async function setCategoryOrder(listType: ListType, ids: string[], current: readonly string[] = []): Promise<void> {
   const own = new Set(categoriesFor(listType).map((c) => c.id));
   await sync.mutateMe({ categoryOrder: [...ids, ...current.filter((id) => !own.has(id))] });
+}
+
+/** Own order of the sidebar sections (shopping, packing, memo, todo, templates). */
+export async function setSectionOrder(keys: SectionKey[]): Promise<void> {
+  await sync.mutateMe({ sectionOrder: keys });
 }
 
 /** Own order of the lists in the sidebar. */

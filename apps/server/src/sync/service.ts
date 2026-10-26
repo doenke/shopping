@@ -387,11 +387,24 @@ export class SyncService {
     const [user] = await tx.select().from(users).where(eq(users.id, userId)).for('update');
     if (!user) throw new Rejection('unknown_user');
     if (patch.defaultListId && !(await this.hasAccess(tx, userId, patch.defaultListId))) throw new Rejection('forbidden');
-    const state = { defaultListId: user.defaultListId, categoryOrder: user.categoryOrder, listOrder: user.listOrder, hlc: { ...user.hlc } };
+    const state = {
+      defaultListId: user.defaultListId,
+      categoryOrder: user.categoryOrder,
+      listOrder: user.listOrder,
+      sectionOrder: user.sectionOrder,
+      hlc: { ...user.hlc },
+    };
     if (applyPatch(state, patch, ts).length === 0) return;
     await tx
       .update(users)
-      .set({ defaultListId: state.defaultListId, categoryOrder: state.categoryOrder, listOrder: state.listOrder, hlc: state.hlc, seq: nextSeq })
+      .set({
+        defaultListId: state.defaultListId,
+        categoryOrder: state.categoryOrder,
+        listOrder: state.listOrder,
+        sectionOrder: state.sectionOrder,
+        hlc: state.hlc,
+        seq: nextSeq,
+      })
       .where(eq(users.id, userId));
   }
 

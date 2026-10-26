@@ -23,13 +23,17 @@ describe('own order per user', () => {
     await req('POST', `/api/v1/lists/${a}/items`, { text: 'Milch, Äpfel, Brot' });
 
     const push = await req('POST', '/api/v1/sync/push', {
-      mutations: [me({ listOrder: [b, a], categoryOrder: ['brot-gebaeck', 'milch-kaese', 'obst-gemuese'] })],
+      mutations: [me({ listOrder: [b, a], categoryOrder: ['brot-gebaeck', 'milch-kaese', 'obst-gemuese'], sectionOrder: ['todo', 'shopping', 'memo'] })],
     });
     expect(push.json().rejected).toEqual([]);
 
     const pulled = (await req('GET', '/api/v1/sync/pull?since=0')).json().me;
     expect(pulled.listOrder).toEqual([b, a]);
     expect(pulled.categoryOrder).toEqual(['brot-gebaeck', 'milch-kaese', 'obst-gemuese']);
+    expect(pulled.sectionOrder).toEqual(['todo', 'shopping', 'memo']);
+    // Unknown sections are refused.
+    const bad = await req('POST', '/api/v1/sync/push', { mutations: [me({ sectionOrder: ['quatsch'] })] });
+    expect(bad.statusCode === 400 || bad.json().rejected?.length > 0).toBe(true);
 
     expect((await req('GET', '/api/v1/lists')).json().map((l: { name: string }) => l.name)).toEqual(['Drogerie', 'Einkauf']);
     const items = (await req('GET', `/api/v1/lists/${a}`)).json().items.map((i: { name: string }) => i.name);

@@ -78,6 +78,8 @@ export interface Me extends UserInfo {
   categoryOrder: string[];
   /** Own order of the lists in the sidebar (ids); lists not in it follow in their usual order. */
   listOrder: string[];
+  /** Own order of the sidebar sections. */
+  sectionOrder: SectionKey[];
 }
 
 export type CatalogKind = 'shopping' | 'packing';
@@ -133,7 +135,11 @@ export interface MePatch {
   defaultListId?: string | null;
   categoryOrder?: string[];
   listOrder?: string[];
+  sectionOrder?: SectionKey[];
 }
+
+/** The sections of the sidebar: one per list type, plus the templates. */
+export type SectionKey = 'shopping' | 'packing' | 'memo' | 'todo' | 'templates';
 
 interface MutationBase {
   mid: string;

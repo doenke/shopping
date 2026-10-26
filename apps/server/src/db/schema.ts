@@ -1,4 +1,4 @@
-import type { Amount, FieldClock } from '@shopping/shared';
+import type { Amount, FieldClock, SectionKey } from '@shopping/shared';
 import { sql } from 'drizzle-orm';
 import {
   bigint,
@@ -59,6 +59,7 @@ export const users = pgTable('users', {
   /** Own order of categories and of the lists in the sidebar (ids). */
   categoryOrder: jsonb('category_order').$type<string[]>().notNull().default([]),
   listOrder: jsonb('list_order').$type<string[]>().notNull().default([]),
+  sectionOrder: jsonb('section_order').$type<SectionKey[]>().notNull().default([]),
   hlc: jsonb('hlc').$type<FieldClock>().notNull().default({}),
   seq: seq(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
