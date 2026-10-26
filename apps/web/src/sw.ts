@@ -21,6 +21,10 @@ registerRoute(
   }),
 );
 
+// A new version takes over at once instead of waiting until every window of the app is closed
+// (an installed app practically never is). The page then reloads itself (see main.tsx).
+self.addEventListener('install', () => void self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting();
 });
