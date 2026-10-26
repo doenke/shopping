@@ -61,7 +61,7 @@ export function toUserInfo(r: UserRecord): UserInfo {
 }
 
 export function toMe(r: UserRecord, household: string | null = null): Me {
-  return { ...toUserInfo(r), email: r.email, isAdmin: r.isAdmin, defaultListId: r.defaultListId, household };
+  return { ...toUserInfo(r), email: r.email, isAdmin: r.isAdmin, defaultListId: r.defaultListId, household, categoryOrder: r.categoryOrder, listOrder: r.listOrder };
 }
 
 export function toCatalogItem(r: CatalogRecord): CatalogItem {

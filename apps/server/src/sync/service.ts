@@ -11,6 +11,7 @@ import {
   type ItemSource,
   type ListPatch,
   type ListRow,
+  type MePatch,
   type Mutation,
 } from '@shopping/shared';
 import { MutationSchema } from '@shopping/shared/schemas';
@@ -382,13 +383,16 @@ export class SyncService {
     return candidates.find((c) => sameProperties(c.properties, row.properties) && samePacking(packingInfo(c), packingInfo(row)));
   }
 
-  private async applyMe(tx: Tx, userId: string, patch: { defaultListId?: string | null }, ts: string): Promise<void> {
+  private async applyMe(tx: Tx, userId: string, patch: MePatch, ts: string): Promise<void> {
     const [user] = await tx.select().from(users).where(eq(users.id, userId)).for('update');
     if (!user) throw new Rejection('unknown_user');
     if (patch.defaultListId && !(await this.hasAccess(tx, userId, patch.defaultListId))) throw new Rejection('forbidden');
-    const state = { defaultListId: user.defaultListId, hlc: { ...user.hlc } };
+    const state = { defaultListId: user.defaultListId, categoryOrder: user.categoryOrder, listOrder: user.listOrder, hlc: { ...user.hlc } };
     if (applyPatch(state, patch, ts).length === 0) return;
-    await tx.update(users).set({ defaultListId: state.defaultListId, hlc: state.hlc, seq: nextSeq }).where(eq(users.id, userId));
+    await tx
+      .update(users)
+      .set({ defaultListId: state.defaultListId, categoryOrder: state.categoryOrder, listOrder: state.listOrder, hlc: state.hlc, seq: nextSeq })
+      .where(eq(users.id, userId));
   }
 
   /** Adds the user to a list (opening its link). Returns false if the list is gone. */

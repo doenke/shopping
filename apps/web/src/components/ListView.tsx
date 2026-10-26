@@ -1,7 +1,8 @@
-import { categoriesFor, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
+import { categoriesInOrder, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { clearChecked, setChecked } from '../actions';
 import { shopModeKnown, shoppingActivity, startShopping, stopShopping, useShopping } from '../shopMode';
+import { useMe } from '../hooks';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
@@ -32,6 +33,7 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
   const [editing, setEditing] = useState<string | null>(null);
   const [undo, setUndo] = useState<ItemRow | null>(null);
   const [showRecent, setShowRecent] = useState(false);
+  const me = useMe();
   // At home a tap opens an item; only while shopping does it check it off. Templates are never checked.
   const shopping = useShopping() && !list.isTemplate;
   const [done, setDone] = useState(false);
@@ -58,11 +60,11 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
       const cat = categoryInList(i.categoryId, list.listType).id;
       byCat.set(cat, [...(byCat.get(cat) ?? []), i]);
     }
-    return categoriesFor(list.listType).filter((c) => byCat.has(c.id)).map((c) => ({
+    return categoriesInOrder(list.listType, me?.categoryOrder).filter((c) => byCat.has(c.id)).map((c) => ({
       category: c,
       items: byCat.get(c.id)!.sort((a, b) => a.position.localeCompare(b.position)),
     }));
-  }, [open, list.listType]);
+  }, [open, list.listType, me?.categoryOrder]);
 
   const boost = useMemo(() => {
     const used = new Map<string, number>();

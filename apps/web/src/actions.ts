@@ -1,4 +1,4 @@
-import { defaultVisibility, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem } from '@shopping/shared';
+import { categoriesFor, defaultVisibility, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem } from '@shopping/shared';
 import { db } from './db';
 import { sync } from './sync/engine';
 
@@ -97,6 +97,17 @@ export async function deleteList(id: string): Promise<void> {
 
 export async function setMainList(id: string): Promise<void> {
   await sync.mutateMe({ defaultListId: id });
+}
+
+/** Own order of one list type's categories; the other types' order is kept. */
+export async function setCategoryOrder(listType: ListType, ids: string[], current: readonly string[] = []): Promise<void> {
+  const own = new Set(categoriesFor(listType).map((c) => c.id));
+  await sync.mutateMe({ categoryOrder: [...ids, ...current.filter((id) => !own.has(id))] });
+}
+
+/** Own order of the lists in the sidebar. */
+export async function setListOrder(ids: string[]): Promise<void> {
+  await sync.mutateMe({ listOrder: ids });
 }
 
 /** Removes bought items from "Zuletzt verwendet". */

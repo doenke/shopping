@@ -56,6 +56,9 @@ export const users = pgTable('users', {
   /** Only OIDC users belong to a household; guests never do. */
   householdId: uuid('household_id').references(() => households.id, { onDelete: 'set null' }),
   defaultListId: uuid('default_list_id'),
+  /** Own order of categories and of the lists in the sidebar (ids). */
+  categoryOrder: jsonb('category_order').$type<string[]>().notNull().default([]),
+  listOrder: jsonb('list_order').$type<string[]>().notNull().default([]),
   hlc: jsonb('hlc').$type<FieldClock>().notNull().default({}),
   seq: seq(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

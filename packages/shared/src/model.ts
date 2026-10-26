@@ -74,6 +74,10 @@ export interface Me extends UserInfo {
   defaultListId: string | null;
   /** Name of the user's household (null for guests). */
   household: string | null;
+  /** Own order of the categories (ids, all list types together); empty = the built-in order. */
+  categoryOrder: string[];
+  /** Own order of the lists in the sidebar (ids); lists not in it follow in their usual order. */
+  listOrder: string[];
 }
 
 export type CatalogKind = 'shopping' | 'packing';
@@ -127,6 +131,8 @@ export interface ItemPatch {
 
 export interface MePatch {
   defaultListId?: string | null;
+  categoryOrder?: string[];
+  listOrder?: string[];
 }
 
 interface MutationBase {

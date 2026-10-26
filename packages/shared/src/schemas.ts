@@ -45,7 +45,11 @@ export const ItemPatchSchema = z
   .strict();
 
 export const MePatchSchema = z
-  .object({ defaultListId: id.nullable() })
+  .object({
+    defaultListId: id.nullable(),
+    categoryOrder: z.array(z.string().min(1).max(64)).max(200),
+    listOrder: z.array(id).max(1000),
+  })
   .partial()
   .strict();
 

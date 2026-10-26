@@ -1,7 +1,7 @@
-import { categoriesFor, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
+import { categoriesInOrder, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { archiveList, setChecked } from '../actions';
-import { navigate } from '../hooks';
+import { navigate, useMe } from '../hooks';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
@@ -55,6 +55,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
   const packed = items.filter((i) => i.checked).length;
   const allPacked = items.length > 0 && packed === items.length;
 
+  const me = useMe();
   const groups = useMemo(() => {
     const keyOf = (i: ItemRow): string => {
       const p = packingInfo(i);
@@ -66,7 +67,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
     for (const i of items) byKey.set(keyOf(i), [...(byKey.get(keyOf(i)) ?? []), i]);
     const sortItems = (rows: ItemRow[]) => rows.sort((a, b) => a.position.localeCompare(b.position));
     if (groupBy === 'category') {
-      return categoriesFor('packing')
+      return categoriesInOrder('packing', me?.categoryOrder)
         .filter((c) => byKey.has(c.id))
         .map((c) => ({ key: c.id, title: c.name, items: sortItems(byKey.get(c.id)!) }));
     }
@@ -74,7 +75,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
     return [...byKey.keys()]
       .sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, 'de')))
       .map((k) => ({ key: k || '-', title: k || empty, items: sortItems(byKey.get(k)!) }));
-  }, [items, groupBy]);
+  }, [items, groupBy, me?.categoryOrder]);
 
   const boost = useMemo(() => {
     const used = new Set(items.map((i) => i.catalogItemId));

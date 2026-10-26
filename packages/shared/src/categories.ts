@@ -70,3 +70,21 @@ export function categoryInList(id: string | null | undefined, listType: string):
   const own = categoriesFor(listType);
   return own.find((c) => c.id === id) ?? getCategory(defaultCategoryFor(listType));
 }
+
+/**
+ * Sorts by a user's own order (ids): known ones in that order, the rest after them in their usual order.
+ * Used for categories and for lists.
+ */
+export function inUserOrder<T>(things: T[], order: readonly string[] | undefined, idOf: (t: T) => string): T[] {
+  if (!order?.length) return things;
+  const rank = new Map(order.map((id, i) => [id, i]));
+  return things
+    .map((t, i) => ({ t, i, r: rank.get(idOf(t)) }))
+    .sort((a, b) => (a.r ?? Infinity) - (b.r ?? Infinity) || a.i - b.i)
+    .map((x) => x.t);
+}
+
+/** The categories of a list type in the user's order. */
+export function categoriesInOrder(listType: string, order: readonly string[] | undefined): CategoryDef[] {
+  return inUserOrder(categoriesFor(listType), order, (c) => c.id);
+}

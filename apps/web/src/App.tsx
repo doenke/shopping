@@ -1,6 +1,6 @@
-import { listDescription, parseInput, type ListRow, type ListType, type Me } from '@shopping/shared';
+import { categoriesInOrder, inUserOrder, listDescription, parseInput, type ListRow, type ListType, type Me } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, archiveList, createList, deleteList, describeList, leaveList, renameList, saveAsTemplate, setMainList, setVisibility, shareList } from './actions';
+import { addItems, archiveList, createList, deleteList, describeList, leaveList, renameList, saveAsTemplate, setCategoryOrder, setListOrder, setMainList, setVisibility, shareList } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
@@ -8,7 +8,8 @@ import { startShopping, stopShopping, useShopping, useWakeLock } from './shopMod
 import { ListIcon } from './components/ListIcon';
 import { ListAvatars } from './components/ListAvatars';
 import { MembersDialog } from './components/MembersDialog';
-import { NewListDialog } from './components/NewListDialog';
+import { LIST_TYPE_LABEL, NewListDialog } from './components/NewListDialog';
+import { SortDialog } from './components/SortDialog';
 import { SyncTemplateDialog } from './components/SyncTemplateDialog';
 import { ListView } from './components/ListView';
 import { Login } from './components/Login';
@@ -64,12 +65,15 @@ function Shell({ me }: { me: Me }) {
   const guest = me.isGuest;
   const [newDialog, setNewDialog] = useState(false);
   const [syncDialog, setSyncDialog] = useState(false);
-  const shoppingLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'shopping');
-  const packingLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'packing');
-  const memoLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'memo');
-  const todoLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'todo');
-  const archived = lists.filter((l) => !l.isTemplate && l.archivedAt);
-  const templates = lists.filter((l) => l.isTemplate);
+  /** Lists in the user's own order (lists not in it keep their usual place behind). */
+  const ordered = inUserOrder(lists, me.listOrder, (l) => l.id);
+  const shoppingLists = ordered.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'shopping');
+  const packingLists = ordered.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'packing');
+  const memoLists = ordered.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'memo');
+  const todoLists = ordered.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'todo');
+  const archived = ordered.filter((l) => !l.isTemplate && l.archivedAt);
+  const templates = ordered.filter((l) => l.isTemplate);
+  const [sorting, setSorting] = useState<'lists' | ListType | null>(null);
   const TYPE_ICON: Record<ListType, string> = { shopping: '', packing: '🧳 ', memo: '📌 ', todo: '✅ ' };
   /** Sidebar: only sections that have lists. */
   const sections: { title: string | null; lists: ListRow[]; prefix: (l: ListRow) => string }[] = [
@@ -179,6 +183,18 @@ function Shell({ me }: { me: Me }) {
         </details>
       )}
       <span className="spacer" />
+      {lists.length > 1 && (
+        <button
+          type="button"
+          className="link sidebar__sort"
+          onClick={() => {
+            setDrawer(false);
+            setSorting('lists');
+          }}
+        >
+          ↕ Listen sortieren
+        </button>
+      )}
       <a href="#/settings" className={route.page === 'settings' || route.page === 'icons' ? 'active' : ''} onClick={() => setDrawer(false)}>
         ⚙ Einstellungen
       </a>
@@ -227,6 +243,7 @@ function Shell({ me }: { me: Me }) {
                   onImport={() => setImporting(true)}
                   onApplyTemplate={() => setSyncDialog(true)}
                   onMembers={() => setShowMembers(true)}
+                  onSortCategories={() => setSorting(list.listType)}
                 />
               )}
             </div>
@@ -235,7 +252,7 @@ function Shell({ me }: { me: Me }) {
 
         <main className="content">
           {route.page === 'settings' ? (
-            <Settings me={me} />
+            <Settings me={me} onSort={setSorting} />
           ) : route.page === 'icons' && !guest ? (
             <IconReview catalog={catalog.items} />
           ) : list && items ? (
@@ -267,6 +284,26 @@ function Shell({ me }: { me: Me }) {
       {syncDialog && list && (
         <SyncTemplateDialog list={list} templates={templates.filter((t) => t.listType === list.listType)} onClose={() => setSyncDialog(false)} />
       )}
+      {sorting === 'lists' && (
+        <SortDialog
+          title="Listen sortieren"
+          hint="So stehen die Listen in der Seitenleiste – nur bei dir, auf allen deinen Geräten."
+          groups={sections.filter((s) => s.lists.length).map((s) => ({ title: s.title ?? 'Einkaufslisten', items: s.lists.map((l) => ({ id: l.id, label: l.name })) }))}
+          onSave={(ids) => setListOrder([...ids, ...archived.map((l) => l.id)])}
+          onReset={() => setListOrder([])}
+          onClose={() => setSorting(null)}
+        />
+      )}
+      {sorting && sorting !== 'lists' && (
+        <SortDialog
+          title={`Kategorien sortieren – ${LIST_TYPE_LABEL[sorting]}`}
+          hint="Zum Beispiel in der Reihenfolge deines Weges durch den Laden. Gilt nur für dich, auf allen deinen Geräten."
+          groups={[{ title: null, items: categoriesInOrder(sorting, me.categoryOrder).map((c) => ({ id: c.id, label: c.name })) }]}
+          onSave={(ids) => setCategoryOrder(sorting, ids, me.categoryOrder)}
+          onReset={() => setCategoryOrder(sorting, [], me.categoryOrder)}
+          onClose={() => setSorting(null)}
+        />
+      )}
       {showMembers && list && <MembersDialog list={list} me={me} onClose={() => {
             setShowMembers(false);
             setMembersSeen((n) => n + 1);
@@ -297,9 +334,10 @@ interface ListMenuProps {
   onImport: () => void;
   onApplyTemplate: () => void;
   onMembers: () => void;
+  onSortCategories: () => void;
 }
 
-function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, onMembers }: ListMenuProps) {
+function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories }: ListMenuProps) {
   const guest = me.isGuest;
   const isOwner = list.ownerId === me.id;
 
@@ -345,6 +383,18 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
       >
         Wer ist dabei?
       </button>
+      {(list.listType === 'shopping' || list.listType === 'packing') && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onSortCategories();
+            onClose();
+          }}
+        >
+          ↕ Kategorien sortieren …
+        </button>
+      )}
       {!guest && (
         <button
           type="button"

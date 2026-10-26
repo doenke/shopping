@@ -1,6 +1,7 @@
-import { categoriesFor, type CatalogItem, type ItemRow, type ListType } from '@shopping/shared';
+import { categoriesInOrder, type CatalogItem, type ItemRow, type ListType } from '@shopping/shared';
 import { useMemo, useState } from 'react';
 import { addItems, catalogToParsed } from '../actions';
+import { useMe } from '../hooks';
 import { Tile } from './Tile';
 
 interface Props {
@@ -12,7 +13,8 @@ interface Props {
 
 /** Laptop: browse the catalog by category and add with one click. */
 export function CatalogPanel({ listId, listType, catalog, items }: Props) {
-  const categories = categoriesFor(listType);
+  const me = useMe();
+  const categories = categoriesInOrder(listType, me?.categoryOrder);
   const [category, setCategory] = useState(categories[0]!.id);
   const onList = useMemo(() => new Set(items.filter((i) => !i.checked && i.catalogItemId).map((i) => i.catalogItemId)), [items]);
   const shown = useMemo(

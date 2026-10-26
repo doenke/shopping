@@ -56,7 +56,7 @@ function Copy({ text }: { text: string }) {
   );
 }
 
-export function Settings({ me }: { me: Me }) {
+export function Settings({ me, onSort }: { me: Me; onSort: (what: 'lists' | 'shopping' | 'packing') => void }) {
   const lists = useLists().filter((l) => !l.isTemplate && l.listType === 'shopping');
   const [mealie, setMealie] = useState<MealieState | null>(null);
   const [url, setUrl] = useState('');
@@ -297,6 +297,24 @@ export function Settings({ me }: { me: Me }) {
           <a className="btn" href="#/icons">
             🖼 Icons verwalten
           </a>
+        </div>
+      )}
+
+      {!me.isGuest && (
+        <div className="card">
+          <h2>Reihenfolge</h2>
+          <p className="muted">Nur für dich, auf allen deinen Geräten (auch in Home Assistant).</p>
+          <div className="row row--wrap">
+            <button className="btn" type="button" onClick={() => onSort('lists')}>
+              ↕ Listen
+            </button>
+            <button className="btn" type="button" onClick={() => onSort('shopping')}>
+              ↕ Kategorien Einkauf
+            </button>
+            <button className="btn" type="button" onClick={() => onSort('packing')}>
+              ↕ Kategorien Packliste
+            </button>
+          </div>
         </div>
       )}
 

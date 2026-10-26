@@ -2,6 +2,8 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import {
   categoriesFor,
+  categoriesInOrder,
+  inUserOrder,
   CatalogIndex,
   defaultVisibility,
   dueOf,
@@ -245,16 +247,25 @@ export class ShoppingApi {
         .where(and(inArray(listItems.listId, all.map((l) => l.id)), eq(listItems.deleted, false), eq(listItems.checked, false)));
       for (const i of items) counts.set(i.listId, (counts.get(i.listId) ?? 0) + 1);
     }
-    return all
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-      .map((l) => toApiList(l, userId, main, counts.get(l.id) ?? 0));
+    const order = await this.userOrder(userId);
+    return inUserOrder(
+      all.sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+      order.listOrder,
+      (l) => l.id,
+    ).map((l) => toApiList(l, userId, main, counts.get(l.id) ?? 0));
+  }
+
+  /** The user's own order of lists and categories (same as in the app). */
+  private async userOrder(userId: string): Promise<{ categoryOrder: string[]; listOrder: string[] }> {
+    const [u] = await this.db.select({ categoryOrder: users.categoryOrder, listOrder: users.listOrder }).from(users).where(eq(users.id, userId));
+    return u ?? { categoryOrder: [], listOrder: [] };
   }
 
   async list(userId: string, ref: string | undefined, filter: 'open' | 'done' | 'all' = 'open'): Promise<ApiList & { items: ApiItem[] }> {
     const list = await this.resolveList(userId, ref);
     const items = await this.itemsOf(list.id);
     const names = await this.userNames();
-    const categories = categoriesFor(list.listType);
+    const categories = categoriesInOrder(list.listType, (await this.userOrder(userId)).categoryOrder);
     const rank = (id: string | null) => {
       const i = categories.findIndex((c) => c.id === id);
       return i < 0 ? categories.length : i;

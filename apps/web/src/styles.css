@@ -1313,3 +1313,33 @@ img.avatar {
   margin-right: 8px;
   vertical-align: -7px;
 }
+
+/* Sorting (lists, categories) */
+.sortlist {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.sortlist li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0 4px 8px;
+  border-bottom: 1px solid var(--surface-2);
+}
+.sortlist li.sortlist__moved {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border-radius: 8px;
+}
+.sortlist .icon-btn:disabled {
+  opacity: 0.25;
+}
+.row--wrap {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sidebar__sort {
+  align-self: flex-start;
+  margin: 0 12px 4px;
+  font-size: 0.9rem;
+}
