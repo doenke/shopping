@@ -98,7 +98,7 @@ Zuhause-Modus.
 ### 4. Teilen
 
 Wer in deinem Haushalt ist, sieht deine Listen ohnehin. Für alle anderen schickt
-**⋮ → Teilen …** einen Link; wer ihn öffnet, ist dabei – Gäste auch ohne Konto.
+**⋮ → Berechtigungen … → Link teilen** einen Link; wer ihn öffnet, ist dabei – Gäste auch ohne Konto.
 
 ## Login über OIDC
 

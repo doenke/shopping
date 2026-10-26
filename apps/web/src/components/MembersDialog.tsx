@@ -1,6 +1,6 @@
 import type { ListRow, Me } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { shareList } from '../actions';
+import { setVisibility, shareList } from '../actions';
 import { Avatar } from './Avatar';
 
 interface Member {
@@ -12,7 +12,7 @@ interface Member {
   via: 'owner' | 'link' | 'household';
 }
 
-/** Who is on this list; the owner can remove people. */
+/** Berechtigungen: who sees the list (household or private), who is on it, the share link. */
 export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [members, setMembers] = useState<Member[] | null>(null);
@@ -40,11 +40,41 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
     <dialog ref={ref} className="sheet" onClose={onClose}>
       <div className="sheet__body">
         <header className="sheet__header row">
-          <h2 className="spacer">Wer ist dabei?</h2>
+          <h2 className="spacer">Berechtigungen</h2>
           <button type="button" className="icon-btn" aria-label="Schließen" onClick={() => ref.current?.close()}>
             ✕
           </button>
         </header>
+        {!me.isGuest && (
+          <div className="field">
+            <span>Sichtbar für</span>
+            {isOwner ? (
+              <div className="segmented" role="group" aria-label="Sichtbar für">
+                {(['household', 'private'] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={list.visibility === v ? 'active' : ''}
+                    aria-pressed={list.visibility === v}
+                    onClick={async () => {
+                      await setVisibility(list.id, v);
+                      // Who belongs to the list changes on the server; show the new state.
+                      setTimeout(() => void load(), 600);
+                    }}
+                  >
+                    {v === 'household' ? `🏠 ${me.household ?? 'Haushalt'}` : '🔒 Nur ich'}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="muted">
+                {list.visibility === 'private' ? '🔒 Privat' : `🏠 ${me.household ?? 'Haushalt'}`} – das legt der Besitzer fest.
+              </p>
+            )}
+          </div>
+        )}
+
+        <h3>Wer ist dabei?</h3>
         {error && <p className="error">{error}</p>}
         <ul className="checklist">
           {members?.map((m) => (
@@ -68,11 +98,26 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
             </li>
           ))}
         </ul>
+        <h3>Link</h3>
         <p className="muted">
           {list.visibility === 'private' ? 'Diese Liste ist privat. ' : 'Der ganze Haushalt sieht diese Liste. '}
-          Andere kommen über den Link dazu. Gäste ohne Account fliegen raus, wenn der Link erneuert wird.
+          Andere kommen über den Link dazu, auch ohne Konto als Gast.
+          {isOwner && ' Ein neuer Link macht den alten ungültig: Gäste fliegen raus, wer ein Konto hat, bleibt.'}
         </p>
         <footer className="sheet__actions">
+          {isOwner && (
+            <button
+              type="button"
+              className="link danger"
+              onClick={async () => {
+                if (!confirm('Neuen Link erzeugen? Der alte funktioniert dann nicht mehr. Gäste ohne Konto fliegen raus.')) return;
+                await shareList(list, true);
+                void load();
+              }}
+            >
+              Link erneuern
+            </button>
+          )}
           <span className="spacer" />
           <button type="button" className="btn btn--primary" onClick={() => void shareList(list)}>
             Link teilen …

@@ -147,6 +147,7 @@ a {
 }
 .field input,
 .field select,
+.field textarea,
 .catalog-panel select {
   min-height: 44px;
   padding: 0 12px;
@@ -1401,4 +1402,23 @@ img.avatar {
 .snackbar {
   width: max-content;
   max-width: calc(100vw - 32px);
+}
+
+.field textarea {
+  padding: 10px 12px;
+  min-height: 64px;
+  resize: vertical;
+  font: inherit;
+}
+.list-icon-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.list-icon-preview .list-icon {
+  margin: 0;
 }

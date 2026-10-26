@@ -43,12 +43,14 @@
 - **ToDo-Listen** ✅ (standardmäßig **privat**): Aufgaben mit **Fälligkeit** („!morgen“, „!Fr“, „!12.11.“),
   **Wer** („@Ben“) und **Bereich** („#Garten“), gruppiert nach Fälligkeit (Überfällig, Heute, Diese Woche …),
   Bereich oder Person. Die Listen selbst lassen sich in **Kategorien** ordnen (Arbeit, Hobby, Urlaub …; beim
-  Anlegen oder *⋮ → Kategorie …*) und stehen in der Seitenleiste darunter gruppiert.
+  Anlegen oder unter *⋮ → Bearbeiten …*) und stehen in der Seitenleiste darunter gruppiert.
 - **Reihenfolge der Listen und Abschnitte** in der Seitenleiste (z. B. Merklisten ganz nach unten):
   *↕ Listen sortieren*, je Benutzer. Sortiert wird per Ziehen am Griff ⠿, mit der Tastatur über die
   Pfeiltasten.
-- **Wer ist dabei?** zeigt in der Titelzeile die Avatare aller mit Zugriff; ein Tipp öffnet die Liste der
-  Mitglieder.
+- **⋮ → Bearbeiten …**: Name, Beschreibung, Kategorie (ToDo-Listen) und Icon an einem Ort.
+- **⋮ → Berechtigungen …**: sichtbar für den Haushalt oder nur für dich, wer dabei ist (der Besitzer kann
+  Leute entfernen), Link teilen und erneuern. Die Avatare in der Titelzeile zeigen alle mit Zugriff; ein Tipp
+  darauf öffnet denselben Dialog.
 
 ## Zusammenarbeiten
 

@@ -5,7 +5,7 @@
 ## Haushalte
 
 Listen gehören automatisch dem ganzen Haushalt, können aber **privat** 🔒 sein: „Privat – nur für mich“ beim
-Anlegen oder *⋮ → Privat machen*. ToDo-Listen sind standardmäßig privat.
+Anlegen oder unter *⋮ → Berechtigungen …*. ToDo-Listen sind standardmäßig privat.
 
 Wer zu welchem Haushalt gehört, steht in Pocket ID: Leg einen **Custom Claim** `household` an – am Benutzer
 oder an einer Gruppe (dann gilt er für alle Mitglieder), z. B. `household = Müller`. Alle mit demselben Tag
@@ -21,8 +21,8 @@ Nur Pocket-ID-Benutzer gehören zu einem Haushalt, Gäste nie.
 
 ## Teilen per Link
 
-*⋮ → Teilen …* öffnet den Teilen-Dialog des Handys mit einem Link zur Liste. Wer den Link angemeldet öffnet,
-ist dabei – auch aus einem anderen Haushalt. Der Besitzer kann den Link erneuern (*⋮ → Link erneuern*),
+*⋮ → Berechtigungen … → Link teilen* öffnet den Teilen-Dialog des Handys mit einem Link zur Liste. Wer den Link angemeldet öffnet,
+ist dabei – auch aus einem anderen Haushalt. Der Besitzer kann den Link dort auch erneuern,
 Mitglieder können die Liste verlassen.
 
 ## Gäste ohne Konto

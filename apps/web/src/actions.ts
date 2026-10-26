@@ -98,6 +98,31 @@ export async function saveAsTemplate(list: ListRow, name: string): Promise<strin
   return id;
 }
 
+/** Name, description and (ToDo lists) Kategorie in one change – one settings patch, nothing overwrites the other. */
+export async function editList(list: ListRow, edit: { name: string; description: string; group?: string }): Promise<void> {
+  const settings = { ...list.settings };
+  if (edit.description.trim()) settings.description = edit.description.trim();
+  else delete settings.description;
+  if (edit.group !== undefined) {
+    if (edit.group.trim()) settings.group = edit.group.trim();
+    else delete settings.group;
+  }
+  const patch: { name?: string; settings?: Record<string, unknown> } = {};
+  if (edit.name.trim() && edit.name.trim() !== list.name) patch.name = edit.name.trim();
+  if (JSON.stringify(settings) !== JSON.stringify(list.settings)) patch.settings = settings;
+  if (patch.name || patch.settings) await sync.mutateList(list.id, patch);
+}
+
+/** A new icon for the list, drawn from its name and description. */
+export async function newListIcon(listId: string): Promise<boolean> {
+  const res = await fetch('/api/v1/icons/generate', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ targetType: 'list', targetId: listId }),
+  }).catch(() => null);
+  return !!res?.ok;
+}
+
 export async function renameList(id: string, name: string): Promise<void> {
   await sync.mutateList(id, { name });
 }

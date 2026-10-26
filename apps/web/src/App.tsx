@@ -1,11 +1,12 @@
-import { categoriesInOrder, groupLists, inUserOrder, listDescription, listGroup, parseInput, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
+import { categoriesInOrder, groupLists, inUserOrder, listGroup, parseInput, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, archiveList, createList, deleteList, describeList, leaveList, renameList, saveAsTemplate, setCategoryOrder, setListGroup, setListOrder, setSectionOrder, setMainList, setVisibility, shareList } from './actions';
+import { addItems, archiveList, createList, deleteList, leaveList, saveAsTemplate, setCategoryOrder, setListOrder, setSectionOrder, setMainList } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
 import { startShopping, stopShopping, useShopping, useWakeLock } from './shopMode';
 import { ListIcon } from './components/ListIcon';
+import { ListEditDialog } from './components/ListEditDialog';
 import { InstallButton } from './components/InstallButton';
 import { ListAvatars } from './components/ListAvatars';
 import { MembersDialog } from './components/MembersDialog';
@@ -74,6 +75,7 @@ function Shell({ me }: { me: Me }) {
   const todoLists = ordered.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'todo');
   const archived = ordered.filter((l) => !l.isTemplate && l.archivedAt);
   const templates = ordered.filter((l) => l.isTemplate);
+  const [editing, setEditing] = useState(false);
   const [sorting, setSorting] = useState<'lists' | ListType | null>(null);
   const TYPE_ICON: Record<ListType, string> = { shopping: '', packing: '🧳 ', memo: '📌 ', todo: '✅ ' };
   /** Sidebar: only sections that have lists. */
@@ -261,6 +263,7 @@ function Shell({ me }: { me: Me }) {
                   onApplyTemplate={() => setSyncDialog(true)}
                   onMembers={() => setShowMembers(true)}
                   onSortCategories={() => setSorting(list.listType)}
+                  onEdit={() => setEditing(true)}
                 />
               )}
             </div>
@@ -304,6 +307,14 @@ function Shell({ me }: { me: Me }) {
         />}
       {syncDialog && list && (
         <SyncTemplateDialog list={list} templates={templates.filter((t) => t.listType === list.listType)} onClose={() => setSyncDialog(false)} />
+      )}
+      {editing && list && (
+        <ListEditDialog
+          list={list}
+          me={me}
+          groups={[...new Set(todoLists.map(listGroup).filter((g): g is string => !!g))]}
+          onClose={() => setEditing(false)}
+        />
       )}
       {sorting === 'lists' && (
         <SortDialog
@@ -363,9 +374,10 @@ interface ListMenuProps {
   onApplyTemplate: () => void;
   onMembers: () => void;
   onSortCategories: () => void;
+  onEdit: () => void;
 }
 
-function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories }: ListMenuProps) {
+function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories, onEdit }: ListMenuProps) {
   const guest = me.isGuest;
   const isOwner = list.ownerId === me.id;
 
@@ -383,37 +395,12 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
         type="button"
         role="menuitem"
         onClick={() => {
-          const name = prompt('Neuer Name', list.name);
-          if (name?.trim()) void renameList(list.id, name.trim());
+          onEdit();
           onClose();
         }}
       >
-        Umbenennen
+        ✏️ Bearbeiten …
       </button>
-      <button
-        type="button"
-        role="menuitem"
-        onClick={() => {
-          const d = prompt('Worum geht es in dieser Liste?', listDescription(list) ?? '');
-          if (d !== null) void describeList(list, d);
-          onClose();
-        }}
-      >
-        Beschreibung …
-      </button>
-      {list.listType === 'todo' && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            const g = prompt('Kategorie (z. B. Arbeit, Hobby, Urlaub – leer = Allgemein)', listGroup(list) ?? '');
-            if (g !== null) void setListGroup(list, g);
-            onClose();
-          }}
-        >
-          Kategorie …
-        </button>
-      )}
       <button
         type="button"
         role="menuitem"
@@ -422,7 +409,7 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
           onClose();
         }}
       >
-        Wer ist dabei?
+        👥 Berechtigungen …
       </button>
       {(list.listType === 'shopping' || list.listType === 'packing') && (
         <button
@@ -434,22 +421,6 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
           }}
         >
           ↕ Kategorien sortieren …
-        </button>
-      )}
-      {!guest && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            onClose();
-            void fetch('/api/v1/icons/generate', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ targetType: 'list', targetId: list.id }),
-            });
-          }}
-        >
-          🖼 Neues Listen-Icon
         </button>
       )}
       {!list.isTemplate && list.listType === 'shopping' && !guest && (
@@ -489,16 +460,6 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
           Als Vorlage speichern
         </button>
       )}
-      <button
-        type="button"
-        role="menuitem"
-        onClick={() => {
-          void shareList(list);
-          onClose();
-        }}
-      >
-        Teilen …
-      </button>
       {list.listType === 'packing' && !list.isTemplate && !guest && (
         <button
           type="button"
@@ -522,32 +483,6 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
           }}
         >
           ⭐ Als Hauptliste festlegen
-        </button>
-      )}
-      {isOwner && !guest && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            void setVisibility(list.id, list.visibility === 'private' ? 'household' : 'private');
-            onClose();
-          }}
-        >
-          {list.visibility === 'private' ? '🏠 Mit dem Haushalt teilen' : '🔒 Privat machen'}
-        </button>
-      )}
-      {isOwner && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            if (confirm('Neuen Link erzeugen? Der alte funktioniert dann nicht mehr. Wer schon drin ist, bleibt drin.')) {
-              void shareList(list, true);
-            }
-            onClose();
-          }}
-        >
-          Link erneuern
         </button>
       )}
       {!isOwner && !guest && (
