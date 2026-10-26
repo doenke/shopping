@@ -105,8 +105,13 @@ In der App kann jeder über das Artikel-Menü „Icon gefällt mir nicht“ meld
 
 1. In der App: *Einstellungen → API & Integrationen* ein Token mit „Lesen“ und „Ändern“
    erzeugen (für Mealie-Aktionen zusätzlich „Mealie-Import“).
-2. HACS → *Benutzerdefinierte Repositories* → `https://github.com/doenke/shopping`, Typ
-   *Integration* → „Shopping“ installieren, HA neu starten.
+2. HACS → ⋮ → *Benutzerdefinierte Repositories* → diese URL eintragen, Typ **Integration**:
+
+   ```
+   https://github.com/doenke/shopping
+   ```
+
+   Dann „Shopping“ in HACS suchen, installieren und Home Assistant neu starten.
 3. *Einstellungen → Geräte & Dienste → Integration hinzufügen → Shopping*: Adresse und Token.
 4. Bei der Integration **„Liste hinzufügen“** – für jede Liste, die du in Home Assistant brauchst.
    Es wird nichts automatisch angelegt; entfernen geht über ⋮ bei der Liste.
