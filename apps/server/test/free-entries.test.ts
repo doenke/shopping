@@ -83,6 +83,15 @@ describe('free-text entries', () => {
   });
 
 
+  it('of a Merkliste can get a new picture on request', async () => {
+    const memo = (await req('POST', '/api/v1/lists', { name: 'Filme', type: 'memo' })).json().id;
+    await req('POST', `/api/v1/lists/${memo}/items`, { text: 'Dune' });
+    const dune = (await itemsOf(memo))[0]!.id;
+    expect((await req('POST', '/api/v1/icons/generate', { targetType: 'entry', targetId: dune })).statusCode).toBe(200);
+    expect(await t.icons.runNext()).toBe('done');
+    expect((await pulled(dune)).icon).toMatch(/^[0-9a-f]{10}$/);
+  });
+
   it('become catalog items of the household once they have a category, picture included', async () => {
     const pulledFirst = await pulled(first);
     expect(pulledFirst.icon).toMatch(/^[0-9a-f]{10}$/);

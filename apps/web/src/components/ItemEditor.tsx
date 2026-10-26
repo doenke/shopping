@@ -309,24 +309,28 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
           )}
         </p>
 
-        {item.catalogItemId && me && !me.isGuest && (
+        {/* Catalog items share their icon; Merkliste and free-text entries have one of their own. */}
+        {(item.catalogItemId || memo || item.icon) && me && !me.isGuest && list.listType !== 'todo' && (
           <p className="sheet__meta">
             {reported === 'idle' ? (
               <button
                 type="button"
                 className="link"
                 onClick={() => {
-                  fetch(`/api/v1/catalog/${item.catalogItemId}/icon-report`, {
-                    method: 'POST',
-                  })
-                    .then((res) => setReported(res.ok ? 'done' : 'error'))
-                    .catch(() => setReported('error'));
+                  const req = item.catalogItemId
+                    ? fetch(`/api/v1/catalog/${item.catalogItemId}/icon-report`, { method: 'POST' })
+                    : fetch('/api/v1/icons/generate', {
+                        method: 'POST',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({ targetType: 'entry', targetId: item.id }),
+                      });
+                  req.then((res) => setReported(res.ok ? 'done' : 'error')).catch(() => setReported('error'));
                 }}
               >
-                Icon gefällt mir nicht
+                {item.catalogItemId || item.icon ? 'Icon gefällt mir nicht' : 'Icon erzeugen'}
               </button>
             ) : reported === 'done' ? (
-              'Danke – neue Entwürfe kommen in die Icon-Prüfung.'
+              'Neues Icon ist in Auftrag – es erscheint in Kürze (oder in der Icon-Prüfung).'
             ) : (
               'Das ging gerade nicht (offline?).'
             )}

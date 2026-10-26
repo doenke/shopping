@@ -39,7 +39,8 @@ Artikel, jede Kategorie, jeder Merklisten-Eintrag und jede Liste ein eigenes Ico
   bei Merklisten die Listenbeschreibung, bei ToDo-Listen deren Kategorie.
 - **Listen-Icons** entstehen aus Name und Beschreibung der Liste und ersetzen in Seitenleiste und Titelzeile
   das Typ-Symbol. Nach dem Umbenennen entsteht ein neues; *⋮ → Bearbeiten … → Neues Icon erzeugen* erzeugt jederzeit eins.
-- In der App kann jeder über das Artikel-Menü „Icon gefällt mir nicht“ melden.
+- In der App kann jeder im Editor eines Eintrags „Icon gefällt mir nicht“ melden – bei Katalogartikeln wie bei
+  Merklisten- und frei getippten Einträgen (die ohne Icon haben dort „Icon erzeugen“).
 
 ## Optionale Anbieter
 
