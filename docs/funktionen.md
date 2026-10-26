@@ -41,7 +41,8 @@
   „Als Vorlage anlegen“, privat, Beschreibung, bei ToDo-Listen die Kategorie.
 - **Vorlagen** (◇) für jeden Listentyp: nicht abhakbar, füllen neue Listen vor, „Als Vorlage speichern“,
   optionale Artikel. **Mit Vorlage abgleichen** in beide Richtungen: was der Liste fehlt, was der Vorlage
-  fehlt und abweichende Mengen – einzeln auswählbar; die Liste merkt sich ihre Vorlage.
+  fehlt und abweichende Mengen – einzeln auswählbar (Richtung Vorlage ist anfangs nichts angehakt); die Liste
+  merkt sich ihre Vorlage.
 - **Packlisten** 🧳 mit eigenem Katalog (Kleidung, Dokumente, Technik …): Abgehakt heißt „eingepackt“ und
   bleibt durchgestrichen stehen, Fortschritt „12 von 30 eingepackt“, gruppiert nach Kategorie, **Packstück**
   oder **Person**. Beim Tippen ordnen „@Anna“ und „#Koffer“ zu („3 T-Shirts @Anna #Koffer“). Neue Packlisten

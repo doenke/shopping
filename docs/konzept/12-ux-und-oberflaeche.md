@@ -76,7 +76,7 @@ Laptop-Ansicht.
 | 📋 Als Text teilen … | offene Einträge als Text in den Teilen-Dialog bzw. die Zwischenablage |
 | ↕ Kategorien sortieren … | Einkauf und Packliste |
 | Aus Mealie hinzufügen … | Rezept oder Wochenplan |
-| Mit Vorlage abgleichen … | in beide Richtungen |
+| Mit Vorlage abgleichen … | in beide Richtungen; Richtung Vorlage anfangs nichts angehakt |
 | Als Vorlage speichern, Archivieren, Als Hauptliste festlegen | je nach Typ |
 | Liste verlassen / Liste löschen | Mitglied / Besitzer |
 

@@ -58,10 +58,11 @@ export function SyncTemplateDialog({ list, templates, onClose }: Props) {
     };
   }, [listItems, templateItems, list.listType]);
 
-  // Preselect: everything the template has (except optional items), everything the list has.
+  // Preselect what the template has (except optional items); into the template nothing – a one-off
+  // on this list should not end up in every future one by accident.
   useEffect(() => {
     setToList(new Set(diff.missingInList.filter((i) => !i.optional).map((i) => i.id)));
-    setToTemplate(new Set(diff.missingInTemplate.map((i) => i.id)));
+    setToTemplate(new Set());
     setDiffChoice(new Map());
   }, [templateId, listItems === undefined, templateItems === undefined]);
 
