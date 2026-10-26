@@ -60,7 +60,8 @@ describe('free-text entries', () => {
   it('get the picture, and every entry of the same name shares it', async () => {
     await req('POST', '/api/v1/icons/generate', { targetType: 'entry', targetId: first, candidates: 1 });
     expect((await req('POST', '/api/v1/icons/run')).json().result).toBe('done');
-    expect(described.at(-1)).toContain('Zwergenbrot');
+    expect(described.at(-1)).toContain('German item: "Zwergenbrot"');
+    expect(described.at(-1)).toContain('on the list "Einkauf"');
 
     const a = await pulled(first);
     const b = await pulled(second);
@@ -100,6 +101,12 @@ describe('list icons', () => {
     const pulled = (await req('GET', '/api/v1/sync/pull?since=0')).json().lists.find((l: { id: string }) => l.id === id);
     expect(pulled.icon).toMatch(/^[0-9a-f]{10}$/);
     expect((await t.app.inject({ method: 'GET', url: `/icons/list/${id}.webp?v=${pulled.icon}` })).statusCode).toBe(200);
+
+    // ToDo lists: their Kategorie goes into the description too.
+    const todo = (await req('POST', '/api/v1/lists', { name: 'Steuer', type: 'todo', group: 'Finanzen' })).json().id;
+    await req('POST', '/api/v1/icons/generate', { targetType: 'list', targetId: todo, candidates: 1 });
+    expect((await req('POST', '/api/v1/icons/run')).json().result).toBe('done');
+    expect(described.at(-1)).toContain('"Steuer" – a to-do list in the category "Finanzen"');
 
     await req('PATCH', `/api/v1/lists/${id}`, { name: 'Gartencenter' });
     await t.icons.enqueueMissing();

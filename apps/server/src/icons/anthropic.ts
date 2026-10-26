@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import sharp from 'sharp';
-import { QuotaExceeded, type GenerateRequest, type GenerateResult, type IconGenerator } from './generators.js';
+import { DOMAIN_TEXT, QuotaExceeded, thingPrompt, thingSystem, type GenerateRequest, type GenerateResult, type IconDomain, type IconGenerator } from './generators.js';
 
 /**
  * Claude in the icon pipeline (docs/konzept/10-icons-plan.md):
@@ -63,7 +63,8 @@ const png = (data: Buffer) => ({ type: 'base64' as const, media_type: 'image/png
 
 // ---- SVG drawing ------------------------------------------------------------------
 
-const SVG_SYSTEM = `You draw grocery icons as SVG for a shopping list app. All icons must look like one set.
+const SVG_SYSTEM = `You draw icons as SVG for a household list app: groceries, things to pack for a trip, films, books and places to remember,
+tasks, and whole lists. All icons must look like one set, whatever they show.
 
 Canvas and composition:
 - <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">, nothing else around it.
@@ -132,7 +133,7 @@ export class ClaudeSvgGenerator implements IconGenerator {
     this.client = anthropicClient(opts.apiKey, opts.fetchImpl);
   }
 
-  async generate({ subject, style, hint, context, references, referenceSvgs }: GenerateRequest): Promise<GenerateResult> {
+  async generate({ subject, style, hint, context, domain, references, referenceSvgs }: GenerateRequest): Promise<GenerateResult> {
     // Style references first and stable (cached across icons), the task last.
     const refs: Anthropic.Beta.BetaContentBlockParam[] = [];
     if (referenceSvgs?.length) {
@@ -143,7 +144,7 @@ export class ClaudeSvgGenerator implements IconGenerator {
     }
     if (refs.length) refs[refs.length - 1] = { ...refs[refs.length - 1]!, cache_control: { type: 'ephemeral' } } as Anthropic.Beta.BetaContentBlockParam;
 
-    const task = [`Draw: ${subject}.`, context ? `It stands for ${context}.` : null, hint ? `Extra wish: ${hint}.` : null, `Style notes: ${style}`]
+    const task = [`Draw: ${subject}.`, domain ? `It is the icon for ${DOMAIN_TEXT[domain]}.` : null, context ? `It stands for ${context}.` : null, hint ? `Extra wish: ${hint}.` : null, `Style notes: ${style}`]
       .filter(Boolean)
       .join('\n');
     let msg: Anthropic.Beta.BetaMessage;
@@ -199,6 +200,8 @@ export interface ListContext {
   name: string;
   listType: string;
   description: string | null;
+  /** ToDo lists: their Kategorie (Arbeit, Hobby …). */
+  group?: string | null;
 }
 
 const LIST_KIND: Record<string, string> = {
@@ -209,7 +212,9 @@ const LIST_KIND: Record<string, string> = {
 };
 
 export function listContext(l: ListContext): string {
-  return [`"${l.name}" – a ${LIST_KIND[l.listType] ?? 'list'}`, l.description ? `(about: ${l.description})` : null].filter(Boolean).join(' ');
+  return [`"${l.name}" – a ${LIST_KIND[l.listType] ?? 'list'}`, l.group ? `in the category "${l.group}"` : null, l.description ? `(about: ${l.description})` : null]
+    .filter(Boolean)
+    .join(' ');
 }
 
 export const LIST_SYSTEM =
@@ -254,7 +259,11 @@ export class ClaudeReviewer {
   }
 
   /** Looks at a candidate (on a light tile) next to the style references. */
-  async review(candidate: Buffer, item: { name: string; subject: string }, references: Buffer[]): Promise<{ verdict: ReviewVerdict; costMicro: number }> {
+  async review(
+    candidate: Buffer,
+    item: { name: string; subject: string; domain?: IconDomain },
+    references: Buffer[],
+  ): Promise<{ verdict: ReviewVerdict; costMicro: number }> {
     const onTile = (img: Buffer) => sharp(img).resize(256, 256).flatten({ background: '#F4F1EA' }).png().toBuffer();
     const content: Anthropic.Beta.BetaContentBlockParam[] = [];
     if (references.length) {
@@ -263,11 +272,16 @@ export class ClaudeReviewer {
       content[content.length - 1] = { ...content[content.length - 1]!, cache_control: { type: 'ephemeral' } } as Anthropic.Beta.BetaContentBlockParam;
     }
     content.push(
-      { type: 'text', text: `Candidate icon for the shopping list item "${item.name}" (meant to show: ${item.subject}):` },
+      { type: 'text', text: `Candidate icon for ${DOMAIN_TEXT[item.domain ?? 'shopping']}: "${item.name}" (meant to show: ${item.subject}):` },
       { type: 'image', source: png(await onTile(candidate)) },
       {
         type: 'text',
-        text: 'Check the candidate for a grocery icon set: soft flat illustration, one object or a small typical group, transparent background, light from top left, no text, no logos. Be strict about recognisability and text, lenient about small style differences.',
+        text:
+          'Check the candidate for this icon set of a household list app (groceries, things to pack, films and books, tasks, lists): soft flat illustration, ' +
+          'one object or motif (or a small typical group), transparent background, light from top left, no text, no logos. "Recognizable" means it clearly ' +
+          'shows what it is meant to show' +
+          (item.domain === 'memo' || item.domain === 'list' || item.domain === 'category' ? ' – a symbolic motif is right here, it does not have to be a product' : '') +
+          '. Be strict about recognisability and text, lenient about small style differences.',
       },
     );
     let msg: Anthropic.Beta.BetaMessage;
@@ -319,18 +333,15 @@ export class ClaudeReviewer {
     return { subject: subject.trim().slice(0, 200), costMicro: costMicro(msg.model, msg.usage) };
   }
 
-  /** English picture description for a German item (instead of the Cloudflare text model). */
-  async describe(name: string, category: string): Promise<{ subject: string; costMicro: number }> {
+  /** English picture description for a German item to buy or to pack (instead of the Cloudflare text model). */
+  async describe(name: string, category: string, kind = 'shopping', listName?: string): Promise<{ subject: string; costMicro: number }> {
     let msg: Anthropic.Beta.BetaMessage;
     try {
       msg = await this.client.beta.messages.create({
         model: 'claude-haiku-5-5',
         max_tokens: 1000,
-        system:
-          'You write the subject line for a grocery icon. Say what is shown and how many, e.g. "group of three potatoes", ' +
-          '"plain white carton of milk with a small blue band, three-quarter view", "single roll of toilet paper". ' +
-          'Packaged goods are generic, without brands or text. One short English noun phrase, no style words.',
-        messages: [{ role: 'user', content: `German item: "${name}" (category: ${category})` }],
+        system: thingSystem(kind),
+        messages: [{ role: 'user', content: thingPrompt(name, category, listName) }],
         output_config: {
           effort: 'low',
           format: { type: 'json_schema', schema: { type: 'object', properties: { subject: { type: 'string' } }, required: ['subject'], additionalProperties: false } },

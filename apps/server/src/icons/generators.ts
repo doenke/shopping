@@ -22,6 +22,38 @@ export interface GenerateRequest {
   hint?: string | null;
   /** Merkliste entries: what the entry is and what the list is about. */
   context?: string | null;
+  /** What kind of thing the icon stands for (a grocery, something to pack, a film …). */
+  domain?: IconDomain;
+}
+
+/** What an icon stands for – the prompts are worded for it instead of always for groceries. */
+export type IconDomain = 'shopping' | 'packing' | 'memo' | 'todo' | 'list' | 'category';
+
+/** How to name such a thing in a prompt. */
+export const DOMAIN_TEXT: Record<IconDomain, string> = {
+  shopping: 'an item on a shopping list (groceries, household goods)',
+  packing: 'an item on a packing list (something to take on a trip)',
+  memo: 'an entry on a list of things to remember (a film, a book, a restaurant, a place …), shown as one motif that evokes it',
+  todo: 'a task on a to-do list',
+  list: 'a whole list, shown small next to its name',
+  category: 'a section of a list (a category heading)',
+};
+
+/** The German item with what helps to understand it: its category and, for free text, the list it is on. */
+export function thingPrompt(name: string, category: string, listName?: string): string {
+  return `German item: "${name}" (category: ${category}${listName ? `; on the list "${listName}"` : ''})`;
+}
+
+/** System prompt for the English subject line of a thing to buy or to pack. */
+export function thingSystem(kind: string, plain = false): string {
+  const only = plain ? ' Answer with one short English noun phrase only, no quotes, no style words.' : ' One short English noun phrase, no style words.';
+  return kind === 'packing'
+    ? 'You write the subject line for an icon of a thing to take on a trip (clothes, toiletries, gadgets, documents, sports gear …). Say what is shown and ' +
+        'how many, e.g. "pair of hiking boots", "phone charger with a coiled cable", "small first-aid kit", "folded rain jacket". Generic, without brands or text.' +
+        only
+    : 'You write the subject line for a grocery icon. Say what is shown and how many, e.g. "group of three potatoes", ' +
+        '"plain white carton of milk with a small blue band, three-quarter view", "single roll of toilet paper". Packaged goods are generic, without brands or text.' +
+        only;
 }
 
 export interface GenerateResult {
@@ -146,8 +178,8 @@ export class CloudflareGenerator implements IconGenerator {
     return text.slice(0, 200);
   }
 
-  /** Asks a small text model how to draw a German grocery item (used when the catalog has no description). */
-  async describe(name: string, category: string): Promise<string> {
+  /** Asks a small text model how to draw a German item to buy or to pack (used when the catalog has no description). */
+  async describe(name: string, category: string, kind = 'shopping', listName?: string): Promise<string> {
     const res = await this.fetch(this.url(CLOUDFLARE_TEXT_MODEL), {
       method: 'POST',
       headers: { authorization: `Bearer ${this.opts.token}`, 'content-type': 'application/json' },
@@ -155,12 +187,9 @@ export class CloudflareGenerator implements IconGenerator {
         messages: [
           {
             role: 'system',
-            content:
-              'You write the subject line for a grocery icon. Answer with one short English noun phrase only, no quotes, no style words. ' +
-              'Say what is shown and how many, e.g. "group of three potatoes", "plain white carton of milk with a small blue band, three-quarter view", ' +
-              '"single roll of toilet paper". Packaged goods are generic, without brands or text.',
+            content: thingSystem(kind, true),
           },
-          { role: 'user', content: `German item: "${name}" (category: ${category})` },
+          { role: 'user', content: thingPrompt(name, category, listName) },
         ],
         max_tokens: 60,
       }),

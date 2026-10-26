@@ -154,6 +154,11 @@ describe('Claude in the icon pipeline', () => {
     );
     expect(job).toMatchObject({ status: 'queued', attempts: 1 });
     expect(job!.hint).toContain('a blurry blob');
+    // The pre-review knows what the icon is for – a category here, not a grocery.
+    const review = calls.find((c) => c.kind === 'review')!;
+    expect(review.text).toContain('a section of a list');
+    expect(review.text).toContain('a symbolic motif is right here');
+    expect(review.text).not.toContain('grocery icon set');
     expect((await req('POST', '/api/v1/icons/run')).json().result).toBe('done');
     const [after] = await t.db.execute<{ status: string }>(sql`SELECT status FROM icon_jobs WHERE target_id = 'getraenke' ORDER BY created_at DESC LIMIT 1`);
     expect(after!.status).toBe('done');

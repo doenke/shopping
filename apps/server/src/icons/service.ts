@@ -11,7 +11,7 @@ import type { SyncHub } from '../sync/hub.js';
 import type { SyncService } from '../sync/service.js';
 import { ApiError } from '../api/errors.js';
 import { ClaudeReviewer, ClaudeSvgGenerator, entryContext, ENTRY_SYSTEM, LIST_SYSTEM, listContext, type EntryContext, type ReviewVerdict } from './anthropic.js';
-import { CloudflareGenerator, OpenAiGenerator, QuotaExceeded, type IconGenerator, type ProviderId } from './generators.js';
+import { CloudflareGenerator, OpenAiGenerator, QuotaExceeded, type IconDomain, type IconGenerator, type ProviderId } from './generators.js';
 import { processIcon, referenceImage } from './image.js';
 import { buildPrompt, DEFAULT_STYLE } from './prompt.js';
 import { ANCHOR_ITEMS, CATEGORY_SUBJECTS, PACKING_SUBJECTS, SEED_SUBJECTS } from './subjects.js';
@@ -364,7 +364,14 @@ export class IconService {
 
   private async listOf(listId: string) {
     const [row] = await this.db.select().from(lists).where(and(eq(lists.id, listId), eq(lists.deleted, false)));
-    return row ? { name: row.name, listType: row.listType, description: typeof row.settings.description === 'string' ? row.settings.description : null } : null;
+    return row
+      ? {
+          name: row.name,
+          listType: row.listType,
+          description: typeof row.settings.description === 'string' ? row.settings.description : null,
+          group: typeof row.settings.group === 'string' ? row.settings.group : null,
+        }
+      : null;
   }
 
   /** A Merkliste entry or a free-text entry with its list (for the context of its picture). */
@@ -395,9 +402,9 @@ export class IconService {
     targetId: string,
     gen: IconGenerator,
     s: IconSettings,
-  ): Promise<{ subject: string; name: string; context?: string }> {
+  ): Promise<{ subject: string; name: string; context?: string; domain: IconDomain }> {
     if (targetType === 'category') {
-      return { subject: CATEGORY_SUBJECTS[targetId] ?? 'plain shopping bag', name: getCategory(targetId).name };
+      return { subject: CATEGORY_SUBJECTS[targetId] ?? 'plain shopping bag', name: getCategory(targetId).name, domain: 'category' };
     }
     if (targetType === 'list') {
       const l = await this.listOf(targetId);
@@ -424,7 +431,7 @@ export class IconService {
           return undefined;
         });
       }
-      return { subject: subject ?? `a simple object that stands for ${context}`, name: l.name, context };
+      return { subject: subject ?? `a simple object that stands for ${context}`, name: l.name, context, domain: 'list' };
     }
     if (targetType === 'entry') {
       // Merkliste: the list's description tells what "Dune" is (a film here, a book elsewhere).
@@ -433,7 +440,9 @@ export class IconService {
       if (e.listType !== 'memo') {
         // Free text on a shopping or packing list: an object like a catalog item.
         const kind = e.listType === 'packing' ? 'packing' : 'shopping';
-        return { subject: await this.describeThing(e.name, e.categoryId, kind, gen, s), name: e.name };
+        // The list's name helps: "Mutter" on "Baumarkt" is a nut, not a mother.
+        const subject = await this.describeThing(e.name, e.categoryId, kind, gen, s, e.listName);
+        return { subject, name: e.name, domain: kind, context: `"${e.name}" on the list "${e.listName}"` };
       }
       const context = entryContext(e);
       let subject: string | undefined;
@@ -457,24 +466,25 @@ export class IconService {
           return undefined;
         });
       }
-      return { subject: subject ?? `a simple object that evokes ${context}`, name: e.name, context };
+      return { subject: subject ?? `a simple object that evokes ${context}`, name: e.name, context, domain: 'memo' };
     }
     const [item] = await this.db.select().from(catalogItems).where(eq(catalogItems.id, targetId));
     if (!item) throw new Error('Artikel nicht gefunden');
-    if (item.iconSubject) return { subject: item.iconSubject, name: item.name };
+    const domain: IconDomain = item.kind === 'packing' ? 'packing' : 'shopping';
+    if (item.iconSubject) return { subject: item.iconSubject, name: item.name, domain };
     const subject = await this.describeThing(item.name, item.categoryId, item.kind, gen, s);
     await this.db.update(catalogItems).set({ iconSubject: subject }).where(eq(catalogItems.id, item.id));
-    return { subject, name: item.name };
+    return { subject, name: item.name, domain };
   }
 
   /** English picture description of a thing to buy or pack: built-in list, Claude, a text model, or the German name. */
-  private async describeThing(name: string, categoryId: string | null, kind: string, gen: IconGenerator, s: IconSettings): Promise<string> {
+  private async describeThing(name: string, categoryId: string | null, kind: string, gen: IconGenerator, s: IconSettings, listName?: string): Promise<string> {
     let subject = kind === 'packing' ? (PACKING_SUBJECTS[name] ?? SEED_SUBJECTS[name]) : SEED_SUBJECTS[name];
     const category = getCategory(categoryId ?? 'eigene').name;
     const claude = this.claude(s);
     if (!subject && claude && (await this.withinBudget(s, 'claude', 1_000))) {
       subject = await claude
-        .describe(name, category)
+        .describe(name, category, kind, listName)
         .then(async (r) => {
           await this.recordUsage('claude', 0, r.costMicro);
           return r.subject;
@@ -485,7 +495,7 @@ export class IconService {
         });
     }
     if (!subject && gen instanceof CloudflareGenerator) {
-      subject = await gen.describe(name, category).catch((err: Error) => {
+      subject = await gen.describe(name, category, kind, listName).catch((err: Error) => {
         if (err instanceof QuotaExceeded) throw err;
         this.log.warn({ err: err.message }, 'Bildbeschreibung fehlgeschlagen');
         return undefined;
@@ -521,7 +531,7 @@ export class IconService {
     let passed = 0;
     const verdicts: ReviewVerdict[] = [];
     try {
-      const { subject, name, context } = await this.subject(job.targetType, job.targetId, gen, s);
+      const { subject, name, context, domain } = await this.subject(job.targetType, job.targetId, gen, s);
       const anchors = (await this.anchors()).filter((a) => !(a.targetType === job.targetType && a.targetId === job.targetId) && a.image);
       // The most recently approved anchors are used, at most as many as the provider takes.
       const refs = anchors.slice(-gen.maxReferences);
@@ -542,7 +552,7 @@ export class IconService {
       for (let n = 0; n < job.candidates; n++) {
         if (!(await this.withinBudget(s, gen.provider, gen.costMicro))) break;
         const seed = randomInt(1, 2 ** 31 - 1);
-        const result = await gen.generate({ prompt, references, referenceSvgs, seed, subject, style: s.style, hint: job.hint, context }).catch((err: Error) => {
+        const result = await gen.generate({ prompt, references, referenceSvgs, seed, subject, style: s.style, hint: job.hint, context, domain }).catch((err: Error) => {
           // A broken SVG is one bad candidate, not a broken provider.
           if (gen.provider === 'claude' && !(err instanceof QuotaExceeded) && /SVG|Element|Verweis|url\(|Inhalt|JSON/.test(err.message)) {
             this.log.warn({ err: err.message }, 'SVG unbrauchbar');
@@ -561,7 +571,7 @@ export class IconService {
         let aiReview: ReviewVerdict | null = null;
         if (reviewer && (await this.withinBudget(s, 'claude', 2_000))) {
           aiReview = await reviewer
-            .review(processed.image, { name, subject }, reviewRefs)
+            .review(processed.image, { name, subject, domain }, reviewRefs)
             .then(async (r) => {
               await this.recordUsage('claude', 0, r.costMicro);
               return r.verdict;
