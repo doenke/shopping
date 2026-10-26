@@ -97,11 +97,16 @@ export function useRemoteChecks(ttl = 2500): Map<string, RemoteCheck> {
   return checks;
 }
 
-export type Route = { page: 'list'; listId?: string } | { page: 'settings' } | { page: 'icons' };
+export const SETTINGS_SECTIONS = ['order', 'categories', 'mealie', 'api', 'webhooks'] as const;
+export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
+
+export type Route = { page: 'list'; listId?: string } | { page: 'settings'; section?: SettingsSection } | { page: 'icons' };
 
 function parseRoute(): Route {
   const hash = location.hash.replace(/^#\/?/, '');
   if (hash === 'settings') return { page: 'settings' };
+  const section = /^settings\/(\w+)$/.exec(hash)?.[1] as SettingsSection | undefined;
+  if (section && SETTINGS_SECTIONS.includes(section)) return { page: 'settings', section };
   if (hash === 'icons') return { page: 'icons' };
   const m = /^list\/([0-9a-f-]{36})$/.exec(hash);
   return { page: 'list', listId: m?.[1] };
@@ -118,7 +123,14 @@ export function useRoute(): Route {
 }
 
 export function navigate(route: Route): void {
-  location.hash = route.page !== 'list' ? `#/${route.page}` : route.listId ? `#/list/${route.listId}` : '#/';
+  location.hash =
+    route.page === 'settings' && route.section
+      ? `#/settings/${route.section}`
+      : route.page !== 'list'
+        ? `#/${route.page}`
+        : route.listId
+          ? `#/list/${route.listId}`
+          : '#/';
 }
 
 export function useMediaQuery(query: string): boolean {

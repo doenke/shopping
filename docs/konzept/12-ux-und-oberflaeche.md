@@ -80,6 +80,13 @@ Laptop-Ansicht.
 | Als Vorlage speichern, Archivieren, Als Hauptliste festlegen | je nach Typ |
 | Liste verlassen / Liste löschen | Mitglied / Besitzer |
 
+## Einstellungen
+
+Eine kurze Übersicht wie in den Handy-Einstellungen: oben das Konto (Bild, Name, Haushalt, Abmelden),
+darunter Gruppen mit je einer Zeile und dem aktuellen Stand – **Für mich** (Reihenfolge), **Haushalt**
+(eigene Kategorien, Icons), **Verbindungen** (Mealie, API & Integrationen, Webhooks). Ein Tipp öffnet eine
+eigene Seite (`#/settings/mealie` …) mit „‹ Einstellungen“ zurück.
+
 ## Neue Liste
 
 Ein Knopf **„+ Neu“**: Typ (Einkauf, Packliste, Merkliste, ToDo), Name mit passendem Vorschlag,

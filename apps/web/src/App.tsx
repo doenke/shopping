@@ -15,7 +15,7 @@ import { SortDialog } from './components/SortDialog';
 import { SyncTemplateDialog } from './components/SyncTemplateDialog';
 import { ListView } from './components/ListView';
 import { Login } from './components/Login';
-import { Settings } from './components/Settings';
+import { SECTION_TITLE, Settings } from './components/Settings';
 import { SyncBadge, SyncDot, useSyncInfo } from './components/SyncBadge';
 import { setMeta } from './db';
 import { CategoryContext } from './categories';
@@ -243,7 +243,7 @@ function Shell({ me }: { me: Me }) {
           )}
           <h1 className="topbar__title">
             {route.page === 'list' && list && <ListIcon list={list} size="md" />}
-            {route.page === 'settings' ? 'Einstellungen' : route.page === 'icons' ? 'Icons' : (list?.name ?? 'Shopping')}
+            {route.page === 'settings' ? (route.section ? SECTION_TITLE[route.section] : 'Einstellungen') : route.page === 'icons' ? 'Icons' : (list?.name ?? 'Shopping')}
           </h1>
           {shopList &&
             (shopping ? (
@@ -286,9 +286,14 @@ function Shell({ me }: { me: Me }) {
 
         <main className="content">
           {route.page === 'settings' ? (
-            <Settings me={me} onSort={setSorting} />
+            <Settings key={route.section ?? 'overview'} me={me} section={route.section} onSort={setSorting} />
           ) : route.page === 'icons' && !guest ? (
-            <IconReview catalog={catalog.items} />
+            <>
+              <a className="settings-back" href="#/settings">
+                ‹ Einstellungen
+              </a>
+              <IconReview catalog={catalog.items} />
+            </>
           ) : list && items ? (
             <ListView
               ref={addRef}
