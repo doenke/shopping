@@ -1,5 +1,6 @@
 import type { CatalogIndex } from './catalog-index.js';
 import type { Amount } from './model.js';
+import { extractDue } from './due.js';
 import { extractPackingTokens } from './packing.js';
 import { findProperty } from './properties.js';
 import { findUnit } from './units.js';
@@ -14,6 +15,8 @@ export interface ParsedItem {
   /** Packing lists: "@Anna" and "#Koffer" in the typed text. */
   person?: string | null;
   container?: string | null;
+  /** ToDo lists: "!morgen", "!12.11." → YYYY-MM-DD. */
+  due?: string | null;
 }
 
 const NUMBER_WORDS: Record<string, number> = {
@@ -61,7 +64,8 @@ function capitalize(s: string): string {
 }
 
 export function parseItem(text: string, catalog?: CatalogIndex): ParsedItem | null {
-  const packing = extractPackingTokens(text);
+  const dated = extractDue(text);
+  const packing = extractPackingTokens(dated.text);
   let rest = packing.text;
   if (!rest) return null;
 
@@ -155,6 +159,7 @@ export function parseItem(text: string, catalog?: CatalogIndex): ParsedItem | nu
     note: notes.length ? notes.join(', ') : null,
     ...(packing.person ? { person: packing.person } : {}),
     ...(packing.container ? { container: packing.container } : {}),
+    ...(dated.due ? { due: dated.due } : {}),
   };
 }
 

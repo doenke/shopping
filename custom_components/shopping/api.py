@@ -56,7 +56,7 @@ class ShoppingClient:
         return await self._request("GET", "/api/v1/me")
 
     async def lists(self) -> list[dict[str, Any]]:
-        """All shopping lists (no templates)."""
+        """All lists – shopping, packing, Merk- and ToDo lists (no templates)."""
         return await self._request("GET", "/api/v1/lists")
 
     async def list(self, list_id: str) -> dict[str, Any]:

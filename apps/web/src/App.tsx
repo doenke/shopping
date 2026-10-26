@@ -60,6 +60,7 @@ function Shell({ me }: { me: Me }) {
   const shoppingLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'shopping');
   const packingLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'packing');
   const memoLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'memo');
+  const todoLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'todo');
   const archived = lists.filter((l) => !l.isTemplate && l.archivedAt);
   const templates = lists.filter((l) => l.isTemplate);
   const mainList = shoppingLists.find((l) => l.id === me.defaultListId) ?? shoppingLists[0];
@@ -110,6 +111,15 @@ function Shell({ me }: { me: Me }) {
     if (!name?.trim()) return;
     const description = prompt('Worum geht es? (hilft auch bei den Bildern)', name.trim() === 'Filme' ? 'Filme und Serien, die wir sehen wollen' : '');
     const id = await createList(name.trim(), false, 'memo', description);
+    navigate({ page: 'list', listId: id });
+    setDrawer(false);
+  };
+
+  /** ToDo lists start private; "⋮ → Mit dem Haushalt teilen" shares them. */
+  const newTodo = async () => {
+    const name = prompt('Name der ToDo-Liste', 'Aufgaben');
+    if (!name?.trim()) return;
+    const id = await createList(name.trim(), false, 'todo');
     navigate({ page: 'list', listId: id });
     setDrawer(false);
   };
@@ -193,6 +203,25 @@ function Shell({ me }: { me: Me }) {
           + Neue Merkliste
         </button>
       )}
+      {(todoLists.length > 0 || !guest) && <h3 className="sidebar__section">ToDo</h3>}
+      <ul>
+        {todoLists.map((l) => (
+          <li key={l.id}>
+            <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
+              <span>
+                ✅ {l.name}
+                {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
+              </span>
+              <OpenCount listId={l.id} />
+            </a>
+          </li>
+        ))}
+      </ul>
+      {!guest && (
+        <button type="button" className="btn btn--ghost" onClick={() => void newTodo()}>
+          + Neue ToDo-Liste
+        </button>
+      )}
       {!guest && <h3 className="sidebar__section">Vorlagen</h3>}
       <ul>
         {templates.map((l) => (
@@ -251,7 +280,7 @@ function Shell({ me }: { me: Me }) {
 
   return (
     <IconContext.Provider value={icons}>
-    <div className={`shell${wide ? ' shell--wide' : ''}${extraWide && route.page === 'list' && list && list.listType !== 'memo' ? ' shell--catalog' : ''}`}>
+    <div className={`shell${wide ? ' shell--wide' : ''}${extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' ? ' shell--catalog' : ''}`}>
       {wide ? sidebar : drawer && <div className="drawer" onClick={() => setDrawer(false)}>{sidebar}</div>}
 
       <div className="main">
@@ -272,7 +301,7 @@ function Shell({ me }: { me: Me }) {
                 <ListMenu
                   list={list}
                   me={me}
-                  hasTemplates={list.listType !== 'memo' && templates.some((t) => t.listType === list.listType)}
+                  hasTemplates={list.listType !== 'memo' && list.listType !== 'todo' && templates.some((t) => t.listType === list.listType)}
                   onClose={() => setMenu(false)}
                   onImport={() => setImporting(true)}
                   onApplyTemplate={() => setTemplateDialog({ mode: 'apply', type: list.listType })}
@@ -294,7 +323,7 @@ function Shell({ me }: { me: Me }) {
               key={list.id}
               list={list}
               items={items}
-              index={list.listType === 'packing' ? catalog.packingIndex : list.listType === 'memo' ? catalog.emptyIndex : catalog.index}
+              index={list.listType === 'packing' ? catalog.packingIndex : list.listType === 'memo' || list.listType === 'todo' ? catalog.emptyIndex : catalog.index}
               users={users}
               remoteChecks={remoteChecks}
             />
@@ -328,7 +357,7 @@ function Shell({ me }: { me: Me }) {
       )}
       {showMembers && list && <MembersDialog list={list} me={me} onClose={() => setShowMembers(false)} />}
       {importing && list && <ImportDialog listId={list.id} onClose={() => setImporting(false)} />}
-      {extraWide && route.page === 'list' && list && list.listType !== 'memo' && (
+      {extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' && (
         <CatalogPanel key={list.listType} listId={list.id} listType={list.listType} catalog={catalog.items} items={items ?? []} />
       )}
     </div>
@@ -425,7 +454,7 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
           Vorlage übernehmen …
         </button>
       )}
-      {!list.isTemplate && list.listType !== 'memo' && !guest && (
+      {!list.isTemplate && list.listType !== 'memo' && list.listType !== 'todo' && !guest && (
         <button
           type="button"
           role="menuitem"

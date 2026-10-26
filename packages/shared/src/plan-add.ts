@@ -74,7 +74,7 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
           amounts: p.amounts,
           properties: p.properties,
           note: p.note,
-          attributes: withPacking({ ...done.attributes, sources: p.sources ?? [] }, packingOf(p)),
+          attributes: withPacking({ ...done.attributes, sources: p.sources ?? [], ...(p.due ? { due: p.due } : {}) }, packingOf(p)),
         },
         kind: 'restored',
       });
@@ -91,8 +91,8 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
       properties: p.properties,
       note: p.note,
       position,
-      ...(p.sources?.length || p.person || p.container
-        ? { attributes: withPacking(p.sources?.length ? { sources: p.sources } : {}, packingOf(p)) }
+      ...(p.sources?.length || p.person || p.container || p.due
+        ? { attributes: withPacking({ ...(p.sources?.length ? { sources: p.sources } : {}), ...(p.due ? { due: p.due } : {}) }, packingOf(p)) }
         : {}),
       ...(p.optional ? { optional: true } : {}),
     };

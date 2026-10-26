@@ -2,6 +2,7 @@ import {
   attributeLabels,
   categoriesFor,
   categoryInList,
+  dueOf,
   formatAmount,
   packingInfo,
   SUGGESTED_PROPERTIES,
@@ -28,6 +29,15 @@ interface Props {
   onClose: () => void;
 }
 
+/** Sets or removes the due date (undefined: leave as is). */
+function withDue(attributes: Record<string, unknown>, due: string | undefined): Record<string, unknown> {
+  if (due === undefined) return attributes;
+  const next = { ...attributes };
+  if (due) next.due = due;
+  else delete next.due;
+  return next;
+}
+
 function parseQuantity(s: string): number | null {
   const n = Number(s.replace(',', '.'));
   return s.trim() && Number.isFinite(n) && n > 0 ? n : null;
@@ -36,7 +46,9 @@ function parseQuantity(s: string): number | null {
 export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const isTemplate = list.isTemplate;
   const packing = list.listType === 'packing';
-  const memo = list.listType === 'memo';
+  const todo = list.listType === 'todo';
+  // Merk- and ToDo lists: no amounts, no categories.
+  const memo = list.listType === 'memo' || todo;
   const labels = attributeLabels(list.listType);
   const categories = categoriesFor(list.listType);
   const ref = useRef<HTMLDialogElement>(null);
@@ -50,6 +62,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const [categoryId, setCategoryId] = useState(categoryInList(item.categoryId, list.listType).id);
   const [person, setPerson] = useState(packingInfo(item).person ?? '');
   const [container, setContainer] = useState(packingInfo(item).container ?? '');
+  const [due, setDue] = useState(dueOf(item) ?? '');
   const [forAll, setForAll] = useState(false);
   const [optional, setOptional] = useState(item.optional);
   const [reported, setReported] = useState<'idle' | 'done' | 'error'>('idle');
@@ -72,7 +85,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
       note: note.trim() || null,
       categoryId,
       ...(isTemplate ? { optional } : {}),
-      ...(labels ? { attributes: withPacking(item.attributes, { person, container }) } : {}),
+      ...(labels ? { attributes: withDue(withPacking(item.attributes, { person, container }), todo ? due : undefined) } : {}),
     });
     if (forAll && item.catalogItemId && categoryId !== item.categoryId) {
       await fetch(`/api/v1/catalog/${item.catalogItemId}`, {
@@ -151,11 +164,25 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="z. B. die von Oma" />
         </label>
 
+        {todo && (
+          <label className="field">
+            <span>Fällig am</span>
+            <div className="field__row">
+              <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+              {due && (
+                <button type="button" className="link" onClick={() => setDue('')}>
+                  kein Datum
+                </button>
+              )}
+            </div>
+          </label>
+        )}
+
         {labels && (
           <div className="field__row">
             <label className="field">
               <span>{labels.person}</span>
-              <input value={person} onChange={(e) => setPerson(e.target.value)} list="packing-people" placeholder={memo ? 'z. B. Ben' : 'alle'} />
+              <input value={person} onChange={(e) => setPerson(e.target.value)} list="packing-people" placeholder={todo ? 'z. B. Anna' : memo ? 'z. B. Ben' : 'alle'} />
             </label>
             <label className="field">
               <span>{labels.container}</span>
@@ -163,7 +190,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
                 value={container}
                 onChange={(e) => setContainer(e.target.value)}
                 list="packing-containers"
-                placeholder={memo ? 'z. B. Netflix' : 'z. B. Koffer'}
+                placeholder={todo ? 'z. B. Garten' : memo ? 'z. B. Netflix' : 'z. B. Koffer'}
               />
             </label>
             <datalist id="packing-people">

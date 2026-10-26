@@ -134,3 +134,28 @@ async def test_revoked_token_asks_for_reauth(hass: HomeAssistant, shopping: Shop
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
     assert await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_todo_list_with_due_dates(hass: HomeAssistant, shopping: ShoppingServer) -> None:
+    entry = await setup(hass, shopping)
+    shopping.request("POST", "/api/v1/lists", {"name": "Haus", "type": "todo"})
+    entity = "todo.haus"
+    await wait_for(hass, lambda: hass.states.get(entity) is not None)
+    # ToDo lists support due dates (feature flag), grocery lists do not.
+    assert hass.states.get(entity).attributes["supported_features"] & 16
+    assert not hass.states.get("todo.einkauf").attributes["supported_features"] & 16
+
+    await hass.services.async_call(
+        "todo", "add_item", {"item": "Reifen wechseln", "due_date": "2026-11-20", "description": "Winterreifen"}, target={"entity_id": entity}, blocking=True
+    )
+    await wait_for(hass, lambda: hass.states.get(entity).state == "1")
+    items = await get_items(hass, entity)
+    assert items[0]["summary"] == "Reifen wechseln"
+    assert items[0]["due"] == "2026-11-20"
+    assert items[0]["description"] == "Winterreifen"
+
+    await hass.services.async_call("todo", "update_item", {"item": "Reifen wechseln", "due_date": "2026-11-22"}, target={"entity_id": entity}, blocking=True)
+    task = shopping.request("GET", "/api/v1/lists/Haus")["items"][0]  # type: ignore[index]
+    assert task["due"] == "2026-11-22"
+    assert task["note"] == "Winterreifen"
+    assert await hass.config_entries.async_unload(entry.entry_id)

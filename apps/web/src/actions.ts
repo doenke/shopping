@@ -1,4 +1,4 @@
-import { packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem } from '@shopping/shared';
+import { defaultVisibility, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem } from '@shopping/shared';
 import { db } from './db';
 import { sync } from './sync/engine';
 
@@ -35,7 +35,7 @@ export async function createList(
   isTemplate = false,
   listType: ListType = 'shopping',
   description?: string | null,
-  visibility: 'household' | 'private' = 'household',
+  visibility: 'household' | 'private' = defaultVisibility(listType),
 ): Promise<string> {
   const id = crypto.randomUUID();
   await sync.mutateList(id, { name, listType, isTemplate, visibility, ...(description?.trim() ? { settings: { description: description.trim() } } : {}) });
@@ -110,7 +110,7 @@ export async function shareList(list: ListRow, renew = false): Promise<void> {
     return;
   }
   const { url } = (await res.json()) as { url: string };
-  const text = `${list.listType === 'packing' ? 'Unsere Packliste' : list.listType === 'memo' ? 'Unsere Merkliste' : 'Unsere Einkaufsliste'} „${list.name}“`;
+  const text = `${list.listType === 'packing' ? 'Unsere Packliste' : list.listType === 'memo' ? 'Unsere Merkliste' : list.listType === 'todo' ? 'Unsere ToDo-Liste' : 'Unsere Einkaufsliste'} „${list.name}“`;
   if (navigator.share) {
     await navigator.share({ title: list.name, text, url }).catch(() => undefined);
   } else {

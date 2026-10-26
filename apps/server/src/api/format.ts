@@ -1,4 +1,4 @@
-import { categoryInList, formatAmounts, getCategory, itemSpecification, listDescription, packingInfo, type ItemRow, type ItemSource, type ListRow, type ListType } from '@shopping/shared';
+import { categoryInList, dueOf, formatAmounts, getCategory, itemSpecification, listDescription, packingInfo, type ItemRow, type ItemSource, type ListRow, type ListType } from '@shopping/shared';
 
 /** The public shape of an item in the REST API, SSE and MCP. */
 export interface ApiItem {
@@ -24,6 +24,10 @@ export interface ApiItem {
   /** Merklisten: who the tip is from, and where to find it (same values as person/container). */
   tipFrom: string | null;
   where: string | null;
+  /** ToDo lists: due date (YYYY-MM-DD), who takes care of it, area – again the same values. */
+  due: string | null;
+  assignee: string | null;
+  area: string | null;
   /** Token or AI assistant the item was added through ("Claude", "Home Assistant"). */
   addedVia: string | null;
 }
@@ -68,6 +72,9 @@ export function toApiItem(i: ItemRow, userNames: Map<string, string>, listType?:
     container: packing.container,
     tipFrom: packing.person,
     where: packing.container,
+    due: dueOf(i),
+    assignee: packing.person,
+    area: packing.container,
     addedVia: typeof i.attributes.via === 'string' ? i.attributes.via : null,
   };
 }

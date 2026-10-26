@@ -3,7 +3,7 @@ export interface Amount {
   u: string | null;
 }
 
-export const LIST_TYPES = ['shopping', 'packing', 'memo'] as const;
+export const LIST_TYPES = ['shopping', 'packing', 'memo', 'todo'] as const;
 export type ListType = (typeof LIST_TYPES)[number];
 
 /** Per-field HLC timestamps, used for last-writer-wins merging per field. */

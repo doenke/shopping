@@ -147,3 +147,10 @@ Nichts Blockierendes. Beim Bau zu klären:
   neu geteilt wird. Ein Haushaltswechsel (beim Login) nimmt die eigenen Listen mit.
 - Bestehende Daten: alle Accounts und Listen landen bei der Migration im Standard-Haushalt.
 
+### ToDo-Listen ✅ umgesetzt
+- Vierter Listentyp `todo`, beim Anlegen **privat** (änderbar über „Mit dem Haushalt teilen“).
+- Aufgaben ohne Katalog; Fälligkeit in `attributes.due` (JJJJ-MM-TT), getippt als „!heute/!morgen/!Fr/!12.11.“;
+  „@…“ = wer, „#…“ = Bereich (dieselben Felder wie bei Pack- und Merklisten; API `due`, `assignee`, `area`).
+- Ansicht als Checkliste, gruppiert nach Fälligkeit, Bereich oder Person; Erledigtes unter „Erledigt“.
+- Home Assistant: ToDo-Listen unterstützen das Fälligkeitsdatum, die Beschreibung ist die Notiz.
+

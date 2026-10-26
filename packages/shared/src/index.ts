@@ -4,6 +4,7 @@ export * from './categories.js';
 export * from './hlc.js';
 export * from './lww.js';
 export * from './model.js';
+export * from './due.js';
 export * from './packing.js';
 export * from './parser.js';
 export * from './properties.js';

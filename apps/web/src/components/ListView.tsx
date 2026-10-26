@@ -6,6 +6,7 @@ import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
 import { MemoView } from './MemoView';
 import { PackingView } from './PackingView';
+import { TodoView } from './TodoView';
 import { Tile } from './Tile';
 
 interface Props {
@@ -22,6 +23,7 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView(pr
   // Packing lists work differently: packed items stay visible (templates are shown like any template).
   if (props.list.listType === 'packing' && !props.list.isTemplate) return <PackingView ref={addRef} {...props} />;
   if (props.list.listType === 'memo') return <MemoView ref={addRef} {...props} />;
+  if (props.list.listType === 'todo') return <TodoView ref={addRef} {...props} />;
   return <ShoppingView ref={addRef} {...props} />;
 });
 

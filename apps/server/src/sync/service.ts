@@ -1,6 +1,7 @@
 import {
   Hlc,
   applyPatch,
+  defaultVisibility,
   mergeAmounts,
   packingInfo,
   samePacking,
@@ -135,6 +136,8 @@ export class SyncService {
         seq: 0,
       };
       applyPatch(row, patch, ts);
+      // ToDo lists start private, everything else is for the household – unless chosen otherwise.
+      if (patch.visibility === undefined) row.visibility = defaultVisibility(row.listType);
       await tx.insert(lists).values({
         id,
         ownerId: userId,

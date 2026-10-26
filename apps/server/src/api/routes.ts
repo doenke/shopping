@@ -20,8 +20,18 @@ const ItemObject = z.object({
   container: z.string().max(40).nullable().optional().describe('Packliste: Packstück, z. B. „Koffer“'),
   tipFrom: z.string().max(40).nullable().optional().describe('Merkliste: von wem der Tipp kommt'),
   where: z.string().max(80).nullable().optional().describe('Merkliste: wo es das gibt, z. B. „Netflix“'),
+  due: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional()
+    .describe('ToDo-Liste: fällig am (JJJJ-MM-TT)'),
+  assignee: z.string().max(40).nullable().optional().describe('ToDo-Liste: wer sich kümmert'),
+  area: z.string().max(40).nullable().optional().describe('ToDo-Liste: Bereich, z. B. „Garten“'),
 });
-const ListType = z.enum(['shopping', 'packing', 'memo']).describe('„shopping“ (Einkaufsliste), „packing“ (Packliste) oder „memo“ (Merkliste)');
+const ListType = z
+  .enum(['shopping', 'packing', 'memo', 'todo'])
+  .describe('„shopping“ (Einkaufsliste), „packing“ (Packliste), „memo“ (Merkliste) oder „todo“ (ToDo-Liste, standardmäßig privat)');
 const Description = z.string().max(300).nullable().describe('Worum es geht, z. B. „Filme und Serien, die wir sehen wollen“');
 const ItemInput = z.union([z.string().trim().min(1).max(300).describe('Freitext, z. B. „2 kg Kartoffeln festkochend“'), ItemObject]);
 
@@ -125,7 +135,7 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
         name: z.string().trim().min(1).max(80),
         type: ListType.optional(),
         description: Description.optional(),
-        private: z.boolean().optional().describe('Nur für mich – sonst sieht der ganze Haushalt die Liste'),
+        private: z.boolean().optional().describe('Nur für mich – sonst sieht der ganze Haushalt die Liste (ToDo-Listen: standardmäßig privat)'),
         template: z.string().optional(),
         isTemplate: z.boolean().optional(),
       }),

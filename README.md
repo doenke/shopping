@@ -41,6 +41,9 @@ eingebautem MCP-Server.
   gruppierbar nach Ort oder Tippgeber, Erledigtes (gesehen, gelesen, besucht) bleibt unter „Erledigt“.
   Jede Liste hat eine Beschreibung („Filme und Serien, die wir sehen wollen“); jeder Eintrag bekommt ein
   **eigenes Icon**, das mit dieser Beschreibung entsteht – bei Filmen also ein Motiv aus dem Film.
+- **ToDo-Listen** ✅ (standardmäßig **privat**): Aufgaben als Checkliste mit **Fälligkeit** („!morgen“,
+  „!Fr“, „!12.11.“), **Wer** („@Ben“) und **Bereich** („#Garten“), gruppiert nach Fälligkeit (Überfällig, Heute,
+  Diese Woche …), Bereich oder Person. In Home Assistant mit Fälligkeitsdatum.
 
 - **REST-API** mit API-Tokens (lesen / ändern / Mealie), OpenAPI-Doku unter `/api/docs`,
   Echtzeit-Ereignisse per Server-Sent Events

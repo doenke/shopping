@@ -45,8 +45,11 @@ export const DEFAULT_PACKING_CATEGORY = 'packen-sonstiges';
 /** Merklisten (films, books, restaurants …) have no categories of their own – one group. */
 export const MEMO_CATEGORIES: CategoryDef[] = [{ id: 'merkliste', name: 'Merkliste', color: '#5C7CBA', order: 10 }];
 
+/** ToDo lists: tasks have no categories either. */
+export const TODO_CATEGORIES: CategoryDef[] = [{ id: 'aufgaben', name: 'Aufgaben', color: '#4F8A8B', order: 10 }];
+
 /** All categories of all list types (ids are unique across types). */
-export const ALL_CATEGORIES: CategoryDef[] = [...CATEGORIES, ...PACKING_CATEGORIES, ...MEMO_CATEGORIES];
+export const ALL_CATEGORIES: CategoryDef[] = [...CATEGORIES, ...PACKING_CATEGORIES, ...MEMO_CATEGORIES, ...TODO_CATEGORIES];
 
 const byId = new Map(ALL_CATEGORIES.map((c) => [c.id, c]));
 
@@ -55,11 +58,11 @@ export function getCategory(id: string | null | undefined): CategoryDef {
 }
 
 export function categoriesFor(listType: string): CategoryDef[] {
-  return listType === 'packing' ? PACKING_CATEGORIES : listType === 'memo' ? MEMO_CATEGORIES : CATEGORIES;
+  return listType === 'packing' ? PACKING_CATEGORIES : listType === 'memo' ? MEMO_CATEGORIES : listType === 'todo' ? TODO_CATEGORIES : CATEGORIES;
 }
 
 export function defaultCategoryFor(listType: string): string {
-  return listType === 'packing' ? DEFAULT_PACKING_CATEGORY : listType === 'memo' ? 'merkliste' : DEFAULT_CATEGORY;
+  return listType === 'packing' ? DEFAULT_PACKING_CATEGORY : listType === 'memo' ? 'merkliste' : listType === 'todo' ? 'aufgaben' : DEFAULT_CATEGORY;
 }
 
 /** Category of an item shown in a list of the given type (unknown/other-type ones go to "Sonstiges"). */

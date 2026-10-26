@@ -16,13 +16,22 @@ function itemLine(i: ApiItem, type = 'shopping'): string {
   const packing =
     type === 'memo'
       ? [i.tipFrom && `Tipp von ${i.tipFrom}`, i.where && `bei ${i.where}`, i.note].filter(Boolean).join(', ')
-      : [i.person && `@${i.person}`, i.container && `#${i.container}`].filter(Boolean).join(' ');
+      : type === 'todo'
+        ? [i.due && `fällig ${i.due}`, i.assignee && `@${i.assignee}`, i.area && `#${i.area}`, i.note].filter(Boolean).join(', ')
+        : [i.person && `@${i.person}`, i.container && `#${i.container}`].filter(Boolean).join(' ');
   return `- ${i.checked ? '~~' : ''}${i.name}${spec}${i.checked ? '~~' : ''}${packing ? ` ${packing}` : ''}${from}`;
 }
 
 /** A list as Markdown, grouped by category – easy to read for models and people. */
 function listMarkdown(list: { name: string; type: string; description: string | null; isMain: boolean; items: ApiItem[] }): string {
-  const kind = list.type === 'packing' ? ' (Packliste, durchgestrichen = eingepackt)' : list.type === 'memo' ? ' (Merkliste, durchgestrichen = erledigt)' : '';
+  const kind =
+    list.type === 'packing'
+      ? ' (Packliste, durchgestrichen = eingepackt)'
+      : list.type === 'memo'
+        ? ' (Merkliste, durchgestrichen = erledigt)'
+        : list.type === 'todo'
+          ? ' (ToDo-Liste, durchgestrichen = erledigt)'
+          : '';
   const lines = [`# ${list.name}${list.isMain ? ' (Hauptliste)' : ''}${kind}`];
   if (list.description) lines.push('', `_${list.description}_`);
   if (list.items.length === 0) lines.push('', '_Nichts auf der Liste._');
@@ -45,7 +54,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     { name: 'shopping', title: 'Shopping – Einkaufslisten', version: '1.0.0' },
     {
       instructions:
-        'Einkaufslisten und Packlisten des Haushalts. Ohne Angabe einer Liste ist immer die Hauptliste (Einkauf) gemeint. Artikel am besten als natürlichen Text übergeben („2 kg Kartoffeln festkochend“) – Menge, Einheit und Eigenschaften werden erkannt. Gleiche Artikel werden zusammengeführt statt doppelt angelegt. In Packlisten bedeutet abgehakt „eingepackt“; „@Anna“ im Text ordnet einer Person zu, „#Koffer“ einem Packstück. Neue Packlisten am besten aus einer Packvorlage anlegen. Merklisten (Typ memo) sammeln Filme, Bücher, Restaurants usw.: „@Anna“ heißt dort „Tipp von Anna“, „#Netflix“ heißt „gibt es bei Netflix“; abgehakt = erledigt (gesehen, gelesen, besucht).',
+        'Einkaufslisten und Packlisten des Haushalts. Ohne Angabe einer Liste ist immer die Hauptliste (Einkauf) gemeint. Artikel am besten als natürlichen Text übergeben („2 kg Kartoffeln festkochend“) – Menge, Einheit und Eigenschaften werden erkannt. Gleiche Artikel werden zusammengeführt statt doppelt angelegt. In Packlisten bedeutet abgehakt „eingepackt“; „@Anna“ im Text ordnet einer Person zu, „#Koffer“ einem Packstück. Neue Packlisten am besten aus einer Packvorlage anlegen. Merklisten (Typ memo) sammeln Filme, Bücher, Restaurants usw.: „@Anna“ heißt dort „Tipp von Anna“, „#Netflix“ heißt „gibt es bei Netflix“; abgehakt = erledigt (gesehen, gelesen, besucht). ToDo-Listen (Typ todo, standardmäßig privat) enthalten Aufgaben: „@Anna“ = wer, „#Garten“ = Bereich, „!morgen“, „!Fr“ oder „!12.11.“ = fällig am.',
     },
   );
   const userId = principal.userId;
@@ -83,18 +92,18 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
       description: 'Alle Einkaufs- und Packlisten (und optional Vorlagen, archivierte Packlisten) mit Anzahl offener Artikel.',
       inputSchema: {
         include_templates: z.boolean().default(false),
-        type: z.enum(['shopping', 'packing', 'memo']).optional().describe('Nur Einkaufslisten (shopping), Packlisten (packing) oder Merklisten (memo)'),
+        type: z.enum(['shopping', 'packing', 'memo', 'todo']).optional().describe('Nur Einkaufslisten (shopping), Packlisten (packing) oder Merklisten (memo)'),
         include_archived: z.boolean().default(false),
       },
       annotations: { readOnlyHint: true },
     },
-    guard('read', async ({ include_templates, type, include_archived }: { include_templates: boolean; type?: 'shopping' | 'packing' | 'memo'; include_archived: boolean }) => {
+    guard('read', async ({ include_templates, type, include_archived }: { include_templates: boolean; type?: 'shopping' | 'packing' | 'memo' | 'todo'; include_archived: boolean }) => {
       const lists = await api.lists(userId, include_templates ? 'include' : 'exclude', { type, archived: include_archived });
       return text(
         lists
           .map(
             (l) =>
-              `- ${l.isTemplate ? '◇ ' : ''}${l.name}${l.type === 'packing' ? ' [Packliste]' : l.type === 'memo' ? ' [Merkliste]' : ''}${l.visibility === 'private' ? ' 🔒 privat' : ''}${l.isMain ? ' ⭐ Hauptliste' : ''}${l.archived ? ' (archiviert)' : ''} – ${l.openItems} offen${l.description ? ` – ${l.description}` : ''} (id: ${l.id})`,
+              `- ${l.isTemplate ? '◇ ' : ''}${l.name}${l.type === 'packing' ? ' [Packliste]' : l.type === 'memo' ? ' [Merkliste]' : l.type === 'todo' ? ' [ToDo]' : ''}${l.visibility === 'private' ? ' 🔒 privat' : ''}${l.isMain ? ' ⭐ Hauptliste' : ''}${l.archived ? ' (archiviert)' : ''} – ${l.openItems} offen${l.description ? ` – ${l.description}` : ''} (id: ${l.id})`,
           )
           .join('\n') || 'Keine Listen.',
       );
@@ -172,6 +181,9 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         container: z.string().nullable().optional().describe('Packliste: Packstück, z. B. „Koffer“'),
         tipFrom: z.string().nullable().optional().describe('Merkliste: von wem der Tipp kommt'),
         where: z.string().nullable().optional().describe('Merkliste: wo es das gibt, z. B. „Netflix“'),
+        due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional().describe('ToDo-Liste: fällig am (JJJJ-MM-TT), null entfernt'),
+        assignee: z.string().nullable().optional().describe('ToDo-Liste: wer sich kümmert'),
+        area: z.string().nullable().optional().describe('ToDo-Liste: Bereich'),
       },
     },
     guard('write', async ({ item, list, ...patch }: { item: string; list?: string } & Record<string, unknown>) => {
@@ -213,16 +225,16 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
       inputSchema: {
         name: z.string().min(1).max(80),
         template: z.string().optional().describe('Name einer Vorlage'),
-        type: z.enum(['shopping', 'packing', 'memo']).optional().describe('Ohne Vorlage: Einkaufsliste (Standard), Packliste oder Merkliste'),
+        type: z.enum(['shopping', 'packing', 'memo', 'todo']).optional().describe('Ohne Vorlage: Einkaufsliste (Standard), Packliste oder Merkliste'),
         description: z.string().max(300).optional().describe('Worum es geht, z. B. „Filme und Serien, die wir sehen wollen“ (wichtig für die Icons von Merklisten)'),
-        private: z.boolean().default(false).describe('Nur für mich – sonst sieht der ganze Haushalt die Liste'),
+        private: z.boolean().optional().describe('Nur für mich – sonst sieht der ganze Haushalt die Liste (ToDo-Listen sind ohne Angabe privat)'),
       },
     },
     guard(
       'write',
-      async ({ name, template, type, description, private: priv }: { name: string; template?: string; type?: 'shopping' | 'packing' | 'memo'; description?: string; private: boolean }) => {
+      async ({ name, template, type, description, private: priv }: { name: string; template?: string; type?: 'shopping' | 'packing' | 'memo' | 'todo'; description?: string; private?: boolean }) => {
       const l = await api.createList(userId, name, { template, type, description, private: priv });
-      return text(`${l.type === 'packing' ? 'Packliste' : l.type === 'memo' ? 'Merkliste' : 'Liste'} „${l.name}“ angelegt (${l.openItems} Einträge${l.visibility === 'private' ? ', privat' : ', für den ganzen Haushalt'}).`);
+      return text(`${l.type === 'packing' ? 'Packliste' : l.type === 'memo' ? 'Merkliste' : l.type === 'todo' ? 'ToDo-Liste' : 'Liste'} „${l.name}“ angelegt (${l.openItems} Einträge${l.visibility === 'private' ? ', privat' : ', für den ganzen Haushalt'}).`);
       },
     ),
   );

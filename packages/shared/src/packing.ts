@@ -56,7 +56,13 @@ export function extractPackingTokens(text: string): { text: string; person: stri
 export function attributeLabels(listType: string): { person: string; container: string } | null {
   if (listType === 'packing') return { person: 'Für wen', container: 'Packstück' };
   if (listType === 'memo') return { person: 'Tipp von', container: 'Wo' };
+  if (listType === 'todo') return { person: 'Wer', container: 'Bereich' };
   return null;
+}
+
+/** New lists of this type are private unless chosen otherwise (ToDo lists are personal). */
+export function defaultVisibility(listType: string): 'household' | 'private' {
+  return listType === 'todo' ? 'private' : 'household';
 }
 
 /** The list's description ("Filme und Serien, die wir sehen wollen"), kept in its settings. */

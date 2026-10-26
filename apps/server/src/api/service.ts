@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import {
   categoriesFor,
   CatalogIndex,
+  defaultVisibility,
+  dueOf,
   listDescription,
   packingInfo,
   withPacking,
@@ -43,6 +45,10 @@ export type ItemInput =
       /** Merklisten: who the tip is from, and where to find it ("Netflix") – same fields as above. */
       tipFrom?: string | null;
       where?: string | null;
+      /** ToDo lists: due date (YYYY-MM-DD), who takes care of it, and the area ("Garten"). */
+      due?: string | null;
+      assignee?: string | null;
+      area?: string | null;
     };
 
 /**
@@ -93,6 +99,7 @@ export class ShoppingApi {
           packing: new CatalogIndex(items.filter((i) => i.kind === 'packing')),
           // Merklisten have no catalog: entries are whatever you type.
           memo: new CatalogIndex([]),
+          todo: new CatalogIndex([]),
         },
       };
     }
@@ -206,8 +213,9 @@ export class ShoppingApi {
         amounts: input.quantity || unit ? [{ q: input.quantity ?? null, u: unit }] : [],
         properties: input.properties ?? [],
         note: input.note ?? null,
-        person: (input.person ?? input.tipFrom)?.trim() || null,
-        container: (input.container ?? input.where)?.trim() || null,
+        person: (input.person ?? input.tipFrom ?? input.assignee)?.trim() || null,
+        container: (input.container ?? input.where ?? input.area)?.trim() || null,
+        due: input.due ?? null,
       });
     }
     return out;
@@ -249,9 +257,13 @@ export class ShoppingApi {
       const i = categories.findIndex((c) => c.id === id);
       return i < 0 ? categories.length : i;
     };
+    // ToDo lists: by due date (none last), then position.
+    const byDue = (a: (typeof items)[number], b: (typeof items)[number]) => (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999');
     const shown = items
       .filter((i) => (filter === 'all' ? true : filter === 'open' ? !i.checked : i.checked))
-      .sort((a, b) => rank(a.categoryId) - rank(b.categoryId) || a.position.localeCompare(b.position));
+      .sort((a, b) =>
+        list.listType === 'todo' ? byDue(a, b) || a.position.localeCompare(b.position) : rank(a.categoryId) - rank(b.categoryId) || a.position.localeCompare(b.position),
+      );
     return {
       ...toApiList(list, userId, await this.mainListId(userId), items.filter((i) => !i.checked).length),
       items: shown.map((i) => toApiItem(i, names, list.listType)),
@@ -304,7 +316,7 @@ export class ShoppingApi {
           name,
           listType,
           isTemplate: opts.isTemplate ?? false,
-          visibility: opts.private ? 'private' : 'household',
+          visibility: opts.private === undefined ? defaultVisibility(listType) : opts.private ? 'private' : 'household',
           ...(description ? { settings: { description } } : {}),
         },
       },
@@ -372,13 +384,17 @@ export class ShoppingApi {
     }
     if (input.properties !== undefined) patch.properties = input.properties;
     if (input.note !== undefined) patch.note = input.note;
-    const person = input.person !== undefined ? input.person : input.tipFrom;
-    const container = input.container !== undefined ? input.container : input.where;
-    if (person !== undefined || container !== undefined) {
+    const person = input.person !== undefined ? input.person : input.tipFrom !== undefined ? input.tipFrom : input.assignee;
+    const container = input.container !== undefined ? input.container : input.where !== undefined ? input.where : input.area;
+    if (person !== undefined || container !== undefined || input.due !== undefined) {
       patch.attributes = withPacking(item.attributes, {
         ...(person !== undefined ? { person } : {}),
         ...(container !== undefined ? { container } : {}),
       });
+      if (input.due !== undefined) {
+        if (input.due) patch.attributes.due = input.due;
+        else delete patch.attributes.due;
+      }
     }
     if (input.category !== undefined) {
       const list = (await this.accessibleLists(userId)).find((l) => l.id === item.listId);

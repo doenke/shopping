@@ -30,7 +30,7 @@ export function TemplateDialog({ templates: allTemplates, targetList, listType: 
   const items = useItems(template?.id);
   const sorted = useMemo(() => [...(items ?? [])].sort((a, b) => a.position.localeCompare(b.position)), [items]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(listType === 'todo');
 
   useEffect(() => ref.current?.showModal(), []);
   // Optional items (e.g. sun cream) start deselected.

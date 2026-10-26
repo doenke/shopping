@@ -6,6 +6,8 @@ import { applyPatch, ITEM_FIELDS, mergeRow } from './lww.js';
 import type { CatalogItem } from './model.js';
 import { parseInput, parseItem, splitInput } from './parser.js';
 import { categoriesFor, categoryInList } from './categories.js';
+import { extractDue, formatDue, parseDue } from './due.js';
+import { defaultVisibility } from './packing.js';
 import { planAdd } from './plan-add.js';
 import { seedCatalog } from './seed-catalog.js';
 
@@ -185,5 +187,44 @@ describe('packing lists', () => {
     expect(categoryInList('obst-gemuese', 'packing').id).toBe('packen-sonstiges');
     expect(categoryInList('technik', 'packing').name).toBe('Technik');
     expect(categoriesFor('shopping')).toHaveLength(14);
+  });
+});
+
+describe('due dates (ToDo lists)', () => {
+  // Wednesday, 2026-11-11
+  const now = new Date(2026, 10, 11, 9, 0);
+
+  it('understands relative days, weekdays and dates', () => {
+    expect(parseDue('heute', now)).toBe('2026-11-11');
+    expect(parseDue('morgen', now)).toBe('2026-11-12');
+    expect(parseDue('gestern', now)).toBe('2026-11-10');
+    expect(parseDue('Fr', now)).toBe('2026-11-13');
+    expect(parseDue('mittwoch', now)).toBe('2026-11-18'); // today's weekday → next week
+    expect(parseDue('24.12.', now)).toBe('2026-12-24');
+    expect(parseDue('5.1.', now)).toBe('2027-01-05'); // already past this year
+    expect(parseDue('2026-12-01', now)).toBe('2026-12-01');
+    expect(parseDue('Hallo', now)).toBeNull();
+    expect(parseDue('32.1.', now)).toBeNull();
+  });
+
+  it('is typed with "!" and goes into the item', () => {
+    expect(extractDue('Steuer machen !Fr @Anna', now)).toEqual({ text: 'Steuer machen @Anna', due: '2026-11-13' });
+    expect(extractDue('Achtung!', now)).toEqual({ text: 'Achtung!', due: null });
+    const [task] = parseInput('Reifen wechseln !morgen @Ben #Auto');
+    expect(task).toMatchObject({ name: 'Reifen wechseln', person: 'Ben', container: 'Auto' });
+    expect(task!.due).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const [plan] = planAdd('l', [], [task!], () => 'x');
+    expect(plan!.patch.attributes).toMatchObject({ person: 'Ben', container: 'Auto', due: task!.due });
+  });
+
+  it('formats for the list', () => {
+    expect(formatDue('2026-11-11', now)).toMatchObject({ label: 'Heute', today: true, overdue: false });
+    expect(formatDue('2026-11-10', now)).toMatchObject({ label: 'Gestern', overdue: true });
+    expect(formatDue('2026-11-12', now).label).toBe('Morgen');
+  });
+
+  it('makes ToDo lists private by default', () => {
+    expect(defaultVisibility('todo')).toBe('private');
+    expect(defaultVisibility('shopping')).toBe('household');
   });
 });
