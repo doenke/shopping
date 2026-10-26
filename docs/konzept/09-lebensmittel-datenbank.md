@@ -59,8 +59,12 @@ im Editor („+ Neue Kategorie …“) oder in den Einstellungen.
 2. **Mealie**: Lebensmittel aus `/api/foods` (Name, Plural, Aliase, Label); Labels werden auf
    Kategorien abgebildet. Der Abgleich läuft regelmäßig, Shopping-eigene Änderungen bleiben.
 3. **Im Betrieb**: Frei getippte Artikel ohne Katalogtreffer bleiben freier Text; sie bekommen trotzdem
-   ein eigenes Icon (eins pro Name, siehe [10](10-icons-plan.md)). Die Kategorie lässt sich im Editor
-   ändern, auf Wunsch „für alle“ (dann am Katalogartikel).
+   ein eigenes Icon (eins pro Name, siehe [10](10-icons-plan.md)). Ihre **Kategorie** sucht der Server
+   wenige Sekunden nach dem Eintragen: Hatte derselbe Name schon eine (auch von Hand gewählt), wird sie
+   übernommen; sonst wählt Claude Haiku (mit Anthropic-Key, abschaltbar in der Icon-Einrichtung, zählt
+   zur Monatsgrenze) die passendste der Kategorien des Listentyps, eigene eingeschlossen. Eine von Hand
+   gewählte Kategorie gewinnt immer. Im Editor lässt sie sich ändern, bei Katalogartikeln auf Wunsch
+   „für alle“ (dann am Katalogartikel).
 
 ## Eingabe-Parser
 

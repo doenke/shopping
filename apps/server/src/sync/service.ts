@@ -485,6 +485,27 @@ export class SyncService {
       .where(eq(users.id, userId));
   }
 
+  /**
+   * Sorts a new free-text entry into a category the server found (by name or by Claude). Only while it has
+   * none; the field keeps the entry's creation time, so anything a person chose (now or offline) wins.
+   * Returns the list id, or null if the entry was taken care of meanwhile.
+   */
+  suggestCategory(itemId: string, categoryId: string): Promise<string | null> {
+    return this.mutex.run(async () => {
+      const [row] = await this.db
+        .select({ listId: listItems.listId, hlc: listItems.hlc })
+        .from(listItems)
+        .where(and(eq(listItems.id, itemId), sql`${listItems.categoryId} IS NULL`, eq(listItems.deleted, false)));
+      if (!row) return null;
+      const ts = row.hlc.categoryId ?? row.hlc.name ?? this.clock.tick();
+      await this.db
+        .update(listItems)
+        .set({ categoryId, hlc: { ...row.hlc, categoryId: ts }, seq: nextSeq })
+        .where(eq(listItems.id, itemId));
+      return row.listId;
+    });
+  }
+
   /** Adds the user to a list (opening its link). Returns false if the list is gone. */
   join(userId: string, listId: string): Promise<boolean> {
     return this.mutex.run(async () => {

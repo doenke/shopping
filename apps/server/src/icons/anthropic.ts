@@ -333,6 +333,42 @@ export class ClaudeReviewer {
     return { subject: subject.trim().slice(0, 200), costMicro: costMicro(msg.model, msg.usage) };
   }
 
+  /** The best fitting category for a new free-text entry (from the list type's categories, own ones included). */
+  async categorize(
+    entry: { name: string; listType: string; listName: string },
+    categories: { id: string; name: string }[],
+  ): Promise<{ categoryId: string; costMicro: number }> {
+    const kind = entry.listType === 'packing' ? 'packing list (things to take on a trip)' : 'shopping list (groceries, drugstore, household)';
+    let msg: Anthropic.Beta.BetaMessage;
+    try {
+      msg = await this.client.beta.messages.create({
+        model: 'claude-haiku-5-5',
+        max_tokens: 500,
+        system:
+          'You sort entries of a German household list app into the category where people would look for them ' +
+          '(on a shopping list: the supermarket section). Answer with the id of exactly one of the given categories; ' +
+          'use the catch-all category only if nothing else fits.',
+        messages: [
+          {
+            role: 'user',
+            content: `${kind} "${entry.listName}"\nEntry: "${entry.name}"\nCategories:\n${categories.map((c) => `${c.id}: ${c.name}`).join('\n')}`,
+          },
+        ],
+        output_config: {
+          effort: 'low',
+          format: {
+            type: 'json_schema',
+            schema: { type: 'object', properties: { category: { type: 'string', enum: categories.map((c) => c.id) } }, required: ['category'], additionalProperties: false },
+          },
+        },
+      });
+    } catch (err) {
+      mapError(err);
+    }
+    const { category } = jsonText(msg) as { category: string };
+    return { categoryId: category, costMicro: costMicro(msg.model, msg.usage) };
+  }
+
   /** English picture description for a German item to buy or to pack (instead of the Cloudflare text model). */
   async describe(name: string, category: string, kind = 'shopping', listName?: string): Promise<{ subject: string; costMicro: number }> {
     let msg: Anthropic.Beta.BetaMessage;

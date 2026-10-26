@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { ALL_CATEGORIES, defaultCategoryFor, getCategory, listDescription, packingInfo } from '@shopping/shared';
+import { ALL_CATEGORIES, categoriesFor, defaultCategoryFor, getCategory, listDescription, packingInfo } from '@shopping/shared';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import sharp from 'sharp';
@@ -35,7 +35,7 @@ export interface IconSettings {
   /** monthlyCap in € (or $) – stops paid generation for the rest of the month. */
   openai: { apiKey: string | null; model: string; quality: string; monthlyCap: number };
   /** Claude: draws SVG icons, pre-reviews pictures, describes items. One cap for all three. */
-  anthropic: { apiKey: string | null; svgModel: string; review: boolean; reviewModel: string; monthlyCap: number };
+  anthropic: { apiKey: string | null; svgModel: string; review: boolean; categorize: boolean; reviewModel: string; monthlyCap: number };
   pausedUntil: string | null;
   pauseReason: string | null;
 }
@@ -48,7 +48,7 @@ const DEFAULTS: IconSettings = {
   style: DEFAULT_STYLE,
   cloudflare: { accountId: null, token: null, model: 'flux-2-klein-4b', dailyLimit: 150, size: 512 },
   openai: { apiKey: null, model: 'gpt-image-1-mini', quality: 'medium', monthlyCap: 10 },
-  anthropic: { apiKey: null, svgModel: 'claude-sonnet-5-5', review: true, reviewModel: 'claude-haiku-5-5', monthlyCap: 10 },
+  anthropic: { apiKey: null, svgModel: 'claude-sonnet-5-5', review: true, categorize: true, reviewModel: 'claude-haiku-5-5', monthlyCap: 10 },
   pausedUntil: null,
   pauseReason: null,
 };
@@ -694,7 +694,10 @@ export class IconService {
   }
 
   startScheduler(): void {
-    this.timer = setInterval(() => this.kick(), TICK_MS);
+    this.timer = setInterval(() => {
+      void this.categorizeNew();
+      this.kick();
+    }, TICK_MS);
     this.timer.unref();
     this.hub.onChange(() => this.changed());
     this.kick();
@@ -706,9 +709,74 @@ export class IconService {
     if (this.changeTimer) return;
     this.changeTimer = setTimeout(() => {
       this.changeTimer = undefined;
+      void this.categorizeNew();
       this.kick();
     }, CHANGE_DELAY_MS);
     this.changeTimer.unref();
+  }
+
+  // ---- categories of new entries ----------------------------------------------------
+
+  private categorizing: Promise<number> | null = null;
+  /** Entries already looked at (once is enough; a failure is not retried until restart). */
+  private readonly categorized = new Set<string>();
+
+  /**
+   * New free-text entries on shopping and packing lists come without a category ("Sonstiges"). The same
+   * name with a category elsewhere (also chosen by hand) is taken over; otherwise Claude picks one of
+   * the list type's categories, own ones included. Returns how many were sorted in.
+   */
+  categorizeNew(): Promise<number> {
+    if (this.categorizing) return this.categorizing;
+    this.categorizing = (async () => {
+      let done = 0;
+      try {
+        const s = await this.settings();
+        const rows = await this.db.execute<{ id: string; name: string; list_type: string; list_name: string; owner_id: string }>(sql`
+          SELECT li.id, li.name, l.list_type, l.name AS list_name, l.owner_id
+          FROM ${listItems} li JOIN ${lists} l ON l.id = li.list_id
+          WHERE ${FREE_LIST} AND l.deleted = false AND li.deleted = false AND li.checked = false
+            AND li.catalog_item_id IS NULL AND li.category_id IS NULL
+          ORDER BY li.created_at DESC
+          LIMIT 50`);
+        if (this.categorized.size > 50_000) this.categorized.clear();
+        for (const r of rows.filter((r) => !this.categorized.has(r.id)).slice(0, 20)) {
+          this.categorized.add(r.id);
+          const categories = categoriesFor(r.list_type, await this.sync.visibleCategories(r.owner_id));
+          const [known] = await this.db.execute<{ category_id: string }>(sql`
+            SELECT li.category_id FROM ${listItems} li JOIN ${lists} l ON l.id = li.list_id
+            WHERE l.list_type = ${r.list_type} AND li.catalog_item_id IS NULL AND li.category_id IS NOT NULL
+              AND lower(trim(li.name)) = lower(trim(${r.name}))
+            ORDER BY li.created_at DESC LIMIT 1`);
+          let categoryId = known && categories.some((c) => c.id === known.category_id) ? known.category_id : undefined;
+          const claude = s.anthropic.categorize ? this.claude(s, 'claude-haiku-5-5') : null;
+          if (!categoryId && claude && (await this.withinBudget(s, 'claude', 1_000))) {
+            categoryId = await claude
+              .categorize({ name: r.name, listType: r.list_type, listName: r.list_name }, categories.map((c) => ({ id: c.id, name: c.name })))
+              .then(async (res) => {
+                await this.recordUsage('claude', 0, res.costMicro);
+                return res.categoryId;
+              })
+              .catch((err: Error) => {
+                this.log.warn({ err: err.message }, 'Kategorie (Claude) nicht gefunden');
+                return undefined;
+              });
+          }
+          if (!categoryId) continue;
+          const listId = await this.sync.suggestCategory(r.id, categoryId);
+          if (listId) {
+            done++;
+            await this.notifyLists([listId]);
+          }
+        }
+      } catch (err) {
+        this.log.error({ err }, 'Kategorien für neue Einträge');
+      } finally {
+        this.categorizing = null;
+      }
+      return done;
+    })();
+    return this.categorizing;
   }
 
   async stop(): Promise<void> {

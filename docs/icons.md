@@ -37,8 +37,8 @@ Artikel, jede Kategorie, jeder Merklisten-Eintrag und jede Liste ein eigenes Ico
 ## Optionale Anbieter
 
 - **Anthropic (Claude)**: Claude zeichnet Icons als SVG (Sonnet, etwa 3–4 Cent pro Entwurf), prüft jeden
-  Entwurf vorab („erkennbar? Schrift? passt zum Stil?“, Haiku, unter 0,1 Cent) und beschreibt Artikel aus
-  Mealie. Was die Vorprüfung aussortiert, steht hinten und ist blass, bleibt aber wählbar; fällt alles durch,
+  Entwurf vorab („erkennbar? Schrift? passt zum Stil?“, Haiku, unter 0,1 Cent) beschreibt Artikel aus
+  Mealie und sortiert neue freie Einträge in die passende Kategorie (Haiku, abschaltbar). Was die Vorprüfung aussortiert, steht hinten und ist blass, bleibt aber wählbar; fällt alles durch,
   gibt es automatisch einen zweiten Versuch.
 - **OpenAI** (gpt-image) als bezahlte Alternative.
 

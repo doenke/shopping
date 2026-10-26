@@ -52,7 +52,7 @@ interface Status {
     style: string;
     cloudflare: { accountId: string | null; hasToken: boolean; model: string; dailyLimit: number; size: number };
     openai: { hasKey: boolean; model: string; quality: string; monthlyCap: number };
-    anthropic: { hasKey: boolean; svgModel: string; review: boolean; reviewModel: string; monthlyCap: number };
+    anthropic: { hasKey: boolean; svgModel: string; review: boolean; categorize: boolean; reviewModel: string; monthlyCap: number };
     pausedUntil: string | null;
     pauseReason: string | null;
   };
@@ -559,6 +559,7 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
   const [anKey, setAnKey] = useState('');
   const [svgModel, setSvgModel] = useState(s.anthropic.svgModel);
   const [review, setReview] = useState(s.anthropic.review);
+  const [categorize, setCategorize] = useState(s.anthropic.categorize ?? true);
   const [reviewModel, setReviewModel] = useState(s.anthropic.reviewModel);
   const [anCap, setAnCap] = useState(String(s.anthropic.monthlyCap).replace('.', ','));
   const [candidates, setCandidates] = useState(String(s.candidates));
@@ -591,6 +592,7 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
             ...(anKey ? { apiKey: anKey } : {}),
             svgModel,
             review,
+            categorize,
             reviewModel,
             monthlyCap: Number(anCap.replace(',', '.')) || 0,
           },
@@ -719,6 +721,10 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
       <label className="check">
         <input type="checkbox" checked={review} onChange={(e) => setReview(e.target.checked)} />
         KI-Vorprüfung: jeden Entwurf vorab ansehen, Unbrauchbares nach hinten sortieren und einmal neu versuchen
+      </label>
+      <label className="check">
+        <input type="checkbox" checked={categorize} onChange={(e) => setCategorize(e.target.checked)} />
+        Kategorien: neue freie Einträge auf Einkaufs- und Packlisten gleich in die passende Kategorie einsortieren (Haiku, auch eigene Kategorien)
       </label>
 
       <h3>Erzeugung</h3>

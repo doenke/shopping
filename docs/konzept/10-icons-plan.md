@@ -65,7 +65,7 @@ Rahmen: **keine GPU**, aber Zeit – Gratis-Kontingente nutzen und die Erzeugung
 |----------|--------|----------------|-------|
 | **Cloudflare Workers AI, FLUX.2 [klein]** | tägliches Gratis-Kontingent (10.000 Neurons, rund 50 je Icon mit Referenzen) | ✅ bis 4 | Standard; zeichnet auf Magenta, Shopping stellt frei |
 | **Claude (SVG)** | Sonnet, rund 3–4 Cent je Entwurf | ✅ SVG-Quellen der Anker | zeichnet Vektor-Icons; SVGs werden vor dem Rendern auf erlaubte Elemente geprüft |
-| **Claude (Haiku)** | unter 0,1 Cent | – | KI-Vorprüfung und Bildbeschreibungen |
+| **Claude (Haiku)** | unter 0,1 Cent | – | KI-Vorprüfung, Bildbeschreibungen, Kategorie neuer freier Einträge |
 | OpenAI `gpt-image` | wenige Cent je Bild | ✅, transparent | Bezahl-Alternative |
 
 Gemini-Bildmodelle haben kein Gratis-Kontingent mehr und sind nicht eingebaut. Der Generator ist eine

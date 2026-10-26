@@ -8,7 +8,7 @@ const SVG =
   '<circle cx="256" cy="260" r="160" fill="url(#h)"/><ellipse cx="200" cy="200" rx="40" ry="28" fill="#F8C98E"/><path d="M256 100 L270 60" stroke="#6B4A2B" stroke-width="12"/></svg>';
 
 interface Call {
-  kind: 'svg' | 'review' | 'describe';
+  kind: 'svg' | 'review' | 'describe' | 'categorize';
   model: string;
   beta: string | null;
   fallbacks: unknown;
@@ -44,11 +44,11 @@ const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => 
   const body = JSON.parse(await request.text()) as {
     model: string;
     fallbacks?: unknown;
-    output_config: { format: { schema: { properties: Record<string, unknown> } } };
+    output_config: { format: { schema: { properties: Record<string, { enum?: string[] }> } } };
     messages: { content: string | { type: string; text?: string }[] }[];
   };
   const props = body.output_config.format.schema.properties;
-  const kind = 'svg' in props ? 'svg' : 'recognizable' in props ? 'review' : 'describe';
+  const kind = 'svg' in props ? 'svg' : 'recognizable' in props ? 'review' : 'category' in props ? 'categorize' : 'describe';
   const content = body.messages[0]!.content;
   const blocks = typeof content === 'string' ? [{ type: 'text', text: content }] : content;
   calls.push({
@@ -60,6 +60,7 @@ const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => 
     images: blocks.filter((b) => b.type === 'image').length,
   });
   if (kind === 'svg') return message(body.model, { svg: SVG });
+  if (kind === 'categorize') return message(body.model, { category: props.category!.enum!.includes('kleidung') ? 'kleidung' : props.category!.enum![0] });
   if (kind === 'describe') return message(body.model, { subject: 'jar of pickled beetroot' });
   return message(body.model, {
     shows: reviewOk ? 'an orange fruit' : 'a blurry blob',
@@ -201,5 +202,28 @@ describe('Claude in the icon pipeline', () => {
     expect((await req('POST', '/api/v1/icons/run')).json().result).toBe('done');
     expect(calls.filter((c) => c.kind === 'svg')).toHaveLength(1);
     expect((await cat()).tierbedarf).toMatch(/^[0-9a-f]{10}$/);
+  });
+});
+
+describe('categories of new entries', () => {
+  it('lets Haiku sort a new free-text entry in and reuses that for the same name', async () => {
+    const list = (await req('POST', '/api/v1/lists', { name: 'Skiurlaub', type: 'packing' })).json();
+    await req('POST', `/api/v1/lists/${list.id}/items`, { text: 'Stirnband' });
+    const before = calls.filter((c) => c.kind === 'categorize').length;
+    expect(await t.icons.categorizeNew()).toBe(1);
+    const cat = calls.filter((c) => c.kind === 'categorize');
+    expect(cat).toHaveLength(before + 1);
+    expect(cat.at(-1)!.model).toBe('claude-haiku-5-5');
+    expect(cat.at(-1)!.text).toContain('Stirnband');
+    let items = (await req('GET', `/api/v1/lists/${list.id}`)).json().items;
+    expect(items[0].category.name).toBe('Kleidung');
+
+    // Same name on another list: taken over without asking again.
+    const other = (await req('POST', '/api/v1/lists', { name: 'Winterwandern', type: 'packing' })).json();
+    await req('POST', `/api/v1/lists/${other.id}/items`, { text: 'stirnband' });
+    expect(await t.icons.categorizeNew()).toBe(1);
+    expect(calls.filter((c) => c.kind === 'categorize')).toHaveLength(before + 1);
+    items = (await req('GET', `/api/v1/lists/${other.id}`)).json().items;
+    expect(items[0].category.name).toBe('Kleidung');
   });
 });
