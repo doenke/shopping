@@ -149,7 +149,7 @@ export class SyncHub {
       if (conn.cursor < 0 || !conn.transport.isOpen()) return;
       try {
         const changes = await this.sync.pull(conn.userId, conn.cursor);
-        const empty = changes.lists.length + changes.items.length + changes.removedLists.length === 0 && !changes.me;
+        const empty = changes.lists.length + changes.items.length + changes.removedLists.length + changes.categories.length === 0 && !changes.me;
         if (empty && !force) return;
         conn.cursor = changes.seq;
         conn.transport.send({ t: 'changes', ...changes });

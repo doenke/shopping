@@ -218,12 +218,18 @@ describe('categories of new entries', () => {
     let items = (await req('GET', `/api/v1/lists/${list.id}`)).json().items;
     expect(items[0].category.name).toBe('Kleidung');
 
-    // Same name on another list: taken over without asking again.
+    // It is now a catalog item of the household, and the entry points to it.
+    const catalog = (await req('GET', '/api/v1/catalog')).json().items as { id: string; name: string; source: string; categoryId: string; kind: string }[];
+    const own = catalog.find((c) => c.name === 'Stirnband');
+    expect(own).toMatchObject({ source: 'user', categoryId: 'kleidung', kind: 'packing' });
+    expect(items[0].catalogItemId).toBe(own!.id);
+
+    // Next time it is found in the catalog, with its category, without asking again.
     const other = (await req('POST', '/api/v1/lists', { name: 'Winterwandern', type: 'packing' })).json();
-    await req('POST', `/api/v1/lists/${other.id}/items`, { text: 'stirnband' });
-    expect(await t.icons.categorizeNew()).toBe(1);
+    await req('POST', `/api/v1/lists/${other.id}/items`, { text: '2 stirnband' });
+    expect(await t.icons.categorizeNew()).toBe(0);
     expect(calls.filter((c) => c.kind === 'categorize')).toHaveLength(before + 1);
     items = (await req('GET', `/api/v1/lists/${other.id}`)).json().items;
-    expect(items[0].category.name).toBe('Kleidung');
+    expect(items[0]).toMatchObject({ name: 'Stirnband', catalogItemId: own!.id, category: { name: 'Kleidung' } });
   });
 });

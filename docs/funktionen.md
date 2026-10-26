@@ -30,6 +30,8 @@
 - **Automatisch einsortiert**: Neue Einträge, die nicht im Katalog stehen, landen nach wenigen Sekunden in
   der passenden Kategorie – wie beim letzten Mal bei gleichem Namen, sonst gewählt von Claude Haiku
   (mit Anthropic-Key; abschaltbar unter *Icons → Einrichtung*).
+- **Lernender Katalog**: Was du von Hand einträgst, landet danach im Katalog – mit Kategorie und Icon – und
+  wird beim nächsten Tippen vorgeschlagen. Die Kategorie lässt sich im Editor „für alle“ ändern.
 - **🏠 Zuhause / 🛒 Einkaufen** (pro Gerät): Zu Hause öffnet Antippen den Artikel, statt ihn abzuhaken.
   Im Einkaufen-Modus (Knopf 🛒 in der Titelzeile, grüner Kopf) hakt Antippen ab und der Bildschirm bleibt an.
   Zurück auf Zuhause geht es von selbst, wenn alles gekauft ist oder eine Stunde nichts abgehakt wurde.

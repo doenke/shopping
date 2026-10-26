@@ -15,7 +15,7 @@ und Standard-Einheit und macht aus „kartofeln“ den Artikel **Kartoffeln**.
 | `aliases` | Erdapfel, Grumbeere; Paradeiser → Tomaten |
 | `pantry` | Salz, Öl = `true` → beim Rezeptimport vorab abgewählt |
 | `kind` | `shopping` (Lebensmittel, Drogerie, Haushalt) oder `packing` (Dinge zum Einpacken) |
-| `source` | `seed` (Grundkatalog), `mealie` |
+| `source` | `seed` (Grundkatalog), `mealie`, `user` (von Hand eingetragen) |
 | `mealie_food_id` | Verknüpfung zu Mealie |
 | `hidden` | ausgeblendet (z. B. „Wasser“ aus Rezepten) |
 | `category_locked` | Kategorie von Hand gesetzt, wird beim Mealie-Abgleich nicht überschrieben |
@@ -63,7 +63,11 @@ im Editor („+ Neue Kategorie …“) oder in den Einstellungen.
    wenige Sekunden nach dem Eintragen: Hatte derselbe Name schon eine (auch von Hand gewählt), wird sie
    übernommen; sonst wählt Claude Haiku (mit Anthropic-Key, abschaltbar in der Icon-Einrichtung, zählt
    zur Monatsgrenze) die passendste der Kategorien des Listentyps, eigene eingeschlossen. Eine von Hand
-   gewählte Kategorie gewinnt immer. Im Editor lässt sie sich ändern, bei Katalogartikeln auf Wunsch
+   gewählte Kategorie gewinnt immer. Danach wird der Eintrag zum **Katalogartikel** (`user`, ohne
+   Anthropic-Key in der Auffangkategorie): Er erscheint beim Tippen als Vorschlag, behält Kategorie und
+   Icon (das Bild des Eintrags wird übernommen), und Einträge gleichen Namens zeigen auf ihn. Der eigene
+   Name eines Artikels geht dabei Synonymen vor („Stirnlampe“ trifft die Stirnlampe, die Taschenlampe
+   bleibt Vorschlag). Im Editor lässt sie sich ändern, bei Katalogartikeln auf Wunsch
    „für alle“ (dann am Katalogartikel).
 
 ## Eingabe-Parser

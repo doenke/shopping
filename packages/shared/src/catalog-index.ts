@@ -44,14 +44,17 @@ export class CatalogIndex {
   private readonly exact = new Map<string, CatalogItem>();
 
   constructor(items: Iterable<CatalogItem>) {
-    for (const item of items) {
-      if (item.hidden) continue;
-      for (const term of [item.name, item.plural, ...item.aliases]) {
-        if (!term) continue;
-        const key = normalize(term);
-        if (!key) continue;
-        this.entries.push({ key, item });
-        if (!this.exact.has(key)) this.exact.set(key, item);
+    const visible = [...items].filter((i) => !i.hidden);
+    // Own names first: "Stirnlampe" means the Stirnlampe once there is one, not the Taschenlampe it is a synonym of.
+    for (const pass of ['names', 'aliases'] as const) {
+      for (const item of visible) {
+        for (const term of pass === 'names' ? [item.name, item.plural] : item.aliases) {
+          if (!term) continue;
+          const key = normalize(term);
+          if (!key) continue;
+          this.entries.push({ key, item });
+          if (!this.exact.has(key)) this.exact.set(key, item);
+        }
       }
     }
   }

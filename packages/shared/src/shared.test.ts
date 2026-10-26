@@ -197,6 +197,10 @@ describe('packing lists', () => {
     const lamp = { id: 'l', name: 'Taschenlampe', plural: 'Taschenlampen', aliases: ['Stirnlampe'], categoryId: 'technik', defaultUnit: null, pantry: false, source: 'seed' as const, mealieFoodId: null, hidden: false, kind: 'packing' as const, icon: null, seq: 0 };
     expect(isOwnName(lamp, 'taschenlampen')).toBe(true);
     expect(isOwnName(lamp, 'Stirnlampe')).toBe(false);
+    // An item of its own beats the synonym.
+    const head = { ...lamp, id: 's', name: 'Stirnlampe', plural: null, aliases: [] };
+    expect(new CatalogIndex([lamp, head]).match('Stirnlampe')?.id).toBe('s');
+    expect(new CatalogIndex([lamp, head]).search('Stirnlampe').map((i) => i.id)).toContain('l');
   });
 
   it('puts own categories before the catch-all and forgets deleted ones', () => {

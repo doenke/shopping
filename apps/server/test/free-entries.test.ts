@@ -82,6 +82,23 @@ describe('free-text entries', () => {
     expect((await pulled(third)).icon).toBe((await pulled(first)).icon);
   });
 
+
+  it('become catalog items of the household once they have a category, picture included', async () => {
+    const pulledFirst = await pulled(first);
+    expect(pulledFirst.icon).toMatch(/^[0-9a-f]{10}$/);
+    await req('PATCH', `/api/v1/items/${first}`, { category: 'Brot & Gebäck' });
+    expect(await t.icons.adoptFreeEntries()).toBeGreaterThanOrEqual(1);
+    const own = (await req('GET', '/api/v1/catalog')).json().items.find((c: { name: string; kind: string }) => c.name === 'Zwergenbrot' && c.kind === 'shopping');
+    expect(own).toMatchObject({ source: 'user', categoryId: 'brot-gebaeck', kind: 'shopping' });
+    expect(own.icon).toMatch(/^[0-9a-f]{10}$/);
+    expect((await t.app.inject({ method: 'GET', url: `/icons/item/${own.id}.webp?v=${own.icon}` })).statusCode).toBe(200);
+    // Both entries of that name point to it and keep their picture.
+    expect((await pulled(first)).catalogItemId).toBe(own.id);
+    expect((await pulled(second)).catalogItemId).toBe(own.id);
+    expect((await pulled(second)).icon).toBe(pulledFirst.icon);
+    // Nothing new to do the next time.
+    expect(await t.icons.adoptFreeEntries()).toBe(0);
+  });
 });
 
 describe('list icons', () => {

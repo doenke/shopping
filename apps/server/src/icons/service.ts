@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { ALL_CATEGORIES, categoriesFor, defaultCategoryFor, getCategory, listDescription, packingInfo } from '@shopping/shared';
+import { ALL_CATEGORIES, CatalogIndex, categoriesFor, defaultCategoryFor, isOwnName, getCategory, listDescription, packingInfo } from '@shopping/shared';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import sharp from 'sharp';
@@ -7,6 +7,7 @@ import type { SecretBox } from '../crypto.js';
 import type { Db } from '../db/index.js';
 import { appSettings, catalogItems, customCategories, iconJobs, icons, iconUsage, listItems, listMembers, lists, type IconTarget } from '../db/schema.js';
 import { currentSeq, stableUuid } from '../db/seed.js';
+import { toCatalogItem } from '../sync/rows.js';
 import type { SyncHub } from '../sync/hub.js';
 import type { SyncService } from '../sync/service.js';
 import { ApiError } from '../api/errors.js';
@@ -368,6 +369,11 @@ export class IconService {
     if (!row) throw new ApiError(404, 'not_found', 'Unbekannter Artikel');
   }
 
+  private async isUserItem(id: string): Promise<boolean> {
+    const [row] = await this.db.select({ source: catalogItems.source }).from(catalogItems).where(eq(catalogItems.id, id));
+    return row?.source === 'user';
+  }
+
   private async customCategory(id: string) {
     if (!/^[0-9a-f-]{36}$/.test(id)) return null;
     const [row] = await this.db.select().from(customCategories).where(and(eq(customCategories.id, id), eq(customCategories.deleted, false)));
@@ -394,7 +400,8 @@ export class IconService {
       .innerJoin(lists, eq(lists.id, listItems.listId))
       .where(and(eq(listItems.id, itemId), eq(listItems.deleted, false), eq(lists.deleted, false)));
     if (!row) return null;
-    if (row.list.listType !== 'memo' && !(['shopping', 'packing'].includes(row.list.listType) && !row.item.catalogItemId)) return null;
+    // Shopping/packing: free text (or just turned into a catalog item of the household).
+    if (row.list.listType !== 'memo' && !(['shopping', 'packing'].includes(row.list.listType) && (!row.item.catalogItemId || (await this.isUserItem(row.item.catalogItemId))))) return null;
     const info = packingInfo(row.item);
     return {
       listId: row.list.id,
@@ -769,6 +776,7 @@ export class IconService {
             await this.notifyLists([listId]);
           }
         }
+        await this.adoptFreeEntries();
       } catch (err) {
         this.log.error({ err }, 'Kategorien für neue Einträge');
       } finally {
@@ -777,6 +785,85 @@ export class IconService {
       return done;
     })();
     return this.categorizing;
+  }
+
+  /**
+   * Free-text entries become catalog items of the household (source "user"), after `categorizeNew` had its
+   * go (without Claude: in the catch-all category, changeable "für alle"): next time
+   * they are suggested while typing, keep their category and their picture. Entries of the same name are
+   * linked to the new item. Names that already are a catalog item's own name stay as they are.
+   */
+  async adoptFreeEntries(): Promise<number> {
+    const rows = await this.db.execute<{ id: string; name: string; list_type: 'shopping' | 'packing'; category_id: string | null; icon: string | null }>(sql`
+      SELECT DISTINCT ON (l.list_type, lower(trim(li.name))) li.id, trim(li.name) AS name, l.list_type, li.category_id, li.icon
+      FROM ${listItems} li JOIN ${lists} l ON l.id = li.list_id
+      WHERE ${FREE_LIST} AND l.deleted = false AND li.deleted = false
+        AND li.catalog_item_id IS NULL AND length(trim(li.name)) > 1
+      ORDER BY l.list_type, lower(trim(li.name)), (li.category_id IS NOT NULL) DESC, (li.icon IS NOT NULL) DESC, li.created_at DESC
+      LIMIT 200`);
+    if (!rows.length) return 0;
+    const catalog = (await this.db.select().from(catalogItems)).map(toCatalogItem);
+    const index = { shopping: new CatalogIndex(catalog.filter((c) => c.kind !== 'packing')), packing: new CatalogIndex(catalog.filter((c) => c.kind === 'packing')) };
+    const touched = new Set<string>();
+    let adopted = 0;
+    for (const r of rows) {
+      const hit = index[r.list_type].match(r.name, false);
+      const existing = hit && isOwnName(hit, r.name) ? hit : undefined;
+      const id = existing?.id ?? stableUuid(`shopping-user-${r.list_type}`, r.name.toLowerCase());
+      if (!existing) {
+        const created = await this.db
+          .insert(catalogItems)
+          .values({ id, name: r.name, categoryId: r.category_id ?? defaultCategoryFor(r.list_type), kind: r.list_type, source: 'user', aliases: [], categoryLocked: true })
+          .onConflictDoNothing()
+          .returning({ id: catalogItems.id });
+        if (created.length) adopted++;
+        // The picture already drawn for the entry is the item's picture too.
+        if (created.length && r.icon) await this.copyEntryIcon(r.id, id);
+      }
+      // Entries of that name now point to the catalog item (their own picture stays).
+      const linked = await this.sync.exclusive(() =>
+        this.db.execute<{ id: string; list_id: string }>(sql`
+          UPDATE ${listItems} li SET catalog_item_id = ${id}::uuid,
+            hlc = li.hlc || jsonb_build_object('catalogItemId', coalesce(li.hlc->>'catalogItemId', li.hlc->>'name', '')),
+            seq = nextval('sync_seq')
+          FROM ${lists} l
+          WHERE l.id = li.list_id AND l.list_type = ${r.list_type} AND li.catalog_item_id IS NULL AND li.deleted = false
+            AND lower(trim(li.name)) = lower(${r.name})
+          RETURNING li.id, li.list_id`),
+      );
+      for (const l of linked) touched.add(l.list_id);
+      // Pictures still waiting for those entries: the catalog item gets one instead.
+      if (linked.length) {
+        await this.db
+          .delete(iconJobs)
+          .where(and(eq(iconJobs.targetType, 'entry'), eq(iconJobs.status, 'queued'), inArray(iconJobs.targetId, linked.map((l) => l.id))));
+      }
+    }
+    if (adopted) await this.broadcastCatalog();
+    if (touched.size) await this.notifyLists([...touched]);
+    return adopted;
+  }
+
+  /** Copies an entry's approved picture to a catalog item (no second picture is drawn). */
+  private async copyEntryIcon(entryId: string, catalogItemId: string): Promise<void> {
+    const [icon] = await this.db
+      .select()
+      .from(icons)
+      .where(and(eq(icons.targetType, 'entry'), eq(icons.targetId, entryId), eq(icons.status, 'approved')));
+    const source =
+      icon ??
+      // Free entries share one picture per name; the approved one may hang on another entry.
+      (
+        await this.db.execute<{ id: string }>(sql`
+          SELECT i.id FROM ${icons} i JOIN ${listItems} o ON i.target_id = o.id::text JOIN ${listItems} e ON e.id = ${entryId}::uuid
+          WHERE i.target_type = 'entry' AND i.status = 'approved' AND o.icon = e.icon LIMIT 1`)
+      )[0];
+    if (!source) return;
+    const [full] = icon ? [icon] : await this.db.select().from(icons).where(eq(icons.id, source.id));
+    if (!full) return;
+    const { id: _id, targetType: _t, targetId: _i, isAnchor: _a, ...rest } = full;
+    const [copy] = await this.db.insert(icons).values({ ...rest, targetType: 'item', targetId: catalogItemId }).returning({ id: icons.id });
+    await this.db.update(catalogItems).set({ icon: iconToken(copy!.id), seq: sql`nextval('sync_seq')` }).where(eq(catalogItems.id, catalogItemId));
   }
 
   async stop(): Promise<void> {
@@ -846,7 +933,20 @@ export class IconService {
         }
       }),
     );
+    await this.shareWithUserItem(iconId);
     if (await this.notifyEntry(iconId)) return;
+    await this.broadcastCatalog();
+  }
+
+  /** An entry's picture approved after it became a catalog item: the item gets it too. */
+  private async shareWithUserItem(iconId: string): Promise<void> {
+    const [row] = await this.db.execute<{ entry: string; item: string }>(sql`
+      SELECT li.id AS entry, c.id AS item FROM ${icons} i
+      JOIN ${listItems} li ON i.target_type = 'entry' AND li.id::text = i.target_id
+      JOIN ${catalogItems} c ON c.id = li.catalog_item_id
+      WHERE i.id = ${iconId}::uuid AND c.source = 'user' AND c.icon IS NULL`);
+    if (!row) return;
+    await this.copyEntryIcon(row.entry, row.item);
     await this.broadcastCatalog();
   }
 
