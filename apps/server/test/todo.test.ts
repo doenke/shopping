@@ -45,4 +45,11 @@ describe('ToDo lists', () => {
     const cleared = (await as(anna, 'PATCH', `/api/v1/items/${items[0].id}`, { due: null })).json();
     expect(cleared.due).toBeNull();
   });
+
+  it('never become the main list', async () => {
+    const me = (await as(anna, 'GET', '/api/v1/me')).json();
+    expect(me.defaultListId).toBeNull();
+    await as(anna, 'POST', '/api/v1/lists', { name: 'Einkauf' });
+    expect((await as(anna, 'GET', '/api/v1/lists/default')).json()).toMatchObject({ name: 'Einkauf', isMain: true });
+  });
 });

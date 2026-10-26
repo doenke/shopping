@@ -1208,3 +1208,10 @@ img.avatar {
 .group__title--alert {
   color: var(--danger);
 }
+.sidebar__new {
+  margin: 4px 0 8px;
+}
+.segmented--wrap {
+  flex-wrap: wrap;
+  border-radius: 14px;
+}

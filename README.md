@@ -31,8 +31,11 @@ eingebautem MCP-Server.
   Zielliste und wird in Mealie abgehakt – per Notifier sofort, sonst alle 15 Minuten
 - **Rezept und Wochenplan aus Mealie**: Portionen anpassen, Zutaten-Checkliste,
   Vorrat (Salz, Öl …) vorab abgewählt, gleiche Zutaten zusammengefasst
-- **Vorlagen** (◇): nicht abhakbar, „Neue Liste“ aus Vorlage, „Vorlage übernehmen“ mit
-  Auswahl, „Als Vorlage speichern“, optionale Artikel
+- **Eine Schaltfläche „+ Neu“** für alles: Name, Typ (Einkauf, Packliste, Merkliste, ToDo), Vorlage,
+  „Als Vorlage anlegen“, privat, Beschreibung
+- **Vorlagen** (◇) für jeden Listentyp: nicht abhakbar, füllen neue Listen vor, „Als Vorlage speichern“,
+  optionale Artikel. **Mit Vorlage abgleichen** in beide Richtungen: was der Liste fehlt, was der Vorlage
+  fehlt und abweichende Mengen – einzeln auswählbar; die Liste merkt sich ihre Vorlage
 - **Packlisten** 🧳 mit eigenem Katalog (Kleidung, Dokumente, Technik …): Abgehakt heißt
   „eingepackt“ und bleibt durchgestrichen stehen, Fortschritt „12 von 30 eingepackt“, gruppiert nach
   Kategorie, **Packstück** oder **Person**. Beim Tippen ordnen „@Anna“ und „#Koffer“ zu

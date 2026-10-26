@@ -77,7 +77,7 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
 
       {list.isTemplate && (
         <p className="template-hint">
-          ◇ Vorlage – hier wird nichts abgehakt. Sie füllt neue Listen vor („Neue Liste“ oder „Vorlage übernehmen“). Antippen
+          ◇ Vorlage – hier wird nichts abgehakt. Sie füllt neue Listen vor („+ Neu“) und lässt sich mit Listen abgleichen („⋮ → Mit Vorlage abgleichen“). Antippen
           bearbeitet einen Artikel.
         </p>
       )}

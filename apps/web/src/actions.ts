@@ -36,9 +36,14 @@ export async function createList(
   listType: ListType = 'shopping',
   description?: string | null,
   visibility: 'household' | 'private' = defaultVisibility(listType),
+  /** The template it came from – preselected later in "Mit Vorlage abgleichen". */
+  templateId?: string,
 ): Promise<string> {
   const id = crypto.randomUUID();
-  await sync.mutateList(id, { name, listType, isTemplate, visibility, ...(description?.trim() ? { settings: { description: description.trim() } } : {}) });
+  const settings: Record<string, unknown> = {};
+  if (description?.trim()) settings.description = description.trim();
+  if (templateId) settings.templateId = templateId;
+  await sync.mutateList(id, { name, listType, isTemplate, visibility, ...(Object.keys(settings).length ? { settings } : {}) });
   return id;
 }
 

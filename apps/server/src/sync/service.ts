@@ -156,8 +156,8 @@ export class SyncService {
       await tx.insert(listMembers).values({ listId: id, userId, via: 'owner' });
       // Shared with the household right away (unless created as private).
       await this.reconcileList(tx, id);
-      // The first shopping list becomes the user's main list.
-      if (!row.isTemplate) {
+      // The first shopping list becomes the user's main list (not a packing, Merk- or ToDo list).
+      if (!row.isTemplate && row.listType === 'shopping') {
         await tx
           .update(users)
           .set({ defaultListId: id, seq: nextSeq })

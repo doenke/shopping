@@ -149,7 +149,9 @@ export class ShoppingApi {
     const want = (l: { isTemplate: boolean }) => (opts.templates === undefined ? true : l.isTemplate === opts.templates);
     if (!ref || ref === 'default') {
       const main = await this.mainListId(userId);
-      const list = all.find((l) => l.id === main && !l.isTemplate) ?? all.find((l) => !l.isTemplate);
+      // The main list is a shopping list; without one, the first shopping list.
+      const shopping = all.filter((l) => !l.isTemplate && l.listType === 'shopping' && !l.archivedAt);
+      const list = shopping.find((l) => l.id === main) ?? shopping[0] ?? all.find((l) => !l.isTemplate);
       if (!list) throw notFound('Hauptliste');
       return list;
     }

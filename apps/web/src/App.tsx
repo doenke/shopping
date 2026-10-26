@@ -5,7 +5,8 @@ import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
 import { MembersDialog } from './components/MembersDialog';
-import { TemplateDialog } from './components/TemplateDialog';
+import { NewListDialog } from './components/NewListDialog';
+import { SyncTemplateDialog } from './components/SyncTemplateDialog';
 import { ListView } from './components/ListView';
 import { Login } from './components/Login';
 import { Settings } from './components/Settings';
@@ -56,13 +57,23 @@ function Shell({ me }: { me: Me }) {
   const [importing, setImporting] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   const guest = me.isGuest;
-  const [templateDialog, setTemplateDialog] = useState<{ mode: 'new' | 'apply'; type: ListType } | null>(null);
+  const [newDialog, setNewDialog] = useState(false);
+  const [syncDialog, setSyncDialog] = useState(false);
   const shoppingLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'shopping');
   const packingLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'packing');
   const memoLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'memo');
   const todoLists = lists.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'todo');
   const archived = lists.filter((l) => !l.isTemplate && l.archivedAt);
   const templates = lists.filter((l) => l.isTemplate);
+  const TYPE_ICON: Record<ListType, string> = { shopping: '', packing: '🧳 ', memo: '📌 ', todo: '✅ ' };
+  /** Sidebar: only sections that have lists. */
+  const sections: { title: string | null; lists: ListRow[]; prefix: (l: ListRow) => string }[] = [
+    { title: null, lists: shoppingLists, prefix: () => '' },
+    { title: 'Packlisten', lists: packingLists, prefix: () => '🧳 ' },
+    { title: 'Merklisten', lists: memoLists, prefix: () => '📌 ' },
+    { title: 'ToDo', lists: todoLists, prefix: () => '✅ ' },
+    { title: 'Vorlagen', lists: templates, prefix: (l) => `◇ ${TYPE_ICON[l.listType]}` },
+  ];
   const mainList = shoppingLists.find((l) => l.id === me.defaultListId) ?? shoppingLists[0];
   const listId = route.page === 'list' ? (route.listId ?? (mainList ?? packingLists[0])?.id) : undefined;
   const addRef = useRef<HTMLInputElement>(null);
@@ -100,35 +111,8 @@ function Shell({ me }: { me: Me }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const newList = (type: ListType = 'shopping') => {
-    setTemplateDialog({ mode: 'new', type });
-    setDrawer(false);
-  };
-
-  /** Merklisten: name and what they are about (the description also guides the icons). */
-  const newMemo = async () => {
-    const name = prompt('Name der Merkliste', 'Filme');
-    if (!name?.trim()) return;
-    const description = prompt('Worum geht es? (hilft auch bei den Bildern)', name.trim() === 'Filme' ? 'Filme und Serien, die wir sehen wollen' : '');
-    const id = await createList(name.trim(), false, 'memo', description);
-    navigate({ page: 'list', listId: id });
-    setDrawer(false);
-  };
-
-  /** ToDo lists start private; "⋮ → Mit dem Haushalt teilen" shares them. */
-  const newTodo = async () => {
-    const name = prompt('Name der ToDo-Liste', 'Aufgaben');
-    if (!name?.trim()) return;
-    const id = await createList(name.trim(), false, 'todo');
-    navigate({ page: 'list', listId: id });
-    setDrawer(false);
-  };
-
-  const newTemplate = async (type: ListType) => {
-    const name = prompt(type === 'packing' ? 'Name der Packvorlage' : 'Name der Vorlage', type === 'packing' ? 'Wochenend-Trip' : 'Wocheneinkauf Basis');
-    if (!name?.trim()) return;
-    const id = await createList(name.trim(), true, type);
-    navigate({ page: 'list', listId: id });
+  const newList = () => {
+    setNewDialog(true);
     setDrawer(false);
   };
 
@@ -138,116 +122,33 @@ function Shell({ me }: { me: Me }) {
         <img src="/icon.svg" alt="" width={28} height={28} />
         <strong>Shopping</strong>
       </div>
-      <ul>
-        {shoppingLists.map((l) => (
-          <li key={l.id}>
-            <a
-              href={`#/list/${l.id}`}
-              className={l.id === list?.id && route.page === 'list' ? 'active' : ''}
-              onClick={() => setDrawer(false)}
-            >
-              <span>
-                {l.id === me.defaultListId && <span title="Hauptliste">⭐ </span>}
-                {l.name}
-                {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
-              </span>
-              <OpenCount listId={l.id} />
-            </a>
-          </li>
-        ))}
-      </ul>
       {!guest && (
-        <button type="button" className="btn btn--ghost" onClick={() => void newList()}>
-          + Neue Liste
+        <button type="button" className="btn btn--primary sidebar__new" onClick={() => newList()}>
+          + Neu
         </button>
       )}
-      {(packingLists.length > 0 || !guest) && <h3 className="sidebar__section">Packlisten</h3>}
-      <ul>
-        {packingLists.map((l) => (
-          <li key={l.id}>
-            <a
-              href={`#/list/${l.id}`}
-              className={l.id === list?.id && route.page === 'list' ? 'active' : ''}
-              onClick={() => setDrawer(false)}
-            >
-              <span>
-                🧳 {l.name}
-                {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
-              </span>
-              <OpenCount listId={l.id} />
-            </a>
-          </li>
-        ))}
-      </ul>
-      {!guest && (
-        <button type="button" className="btn btn--ghost" onClick={() => void newList('packing')}>
-          + Neue Packliste
-        </button>
-      )}
-      {(memoLists.length > 0 || !guest) && <h3 className="sidebar__section">Merklisten</h3>}
-      <ul>
-        {memoLists.map((l) => (
-          <li key={l.id}>
-            <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
-              <span>
-                📌 {l.name}
-                {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
-              </span>
-              <OpenCount listId={l.id} />
-            </a>
-          </li>
-        ))}
-      </ul>
-      {!guest && (
-        <button type="button" className="btn btn--ghost" onClick={() => void newMemo()}>
-          + Neue Merkliste
-        </button>
-      )}
-      {(todoLists.length > 0 || !guest) && <h3 className="sidebar__section">ToDo</h3>}
-      <ul>
-        {todoLists.map((l) => (
-          <li key={l.id}>
-            <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
-              <span>
-                ✅ {l.name}
-                {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
-              </span>
-              <OpenCount listId={l.id} />
-            </a>
-          </li>
-        ))}
-      </ul>
-      {!guest && (
-        <button type="button" className="btn btn--ghost" onClick={() => void newTodo()}>
-          + Neue ToDo-Liste
-        </button>
-      )}
-      {!guest && <h3 className="sidebar__section">Vorlagen</h3>}
-      <ul>
-        {templates.map((l) => (
-          <li key={l.id}>
-            <a
-              href={`#/list/${l.id}`}
-              className={l.id === list?.id && route.page === 'list' ? 'active' : ''}
-              onClick={() => setDrawer(false)}
-            >
-              <span>
-                ◇ {l.listType === 'packing' && '🧳 '}
-                {l.name}
-              </span>
-            </a>
-          </li>
-        ))}
-      </ul>
-      {!guest && (
-        <div className="row">
-          <button type="button" className="btn btn--ghost" onClick={() => void newTemplate('shopping')}>
-            + Einkaufsvorlage
-          </button>
-          <button type="button" className="btn btn--ghost" onClick={() => void newTemplate('packing')}>
-            + Packvorlage
-          </button>
-        </div>
+      {sections.map(
+        (sec) =>
+          sec.lists.length > 0 && (
+            <div key={sec.title}>
+              {sec.title && <h3 className="sidebar__section">{sec.title}</h3>}
+              <ul>
+                {sec.lists.map((l) => (
+                  <li key={l.id}>
+                    <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
+                      <span>
+                        {l.id === me.defaultListId && <span title="Hauptliste">⭐ </span>}
+                        {sec.prefix(l)}
+                        {l.name}
+                        {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
+                      </span>
+                      {!l.isTemplate && <OpenCount listId={l.id} />}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
       )}
       {archived.length > 0 && (
         <details className="sidebar__archive">
@@ -301,10 +202,10 @@ function Shell({ me }: { me: Me }) {
                 <ListMenu
                   list={list}
                   me={me}
-                  hasTemplates={list.listType !== 'memo' && list.listType !== 'todo' && templates.some((t) => t.listType === list.listType)}
+                  hasTemplates={templates.some((t) => t.listType === list.listType)}
                   onClose={() => setMenu(false)}
                   onImport={() => setImporting(true)}
-                  onApplyTemplate={() => setTemplateDialog({ mode: 'apply', type: list.listType })}
+                  onApplyTemplate={() => setSyncDialog(true)}
                   onMembers={() => setShowMembers(true)}
                 />
               )}
@@ -334,26 +235,17 @@ function Shell({ me }: { me: Me }) {
           ) : lists.length === 0 ? (
             <div className="empty">
               <p className="empty__title">Noch keine Liste</p>
-              <div className="row row--center">
-                <button type="button" className="btn btn--primary" onClick={() => void newList()}>
-                  Erste Liste anlegen
-                </button>
-                <button type="button" className="btn" onClick={() => void newList('packing')}>
-                  Packliste anlegen
-                </button>
-              </div>
+              <button type="button" className="btn btn--primary" onClick={() => newList()}>
+                Erste Liste anlegen
+              </button>
             </div>
           ) : null}
         </main>
       </div>
 
-      {templateDialog && (
-        <TemplateDialog
-          templates={templates}
-          targetList={templateDialog.mode === 'apply' ? list : undefined}
-          listType={templateDialog.type}
-          onClose={() => setTemplateDialog(null)}
-        />
+      {newDialog && <NewListDialog templates={templates} onClose={() => setNewDialog(false)} />}
+      {syncDialog && list && (
+        <SyncTemplateDialog list={list} templates={templates.filter((t) => t.listType === list.listType)} onClose={() => setSyncDialog(false)} />
       )}
       {showMembers && list && <MembersDialog list={list} me={me} onClose={() => setShowMembers(false)} />}
       {importing && list && <ImportDialog listId={list.id} onClose={() => setImporting(false)} />}
@@ -451,10 +343,10 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
             onClose();
           }}
         >
-          Vorlage übernehmen …
+          Mit Vorlage abgleichen …
         </button>
       )}
-      {!list.isTemplate && list.listType !== 'memo' && list.listType !== 'todo' && !guest && (
+      {!list.isTemplate && !guest && (
         <button
           type="button"
           role="menuitem"
