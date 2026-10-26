@@ -13,6 +13,9 @@ eingebautem MCP-Server.
 - Einkaufslisten mit **Hauptliste** ⭐, Artikel mit **Menge, Einheit, Eigenschaften, Notiz**
 - **Eine Eingabezeile für alles**: „2 kg Kartoffeln“, „500g Hack gemischt bio“, „Milch, Butter, 6 Eier“
 - Doppelte Artikel werden zusammengeführt (1 l + 2 l Milch = 3 l)
+- **🏠 Zuhause / 🛒 Einkaufen** (pro Gerät): zu Hause öffnet Antippen den Artikel statt ihn abzuhaken;
+  im Einkaufen-Modus (Knopf 🛒 in der Titelzeile, grüner Kopf) hakt Antippen ab und der Bildschirm bleibt an.
+  Zurück auf Zuhause geht es von selbst, wenn alles gekauft ist oder eine Stunde nichts abgehakt wurde
 - **Offline-first**: lokale Datenbank im Browser, Änderungen werden gepuffert und
   nachgeliefert (auch per Background Sync, wenn die App schon zu ist)
 - **Echtzeit**: Abhaken erscheint bei anderen in ~0,1 s, mit „✓ von Anna“

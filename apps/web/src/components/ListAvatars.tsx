@@ -7,7 +7,8 @@ interface Person {
   avatarUrl: string | null;
 }
 
-const MAX = 4;
+/** Phones: fewer pictures, so the list name keeps some room. */
+const max = () => (window.matchMedia('(max-width: 500px)').matches ? 3 : 4);
 
 function cached(listId: string): Person[] {
   try {
@@ -53,7 +54,8 @@ export function ListAvatars({ listId, refresh, onClick }: { listId: string; refr
   }, [listId, refresh]);
 
   if (people.length === 0) return null;
-  const shown = people.length > MAX ? people.slice(0, MAX - 1) : people;
+  const limit = max();
+  const shown = people.length > limit ? people.slice(0, limit - 1) : people;
   const more = people.length - shown.length;
   return (
     <button type="button" className="avatar-stack" onClick={onClick} title={people.map((p) => p.displayName).join(', ')} aria-label={`Zugriff: ${people.map((p) => p.displayName).join(', ')}`}>

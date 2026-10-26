@@ -4,6 +4,7 @@ import { addItems, archiveList, createList, deleteList, describeList, leaveList,
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
+import { startShopping, stopShopping, useShopping, useWakeLock } from './shopMode';
 import { ListAvatars } from './components/ListAvatars';
 import { MembersDialog } from './components/MembersDialog';
 import { NewListDialog } from './components/NewListDialog';
@@ -83,6 +84,11 @@ function Shell({ me }: { me: Me }) {
 
 
   const list = lists.find((l) => l.id === listId);
+  const shopping = useShopping();
+  /** The mode switch only exists on shopping lists; packing and ToDo lists are checked off at home. */
+  const shopList = route.page === 'list' && !!list && list.listType === 'shopping' && !list.isTemplate;
+  const shopMode = shopList && shopping;
+  useWakeLock(shopMode);
   const items = useItems(list?.id);
 
   // Shared text from another app ("Teilen → Shopping") lands on the main list.
@@ -183,13 +189,23 @@ function Shell({ me }: { me: Me }) {
       {wide ? sidebar : drawer && <div className="drawer" onClick={() => setDrawer(false)}>{sidebar}</div>}
 
       <div className="main">
-        <header className="topbar">
+        <header className={`topbar${shopMode ? ' topbar--shopping' : ''}`}>
           {!wide && (
             <button type="button" className="icon-btn" aria-label="Listen" onClick={() => setDrawer(true)}>
               ☰
             </button>
           )}
           <h1 className="topbar__title">{route.page === 'settings' ? 'Einstellungen' : route.page === 'icons' ? 'Icons' : (list?.name ?? 'Shopping')}</h1>
+          {shopList &&
+            (shopping ? (
+              <button type="button" className="shop-toggle shop-toggle--on" onClick={stopShopping} aria-label="Einkauf beenden, zurück zu Zuhause">
+                🛒<span className="shop-toggle__label"> Einkaufen</span> <span aria-hidden>✕</span>
+              </button>
+            ) : (
+              <button type="button" className="shop-toggle" onClick={startShopping} aria-label="Einkaufen starten" title="Einkaufen starten – dann hakt Antippen ab">
+                🛒
+              </button>
+            ))}
           {route.page === 'list' && list && <ListAvatars listId={list.id} refresh={membersSeen} onClick={() => setShowMembers(true)} />}
           <SyncBadge guest={me.isGuest} />
           {route.page === 'list' && list && (

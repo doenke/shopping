@@ -1,6 +1,7 @@
 import { categoriesFor, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { clearChecked, setChecked } from '../actions';
+import { shopModeKnown, shoppingActivity, startShopping, stopShopping, useShopping } from '../shopMode';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
@@ -31,6 +32,12 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
   const [editing, setEditing] = useState<string | null>(null);
   const [undo, setUndo] = useState<ItemRow | null>(null);
   const [showRecent, setShowRecent] = useState(false);
+  // At home a tap opens an item; only while shopping does it check it off. Templates are never checked.
+  const shopping = useShopping() && !list.isTemplate;
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (shopping) setDone(false);
+  }, [shopping]);
 
   useEffect(() => {
     if (!undo) return;
@@ -66,7 +73,7 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
   const editItem = items.find((i) => i.id === editing);
 
   return (
-    <section className="listview">
+    <section className={`listview${shopping ? ' listview--shopping' : ''}`}>
       <AddBar
         ref={addRef}
         listId={list.id}
@@ -82,7 +89,24 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
         </p>
       )}
 
-      {open.length === 0 && !list.isTemplate && (
+      {!shopping && !list.isTemplate && open.length > 0 && !shopModeKnown() && (
+        <p className="mode-hint">
+          🏠 Zuhause hakt Antippen nichts ab, sondern öffnet den Artikel. Im Laden auf{' '}
+          <button type="button" className="link" onClick={startShopping}>
+            🛒 Einkaufen
+          </button>{' '}
+          tippen – dann hakt Antippen ab.
+        </p>
+      )}
+
+      {done && open.length === 0 && (
+        <div className="empty">
+          <p className="empty__title">Einkauf fertig 🎉</p>
+          <p>Zurück im Zuhause-Modus.</p>
+        </div>
+      )}
+
+      {!done && open.length === 0 && !list.isTemplate && (
         <div className="empty">
           <p className="empty__title">Alles erledigt 🎉</p>
           <p>Tippe oben, was ihr braucht – oder hol etwas aus „Zuletzt verwendet“ zurück.</p>
@@ -104,10 +128,17 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
                   badgeUser={remote ? users.get(remote.by) : undefined}
                   extra={[packingInfo(item).person, packingInfo(item).container].filter(Boolean).join(' · ') || undefined}
                   onTap={() => {
-                    if (list.isTemplate) return setEditing(item.id);
+                    if (!shopping) return setEditing(item.id);
                     if (remote) return;
                     void setChecked(item, true);
                     setUndo(item);
+                    // The last item: shopping is over.
+                    if (open.every((i) => i.id === item.id || remoteChecks.has(i.id))) {
+                      stopShopping();
+                      setDone(true);
+                    } else {
+                      shoppingActivity();
+                    }
                   }}
                   onLongPress={() => setEditing(item.id)}
                 />

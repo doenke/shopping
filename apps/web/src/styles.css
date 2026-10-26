@@ -1241,3 +1241,59 @@ img.avatar {
   color: var(--text);
   font-size: 0.7rem;
 }
+
+/* Zuhause / Einkaufen */
+.shop-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border, color-mix(in srgb, var(--text) 15%, transparent));
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+.shop-toggle--on {
+  border-color: transparent;
+  background: var(--primary-text);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.topbar--shopping {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+.topbar--shopping .icon-btn,
+.topbar--shopping .topbar__title {
+  color: var(--primary-text);
+}
+.topbar--shopping .avatar-stack .avatar {
+  border-color: var(--primary);
+}
+.listview--shopping .addbar input {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 0.95rem;
+}
+.mode-hint {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 0.9rem;
+}
+.topbar--shopping span.avatar {
+  background: var(--primary-text);
+  color: var(--primary);
+}
+@media (max-width: 500px) {
+  .shop-toggle__label {
+    display: none;
+  }
+}
