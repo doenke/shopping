@@ -6,6 +6,7 @@ import { applyPatch, ITEM_FIELDS, mergeRow } from './lww.js';
 import type { CatalogItem } from './model.js';
 import { parseInput, parseItem, splitInput } from './parser.js';
 import { categoriesFor, categoryInList, getCategory, nextCategoryColor } from './categories.js';
+import { isOwnName } from './catalog-index.js';
 import { extractDue, formatDue, parseDue } from './due.js';
 import { defaultVisibility } from './packing.js';
 import { planAdd } from './plan-add.js';
@@ -190,6 +191,12 @@ describe('packing lists', () => {
     expect(categoryInList('obst-gemuese', 'packing').id).toBe('packen-sonstiges');
     expect(categoryInList('technik', 'packing').name).toBe('Technik');
     expect(categoriesFor('shopping')).toHaveLength(14);
+  });
+
+  it('tells the own name of an item from a synonym', () => {
+    const lamp = { id: 'l', name: 'Taschenlampe', plural: 'Taschenlampen', aliases: ['Stirnlampe'], categoryId: 'technik', defaultUnit: null, pantry: false, source: 'seed' as const, mealieFoodId: null, hidden: false, kind: 'packing' as const, icon: null, seq: 0 };
+    expect(isOwnName(lamp, 'taschenlampen')).toBe(true);
+    expect(isOwnName(lamp, 'Stirnlampe')).toBe(false);
   });
 
   it('puts own categories before the catch-all and forgets deleted ones', () => {

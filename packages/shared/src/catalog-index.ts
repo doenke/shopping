@@ -110,3 +110,11 @@ export class CatalogIndex {
       .map(([item]) => item);
   }
 }
+
+/**
+ * Whether a phrase is the item's own name (or plural, or a simple variant of it) – as opposed to
+ * a synonym ("Stirnlampe" for Taschenlampe) or a fuzzy guess.
+ */
+export function isOwnName(item: CatalogItem, phrase: string): boolean {
+  return !!new CatalogIndex([{ ...item, aliases: [], hidden: false }]).match(phrase, false);
+}

@@ -6,6 +6,8 @@
 
 - **Eine Eingabezeile für alles**: „2 kg Kartoffeln“, „500g Hack gemischt bio“, „Milch, Butter, 6 Eier“.
   Menge, Einheit und Eigenschaften werden erkannt, mehrere Artikel mit Komma.
+  Wird etwas nur über ein Synonym gefunden („Stirnlampe“ → Taschenlampe), gibt es neben dem Vorschlag eine
+  Kachel „so“, die genau das Getippte übernimmt.
 - **Spracheingabe**: 🎤 in der Eingabezeile, „zwei Liter Milch und Butter“ – auf Einkaufs- und Packlisten
   wird „und“ zum Trenner, das Gesagte steht zur Kontrolle im Feld (Chrome/Android, Safari; braucht Netz).
 - **Doppelte Artikel** werden zusammengeführt (1 l + 2 l Milch = 3 l); zuletzt gekaufte kommen zurück

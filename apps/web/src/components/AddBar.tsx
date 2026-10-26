@@ -1,4 +1,4 @@
-import { extractPackingTokens, itemSpecification, parseInput, type CatalogIndex, type CatalogItem, type ListType } from '@shopping/shared';
+import { CatalogIndex, extractPackingTokens, isOwnName, itemSpecification, parseInput, type CatalogItem, type ListType } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, catalogToParsed } from '../actions';
 import { Tile } from './Tile';
@@ -63,6 +63,20 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
     r.start();
   };
 
+  // Found only via a synonym or a guess ("Stirnlampe" → Taschenlampe): also offer exactly what was typed.
+  const asTyped = useMemo(() => {
+    if (!single?.catalogItemId) return undefined;
+    const free = parseInput(text, NO_CATALOG, listType)[0];
+    const match = index.match(free?.name ?? '');
+    if (!free || (match && isOwnName(match, free.name)) || free.name.toLowerCase() === single.name.toLowerCase()) return undefined;
+    return { ...free, categoryId: single.categoryId };
+  }, [single, text, listType, index]);
+  const addAsTyped = async () => {
+    if (!asTyped) return;
+    setText('');
+    await addItems(listId, [asTyped]);
+  };
+
   const freeText = single && !single.catalogItemId && !suggestions.some((s) => s.name.toLowerCase() === single.name.toLowerCase());
 
   return (
@@ -116,6 +130,7 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
               />
             ))}
             {freeText && !hasAmount && <Tile item={single} variant="suggestion" badge="neu" onTap={() => void submit()} />}
+            {asTyped && <Tile item={asTyped} variant="suggestion" badge="so" onTap={() => void addAsTyped()} />}
           </div>
           {single && hasAmount && <p className="addbar__hint">Enter fügt „{[single.name, itemSpecification(single)].filter(Boolean).join(' · ')}“ hinzu</p>}
         </div>
@@ -123,6 +138,8 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
     </div>
   );
 });
+
+const NO_CATALOG = new CatalogIndex([]);
 
 /** The bits of the Web Speech API used here (not in TypeScript's DOM types everywhere). */
 interface SpeechRecognitionLike {

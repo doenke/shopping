@@ -91,6 +91,8 @@ Vorgehen (deterministisch, offline im Client, Code in `packages/shared`):
 5. Rest gegen den Katalog des Listentyps: exakt → Alias → normalisiert (Kleinschreibung, Umlaute,
    Singular/Plural) → fuzzy (Trigramme, Tippfehler) → sonst freier Text.
 6. Unsichere Treffer: die Vorschläge beim Tippen zeigen Kacheln zur Auswahl, statt still falsch zu raten.
+   Passt die Eingabe nur über ein Synonym oder ungefähr („Stirnlampe“ → Taschenlampe), gibt es zusätzlich
+   eine Kachel „so“ mit genau dem Getippten (freier Text, Kategorie vom Treffer); Enter nimmt weiter den Treffer.
 
 Serverseitig steht derselbe Parser hinter `POST /api/v1/parse`, `add_items` (MCP) und den
 Home-Assistant-Aktionen.
