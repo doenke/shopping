@@ -70,6 +70,9 @@ eingebautem MCP-Server.
 4. Zuerst entsteht der Stil an zwölf typischen Artikeln: die ersten vier freigegebenen werden Stil-Referenz ★,
    alles Weitere wird mit ihnen als Vorlage im selben Stil erzeugt – erst Kategorien, dann die Artikel nach
    Häufigkeit, bis zum Tageslimit (Standard 150 Bilder/Tag). Referenzen lassen sich in der Übersicht ändern.
+   Neue Einträge kommen sofort dran (vor den übrigen Katalogartikeln): Merklisten-Einträge und frei
+   getippte Einträge auf Einkaufs- und Packlisten, die nicht im Katalog stehen. Ein frei getippter Name
+   bekommt ein Bild, das jeder Eintrag mit diesem Namen auf jeder Liste mitbenutzt.
 5. Optional einen **Anthropic-Key** (Claude): Claude zeichnet Icons als SVG (Sonnet, etwa 3–4 Cent
    pro Entwurf), prüft jeden Entwurf vorab („erkennbar? Schrift? passt zum Stil?“, Haiku, unter 0,1 Cent)
    und beschreibt Artikel aus Mealie. Was die Vorprüfung aussortiert, steht hinten und ist

@@ -122,6 +122,14 @@ export class SyncHub {
   /** Sends pending deltas to every connected device of the given users. */
   notify(userIds: Iterable<string>): void {
     for (const id of userIds) for (const conn of this.byUser.get(id) ?? []) this.deliver(conn);
+    for (const fn of this.changeListeners) fn();
+  }
+
+  private readonly changeListeners = new Set<() => void>();
+
+  /** Called after every change to lists or items (e.g. to plan icons for new entries). */
+  onChange(fn: () => void): void {
+    this.changeListeners.add(fn);
   }
 
   private readonly catalogListeners = new Set<() => void>();

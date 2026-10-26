@@ -19,6 +19,9 @@ import { ANCHOR_ITEMS, CATEGORY_SUBJECTS, PACKING_SUBJECTS, SEED_SUBJECTS } from
 /** Below this many anchors the style is still being found: only the anchor items are generated. */
 export const MIN_ANCHORS = 4;
 const TICK_MS = 5 * 60_000;
+const CHANGE_DELAY_MS = 3_000;
+/** Lists whose free-text entries get their own picture (Merklisten always do). */
+const FREE_LIST = sql`l.list_type IN ('shopping', 'packing')`;
 
 export interface IconSettings {
   /** Works through the queue on its own (daily budget permitting). */
@@ -77,6 +80,9 @@ export function iconToken(iconId: string): string {
 export class IconService {
   private timer: NodeJS.Timeout | undefined;
   private draining: Promise<void> | null = null;
+  /** Something changed since the queue was last planned (e.g. a new entry). */
+  private dirty = true;
+  private changeTimer: NodeJS.Timeout | undefined;
   /** Pause between two jobs, so a free tier's per-minute limit is never hit. */
   delayMs = 3000;
 
@@ -287,10 +293,48 @@ export class IconService {
           AND ${untouched('entry', sql`li.id`)}
         LIMIT 500`);
       jobs.push(...entries.map((r) => ({ targetType: 'entry' as const, targetId: r.id, priority: 950, candidates: s.candidates })));
+      // Free-text entries on shopping and packing lists (not in the catalog): one picture per name,
+      // shared by every entry of that name. Already drawn names get theirs right away.
+      await this.shareFreeIcons();
+      const free = await this.db.execute<{ id: string }>(sql`
+        SELECT DISTINCT ON (lower(trim(li.name))) li.id FROM ${listItems} li JOIN ${lists} l ON l.id = li.list_id
+        WHERE ${FREE_LIST} AND l.deleted = false AND li.deleted = false AND li.icon IS NULL AND li.catalog_item_id IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM ${listItems} o JOIN ${lists} ol ON ol.id = o.list_id
+            WHERE ol.list_type IN ('shopping', 'packing') AND o.catalog_item_id IS NULL AND lower(trim(o.name)) = lower(trim(li.name))
+              AND (EXISTS (SELECT 1 FROM ${icons} i WHERE i.target_type = 'entry' AND i.target_id = o.id::text)
+                OR EXISTS (SELECT 1 FROM ${iconJobs} j WHERE j.target_type = 'entry' AND j.target_id = o.id::text)))
+        ORDER BY lower(trim(li.name)), li.created_at
+        LIMIT 500`);
+      jobs.push(...free.map((r) => ({ targetType: 'entry' as const, targetId: r.id, priority: 950, candidates: s.candidates })));
     }
     if (!jobs.length) return 0;
     const inserted = await this.db.insert(iconJobs).values(jobs).onConflictDoNothing().returning({ id: iconJobs.id });
     return inserted.length;
+  }
+
+  /** Free-text entries without a picture get the one already drawn for the same name. */
+  private async shareFreeIcons(): Promise<void> {
+    const rows = await this.sync.exclusive(() =>
+      this.db.execute<{ list_id: string }>(sql`
+        UPDATE ${listItems} li SET icon = src.icon, seq = nextval('sync_seq')
+        FROM (
+          SELECT DISTINCT ON (lower(trim(s.name))) lower(trim(s.name)) AS key, s.icon
+          FROM ${listItems} s JOIN ${lists} sl ON sl.id = s.list_id
+          WHERE sl.list_type IN ('shopping', 'packing') AND s.catalog_item_id IS NULL AND s.icon IS NOT NULL
+          ORDER BY lower(trim(s.name)), s.created_at DESC
+        ) src
+        WHERE li.icon IS NULL AND li.deleted = false AND li.catalog_item_id IS NULL AND lower(trim(li.name)) = src.key
+          AND li.list_id IN (SELECT l.id FROM ${lists} l WHERE ${FREE_LIST} AND l.deleted = false)
+        RETURNING li.list_id`),
+    );
+    if (rows.length) await this.notifyLists([...new Set(rows.map((r) => r.list_id))]);
+  }
+
+  private async notifyLists(listIds: string[]): Promise<void> {
+    if (!listIds.length) return;
+    const members = await this.db.select({ userId: listMembers.userId }).from(listMembers).where(inArray(listMembers.listId, listIds));
+    this.hub.notify(new Set(members.map((m) => m.userId)));
   }
 
   private async assertTarget(targetType: IconTarget, targetId: string): Promise<void> {
@@ -307,17 +351,20 @@ export class IconService {
     if (!row) throw new ApiError(404, 'not_found', 'Unbekannter Artikel');
   }
 
-  /** A Merkliste entry with its list (for the context of its picture). */
-  private async entry(itemId: string): Promise<(EntryContext & { listId: string }) | null> {
+  /** A Merkliste entry or a free-text entry with its list (for the context of its picture). */
+  private async entry(itemId: string): Promise<(EntryContext & { listId: string; listType: string; categoryId: string | null }) | null> {
     const [row] = await this.db
       .select({ item: listItems, list: lists })
       .from(listItems)
       .innerJoin(lists, eq(lists.id, listItems.listId))
-      .where(and(eq(listItems.id, itemId), eq(listItems.deleted, false), eq(lists.listType, 'memo'), eq(lists.deleted, false)));
+      .where(and(eq(listItems.id, itemId), eq(listItems.deleted, false), eq(lists.deleted, false)));
     if (!row) return null;
+    if (row.list.listType !== 'memo' && !(['shopping', 'packing'].includes(row.list.listType) && !row.item.catalogItemId)) return null;
     const info = packingInfo(row.item);
     return {
       listId: row.list.id,
+      listType: row.list.listType,
+      categoryId: row.item.categoryId,
       name: row.item.name,
       listName: row.list.name,
       description: listDescription(row.list),
@@ -340,6 +387,11 @@ export class IconService {
       // Merkliste: the list's description tells what "Dune" is (a film here, a book elsewhere).
       const e = await this.entry(targetId);
       if (!e) throw new Error('Eintrag nicht gefunden');
+      if (e.listType !== 'memo') {
+        // Free text on a shopping or packing list: an object like a catalog item.
+        const kind = e.listType === 'packing' ? 'packing' : 'shopping';
+        return { subject: await this.describeThing(e.name, e.categoryId, kind, gen, s), name: e.name };
+      }
       const context = entryContext(e);
       let subject: string | undefined;
       const claude = this.claude(s);
@@ -367,11 +419,19 @@ export class IconService {
     const [item] = await this.db.select().from(catalogItems).where(eq(catalogItems.id, targetId));
     if (!item) throw new Error('Artikel nicht gefunden');
     if (item.iconSubject) return { subject: item.iconSubject, name: item.name };
-    let subject = (item.kind === 'packing' ? (PACKING_SUBJECTS[item.name] ?? SEED_SUBJECTS[item.name]) : SEED_SUBJECTS[item.name]);
+    const subject = await this.describeThing(item.name, item.categoryId, item.kind, gen, s);
+    await this.db.update(catalogItems).set({ iconSubject: subject }).where(eq(catalogItems.id, item.id));
+    return { subject, name: item.name };
+  }
+
+  /** English picture description of a thing to buy or pack: built-in list, Claude, a text model, or the German name. */
+  private async describeThing(name: string, categoryId: string | null, kind: string, gen: IconGenerator, s: IconSettings): Promise<string> {
+    let subject = kind === 'packing' ? (PACKING_SUBJECTS[name] ?? SEED_SUBJECTS[name]) : SEED_SUBJECTS[name];
+    const category = getCategory(categoryId ?? 'eigene').name;
     const claude = this.claude(s);
     if (!subject && claude && (await this.withinBudget(s, 'claude', 1_000))) {
       subject = await claude
-        .describe(item.name, getCategory(item.categoryId).name)
+        .describe(name, category)
         .then(async (r) => {
           await this.recordUsage('claude', 0, r.costMicro);
           return r.subject;
@@ -382,15 +442,13 @@ export class IconService {
         });
     }
     if (!subject && gen instanceof CloudflareGenerator) {
-      subject = await gen.describe(item.name, getCategory(item.categoryId).name).catch((err: Error) => {
+      subject = await gen.describe(name, category).catch((err: Error) => {
         if (err instanceof QuotaExceeded) throw err;
         this.log.warn({ err: err.message }, 'Bildbeschreibung fehlgeschlagen');
         return undefined;
       });
     }
-    subject ??= `the German grocery item "${item.name}"`;
-    await this.db.update(catalogItems).set({ iconSubject: subject }).where(eq(catalogItems.id, item.id));
-    return { subject, name: item.name };
+    return subject ?? (kind === 'packing' ? `the travel item "${name}"` : `the German grocery item "${name}"`);
   }
 
   /** Generates the candidates of the most important open job. */
@@ -535,9 +593,15 @@ export class IconService {
         const s = await this.settings();
         if (!s.enabled) return;
         if (s.autoApprove) await this.autoApprovePending();
+        this.dirty = false;
         await this.enqueueMissing();
         let failures = 0;
         for (;;) {
+          // New entries while a long queue is being worked through: plan them in now, not hours later.
+          if (this.dirty) {
+            this.dirty = false;
+            await this.enqueueMissing();
+          }
           const r = await this.runNext();
           if (r === 'failed') failures++;
           if (r !== 'done' && r !== 'failed') break;
@@ -561,11 +625,24 @@ export class IconService {
   startScheduler(): void {
     this.timer = setInterval(() => this.kick(), TICK_MS);
     this.timer.unref();
+    this.hub.onChange(() => this.changed());
     this.kick();
+  }
+
+  /** A list changed: plan icons for new entries shortly (collected, not per keystroke). */
+  changed(): void {
+    this.dirty = true;
+    if (this.changeTimer) return;
+    this.changeTimer = setTimeout(() => {
+      this.changeTimer = undefined;
+      this.kick();
+    }, CHANGE_DELAY_MS);
+    this.changeTimer.unref();
   }
 
   async stop(): Promise<void> {
     clearInterval(this.timer);
+    clearTimeout(this.changeTimer);
     await this.draining;
   }
 
@@ -616,7 +693,14 @@ export class IconService {
           await tx.update(catalogItems).set({ icon: iconToken(iconId), seq: sql`nextval('sync_seq')` }).where(eq(catalogItems.id, icon.targetId));
         }
         if (icon.targetType === 'entry') {
-          await tx.update(listItems).set({ icon: iconToken(iconId), seq: sql`nextval('sync_seq')` }).where(eq(listItems.id, icon.targetId));
+          // A free-text entry's picture also goes to every other free-text entry of that name.
+          await tx.execute(sql`
+            UPDATE ${listItems} li SET icon = ${iconToken(iconId)}, seq = nextval('sync_seq')
+            FROM ${listItems} t JOIN ${lists} tl ON tl.id = t.list_id
+            WHERE t.id = ${icon.targetId}::uuid
+              AND (li.id = t.id OR (tl.list_type IN ('shopping', 'packing') AND t.catalog_item_id IS NULL
+                AND li.catalog_item_id IS NULL AND lower(trim(li.name)) = lower(trim(t.name))
+                AND li.list_id IN (SELECT l.id FROM ${lists} l WHERE ${FREE_LIST})))`);
         }
       }),
     );
@@ -638,7 +722,7 @@ export class IconService {
           await tx.update(catalogItems).set({ icon: null, seq: sql`nextval('sync_seq')` }).where(eq(catalogItems.id, icon.targetId));
         }
         if (icon.status === 'approved' && icon.targetType === 'entry') {
-          await tx.update(listItems).set({ icon: null, seq: sql`nextval('sync_seq')` }).where(eq(listItems.id, icon.targetId));
+          await tx.update(listItems).set({ icon: null, seq: sql`nextval('sync_seq')` }).where(eq(listItems.icon, iconToken(iconId)));
         }
       }),
     );
@@ -650,12 +734,11 @@ export class IconService {
   private async notifyEntry(iconId: string): Promise<boolean> {
     const [icon] = await this.db.select({ targetType: icons.targetType, targetId: icons.targetId }).from(icons).where(eq(icons.id, iconId));
     if (icon?.targetType !== 'entry') return false;
-    const members = await this.db
-      .select({ userId: listMembers.userId })
-      .from(listMembers)
-      .innerJoin(listItems, eq(listItems.listId, listMembers.listId))
-      .where(eq(listItems.id, icon.targetId));
-    this.hub.notify(new Set(members.map((m) => m.userId)));
+    // Shared pictures reach several lists: everyone on a list holding the entry or one of the same name.
+    const rows = await this.db.execute<{ list_id: string }>(sql`
+      SELECT DISTINCT li.list_id FROM ${listItems} li, ${listItems} t
+      WHERE t.id = ${icon.targetId}::uuid AND (li.id = t.id OR (t.catalog_item_id IS NULL AND li.catalog_item_id IS NULL AND lower(trim(li.name)) = lower(trim(t.name))))`);
+    await this.notifyLists(rows.map((r) => r.list_id));
     return true;
   }
 
@@ -714,7 +797,7 @@ export class IconService {
     const entryIds = targets.filter((t) => t.targetType === 'entry').map((t) => t.targetId);
     const entries = entryIds.length
       ? await this.db
-          .select({ id: listItems.id, name: listItems.name, list: lists.name })
+          .select({ id: listItems.id, name: listItems.name, list: lists.name, listType: lists.listType, categoryId: listItems.categoryId })
           .from(listItems)
           .innerJoin(lists, eq(lists.id, listItems.listId))
           .where(inArray(listItems.id, entryIds))
@@ -723,7 +806,7 @@ export class IconService {
     return (t: { targetType: IconTarget; targetId: string }) => {
       if (t.targetType === 'entry') {
         const e = entryById.get(t.targetId);
-        return { name: e ? `${e.name} (${e.list})` : '?', categoryId: 'merkliste', subject: null };
+        return { name: e ? `${e.name} (${e.list})` : '?', categoryId: e && e.listType !== 'memo' ? (e.categoryId ?? 'eigene') : 'merkliste', subject: null };
       }
       if (t.targetType === 'category') {
         return { name: getCategory(t.targetId).name, categoryId: t.targetId, subject: CATEGORY_SUBJECTS[t.targetId] ?? null };
@@ -849,7 +932,15 @@ export class IconService {
       .from(icons)
       .where(and(eq(icons.targetType, targetType), eq(icons.targetId, targetId), eq(icons.status, 'approved')))
       .limit(1);
-    return row?.thumb ? { token: iconToken(row.id), thumb: row.thumb } : null;
+    if (row?.thumb) return { token: iconToken(row.id), thumb: row.thumb };
+    if (targetType !== 'entry' || !/^[0-9a-f-]{36}$/.test(targetId)) return null;
+    // A free-text entry may show the picture drawn for another entry of the same name.
+    const [shared] = await this.db.execute<{ id: string; thumb: Buffer | null }>(sql`
+      SELECT i.id, i.thumb FROM ${listItems} li JOIN ${icons} i
+        ON i.target_type = 'entry' AND i.status = 'approved' AND replace(i.id::text, '-', '') LIKE li.icon || '%'
+      WHERE li.id = ${targetId}::uuid AND li.icon IS NOT NULL
+      LIMIT 1`);
+    return shared?.thumb ? { token: iconToken(shared.id), thumb: shared.thumb } : null;
   }
 
   async image(iconId: string, size: 'master' | 'thumb'): Promise<Buffer | null> {
