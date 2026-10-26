@@ -28,7 +28,29 @@
     "abort": {
       "already_configured": "Account already configured",
       "reauth_successful": "Token updated",
-      "wrong_account": "The token belongs to another account"
+      "wrong_account": "The token belongs to another account",
+      "no_lists": "All lists have been added already"
+    }
+  },
+  "config_subentries": {
+    "list": {
+      "entry_type": "List",
+      "initiate_flow": {
+        "user": "Add list"
+      },
+      "step": {
+        "user": {
+          "title": "Add list",
+          "description": "Which Shopping list should become a to-do list in Home Assistant?",
+          "data": {
+            "list_id": "List"
+          }
+        }
+      },
+      "abort": {
+        "no_lists": "All lists have been added already",
+        "cannot_connect": "Cannot reach Shopping"
+      }
     }
   },
   "entity": {

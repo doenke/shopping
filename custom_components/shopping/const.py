@@ -6,6 +6,9 @@ DOMAIN: Final = "shopping"
 
 CONF_URL: Final = "url"
 CONF_TOKEN: Final = "token"
+CONF_LIST_ID: Final = "list_id"
+
+SUBENTRY_LIST: Final = "list"
 
 ATTR_LIST: Final = "list"
 ATTR_ITEMS: Final = "items"

@@ -19,7 +19,7 @@ class ShoppingListEntity(CoordinatorEntity[ShoppingCoordinator]):
     def __init__(self, coordinator: ShoppingCoordinator, list_id: str) -> None:
         super().__init__(coordinator)
         self.list_id = list_id
-        name = coordinator.data[list_id]["name"]
+        name = (coordinator.data.get(list_id) or {}).get("name") or list_id
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{coordinator.config_entry.entry_id}_{list_id}")},
             name=name,
@@ -31,8 +31,8 @@ class ShoppingListEntity(CoordinatorEntity[ShoppingCoordinator]):
 
     @property
     def shopping_list(self) -> dict[str, Any]:
-        """The current state of the list."""
-        return self.coordinator.data[self.list_id]
+        """The current state of the list (empty while it is gone, e.g. deleted in the app)."""
+        return self.coordinator.data.get(self.list_id) or {"id": self.list_id, "items": []}
 
     @property
     def available(self) -> bool:

@@ -14,7 +14,7 @@ from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import ShoppingAuthError, ShoppingClient, ShoppingError
-from .const import DOMAIN
+from .const import CONF_LIST_ID, DOMAIN, SUBENTRY_LIST
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,15 +43,32 @@ class ShoppingCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         self.client = client
         self.connected = False
 
+    def chosen(self) -> dict[str, str]:
+        """The lists added to Home Assistant: list id -> subentry id."""
+        return {
+            s.data[CONF_LIST_ID]: s.subentry_id for s in self.config_entry.subentries.values() if s.subentry_type == SUBENTRY_LIST
+        }
+
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
+        """Only the lists that were added; a list deleted in the app simply becomes unavailable."""
         try:
             lists = await self.client.lists()
-            details = await asyncio.gather(*(self.client.list(l["id"]) for l in lists))
+            wanted = [l for l in lists if l["id"] in self.chosen()]
+            details = await asyncio.gather(*(self.client.list(l["id"]) for l in wanted))
         except ShoppingAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except ShoppingError as err:
             raise UpdateFailed(str(err)) from err
+        self._sync_titles(details)
         return {d["id"]: d for d in details}
+
+    def _sync_titles(self, details: list[dict[str, Any]]) -> None:
+        """A list renamed in the app is renamed here too."""
+        chosen = self.chosen()
+        for d in details:
+            subentry = self.config_entry.subentries.get(chosen.get(d["id"], ""))
+            if subentry and subentry.title != d["name"]:
+                self.hass.config_entries.async_update_subentry(self.config_entry, subentry, title=d["name"])
 
     def main_list_id(self) -> str | None:
         """The account's main list."""

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import ShoppingConfigEntry, ShoppingCoordinator
@@ -16,17 +16,8 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ShoppingConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
     coordinator = entry.runtime_data
-    known: set[str] = set()
-
-    @callback
-    def add_new() -> None:
-        new = set(coordinator.data) - known
-        if new:
-            async_add_entities(OpenItemsSensor(coordinator, list_id) for list_id in new)
-            known.update(new)
-
-    add_new()
-    entry.async_on_unload(coordinator.async_add_listener(add_new))
+    for list_id, subentry_id in coordinator.chosen().items():
+        async_add_entities([OpenItemsSensor(coordinator, list_id)], config_subentry_id=subentry_id)
 
 
 class OpenItemsSensor(ShoppingListEntity, SensorEntity):

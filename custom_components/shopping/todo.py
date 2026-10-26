@@ -6,7 +6,7 @@ from datetime import date
 from typing import Any
 
 from homeassistant.components.todo import TodoItem, TodoItemStatus, TodoListEntity, TodoListEntityFeature
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -20,19 +20,10 @@ PARALLEL_UPDATES = 0
 async def async_setup_entry(
     hass: HomeAssistant, entry: ShoppingConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
-    """One to-do entity per list; lists created later show up automatically."""
+    """One to-do entity per list added under the integration ("Liste hinzufügen")."""
     coordinator = entry.runtime_data
-    known: set[str] = set()
-
-    @callback
-    def add_new() -> None:
-        new = set(coordinator.data) - known
-        if new:
-            async_add_entities(ShoppingTodoList(coordinator, list_id) for list_id in new)
-            known.update(new)
-
-    add_new()
-    entry.async_on_unload(coordinator.async_add_listener(add_new))
+    for list_id, subentry_id in coordinator.chosen().items():
+        async_add_entities([ShoppingTodoList(coordinator, list_id)], config_subentry_id=subentry_id)
 
 
 class ShoppingTodoList(ShoppingListEntity, TodoListEntity):

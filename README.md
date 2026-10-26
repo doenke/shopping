@@ -105,9 +105,13 @@ In der App kann jeder über das Artikel-Menü „Icon gefällt mir nicht“ meld
 2. HACS → *Benutzerdefinierte Repositories* → `https://github.com/doenke/shopping`, Typ
    *Integration* → „Shopping“ installieren, HA neu starten.
 3. *Einstellungen → Geräte & Dienste → Integration hinzufügen → Shopping*: Adresse und Token.
+4. Bei der Integration **„Liste hinzufügen“** – für jede Liste, die du in Home Assistant brauchst.
+   Es wird nichts automatisch angelegt; entfernen geht über ⋮ bei der Liste.
 
-Jede Einkaufsliste wird eine To-do-Liste (`todo.einkauf`) plus Sensor mit der Zahl offener
-Artikel. Änderungen kommen per Push sofort an. Aktionen: `shopping.add_items`,
+Jede hinzugefügte Liste wird eine To-do-Liste (`todo.einkauf`) plus Sensor mit der Zahl offener
+Artikel. Wer die Integration schon vorher eingerichtet hatte, behält seine bisherigen Listen (gleiche
+Entitäten); neue kommen nur noch über „Liste hinzufügen“ dazu. Das Integrations-Icon bringt die
+Integration selbst mit (ab Home Assistant 2026.3 angezeigt). Änderungen kommen per Push sofort an. Aktionen: `shopping.add_items`,
 `shopping.apply_template`, `shopping.import_mealie_recipe`, `shopping.import_mealie_mealplan`,
 `shopping.clear_checked` (Liste per Name, leer = Hauptliste).
 
