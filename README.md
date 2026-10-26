@@ -177,3 +177,7 @@ Einen Proxy Host auf `127.0.0.1:38417` zeigen lassen, dann:
 - Updates: neues Image ziehen und neu starten. Die App im Browser holt sich die neue Version
   von selbst. Welche Version läuft, steht unten in den Einstellungen und in `/healthz`.
 - `DEV_LOGIN=true` erlaubt die Anmeldung nur mit einem Namen – **niemals in Produktion**.
+
+## Lizenz
+
+[MIT](LICENSE)
