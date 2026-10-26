@@ -275,6 +275,25 @@ describe('icon pipeline', () => {
     expect(after).toHaveLength(1);
   });
 
+  it('lets a person keep the current icon when the replacement is worse', async () => {
+    await req('PUT', '/api/v1/icons/settings', { autoApprove: true });
+    const before = (await req('GET', '/api/v1/catalog')).json().items.find((i: { id: string }) => i.id === seedId('Zucker')).icon;
+    expect(before).toMatch(/^[0-9a-f]{10}$/);
+    // The new one fails a check: it waits next to the current one.
+    cutOff = true;
+    await req('POST', '/api/v1/icons/generate', { targetType: 'item', targetId: seedId('Zucker'), candidates: 1 });
+    expect(await t.icons.runNext()).toBe('done');
+    cutOff = false;
+    const target = (await req('GET', '/api/v1/icons/review')).json().targets.find((x: { targetId: string }) => x.targetId === seedId('Zucker'));
+    expect(target.approved).toBeTruthy();
+    expect(target.candidates).toHaveLength(1);
+
+    expect((await req('POST', '/api/v1/icons/discard', { targetType: 'item', targetId: seedId('Zucker') })).json().discarded).toBe(1);
+    const left = (await req('GET', '/api/v1/icons/review')).json().targets.find((x: { targetId: string }) => x.targetId === seedId('Zucker'));
+    expect(left).toBeUndefined();
+    expect((await req('GET', '/api/v1/catalog')).json().items.find((i: { id: string }) => i.id === seedId('Zucker')).icon).toBe(before);
+  });
+
   it('is for logged-in accounts only, too', async () => {
     expect((await t.app.inject({ method: 'GET', url: '/api/v1/icons/review' })).statusCode).toBe(401);
   });

@@ -348,6 +348,25 @@ function ReviewCard({ target, stylePhase, neighbours, alternatives, busy, run }:
         {target.approved && <span className="muted">ersetzt das bisherige Icon</span>}
       </header>
       <div className="review__candidates">
+        {target.approved && (
+          <figure className="review__candidate review__candidate--current">
+            <Preview src={`/api/v1/icons/${target.approved}/image`} categoryId={target.categoryId} />
+            <small className="muted">bisher</small>
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  await post('/api/v1/icons/discard', { targetType: target.targetType, targetId: target.targetId });
+                  return `Neue Entwürfe für „${target.name}“ verworfen, das bisherige Icon bleibt.`;
+                })
+              }
+            >
+              Bisheriges behalten
+            </button>
+          </figure>
+        )}
         {target.candidates.map((c) => {
           const problems = (Object.keys(CHECK_TEXT) as (keyof Checks)[]).filter((k) => c.checks[k] === false);
           return (
@@ -400,6 +419,21 @@ function ReviewCard({ target, stylePhase, neighbours, alternatives, busy, run }:
           <button type="button" className="btn" disabled={busy} onClick={() => void regenerate()}>
             Alle verwerfen und neu erzeugen
           </button>
+          {!target.approved && (
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  await post('/api/v1/icons/discard', { targetType: target.targetType, targetId: target.targetId });
+                  return `Entwürfe für „${target.name}“ verworfen – es bleibt beim Kategorie-Icon bzw. Anfangsbuchstaben.`;
+                })
+              }
+            >
+              Alle verwerfen, keins nehmen
+            </button>
+          )}
           {alternatives.map((p) => (
             <button key={p} type="button" className="btn" disabled={busy} onClick={() => void regenerate(p)}>
               Mit {PROVIDER_LABEL[p]} neu

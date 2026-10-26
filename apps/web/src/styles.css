@@ -1497,3 +1497,10 @@ img.avatar {
   border: 2px solid var(--border, rgba(0, 0, 0, 0.15));
   cursor: pointer;
 }
+
+/* Icon review: the current icon next to the new drafts */
+.review__candidate--current {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 6px;
+}

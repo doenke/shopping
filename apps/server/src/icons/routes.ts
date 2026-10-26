@@ -108,6 +108,11 @@ export async function iconRoutes(app: FastifyInstance, { icons, requireAccount }
       return { ok: true };
     });
 
+    api.post('/api/v1/icons/discard', async (request) => {
+      const body = Target.parse(request.body);
+      return { discarded: await icons.discardCandidates(body.targetType, body.targetId, request.userId) };
+    });
+
     api.post('/api/v1/icons/:id/anchor', async (request) => {
       const { id } = IdParam.parse(request.params);
       const { anchor } = z.object({ anchor: z.boolean() }).parse(request.body);

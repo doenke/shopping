@@ -28,7 +28,9 @@ Artikel, jede Kategorie, jeder Merklisten-Eintrag und jede Liste ein eigenes Ico
 - **Automatisch freigeben**: Ein Entwurf wird freigegeben, sobald er alle Prüfungen besteht (Hintergrund
   sauber, nichts abgeschnitten, nicht zu klein und – mit Anthropic-Key – die KI-Vorprüfung). Weitere Entwürfe
   werden dann gar nicht erst erzeugt. Durchgefallenes steht unter „Nicht bestanden“ und lässt sich trotzdem
-  nehmen. Wer lieber selbst auswählt, schaltet „Automatisch freigeben“ ab.
+  nehmen. Ersetzt ein Entwurf ein vorhandenes Icon, steht das bisherige daneben; „Bisheriges behalten“
+  verwirft die neuen Entwürfe, „Alle verwerfen, keins nehmen“ tut das, wo es noch keins gibt.
+  Wer lieber selbst auswählt, schaltet „Automatisch freigeben“ ab.
 - **Neue Einträge** kommen sofort dran: Merklisten-Einträge und frei getippte Einträge auf Einkaufs- und
   Packlisten, die nicht im Katalog stehen. Ein frei getippter Name bekommt ein Bild, das jeder Eintrag mit
   diesem Namen auf jeder Liste mitbenutzt.

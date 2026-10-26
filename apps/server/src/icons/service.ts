@@ -1018,6 +1018,20 @@ export class IconService {
     await this.broadcastCatalog();
   }
 
+  /** None of the new drafts is better: they all go, the current icon (if any) stays, nothing more is drawn. */
+  async discardCandidates(targetType: IconTarget, targetId: string, userId: string): Promise<number> {
+    const dropped = await this.db
+      .update(icons)
+      .set({ status: 'rejected', isAnchor: false, image: null, thumb: null, reviewedAt: sql`now()`, reviewedBy: userId })
+      .where(and(eq(icons.targetType, targetType), eq(icons.targetId, targetId), eq(icons.status, 'candidate')))
+      .returning({ id: icons.id });
+    await this.db
+      .update(iconJobs)
+      .set({ status: 'done', updatedAt: sql`now()` })
+      .where(and(eq(iconJobs.targetType, targetType), eq(iconJobs.targetId, targetId), eq(iconJobs.status, 'queued')));
+    return dropped.length;
+  }
+
   async reject(iconId: string, userId: string): Promise<void> {
     await this.sync.exclusive(() =>
       this.db.transaction(async (tx) => {
