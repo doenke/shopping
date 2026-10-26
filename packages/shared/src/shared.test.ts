@@ -5,7 +5,7 @@ import { Hlc } from './hlc.js';
 import { applyPatch, ITEM_FIELDS, mergeRow } from './lww.js';
 import type { CatalogItem } from './model.js';
 import { parseInput, parseItem, splitInput } from './parser.js';
-import { categoriesFor, categoryInList } from './categories.js';
+import { categoriesFor, categoryInList, getCategory, nextCategoryColor } from './categories.js';
 import { extractDue, formatDue, parseDue } from './due.js';
 import { defaultVisibility } from './packing.js';
 import { planAdd } from './plan-add.js';
@@ -190,6 +190,21 @@ describe('packing lists', () => {
     expect(categoryInList('obst-gemuese', 'packing').id).toBe('packen-sonstiges');
     expect(categoryInList('technik', 'packing').name).toBe('Technik');
     expect(categoriesFor('shopping')).toHaveLength(14);
+  });
+
+  it('puts own categories before the catch-all and forgets deleted ones', () => {
+    const own = (id: string, name: string, listType: 'shopping' | 'packing', deleted = false) => ({
+      id, name, listType, color: '#5BAA45', ownerId: 'u', deleted, hlc: {}, seq: 0,
+    });
+    const custom = [own('c1', 'Zelten', 'packing'), own('c2', 'Angeln', 'packing'), own('c3', 'Weg', 'packing', true), own('c4', 'Asia-Laden', 'shopping')];
+    const packing = categoriesFor('packing', custom).map((c) => c.name);
+    expect(packing.slice(-3)).toEqual(['Angeln', 'Zelten', 'Sonstiges']);
+    expect(packing).not.toContain('Weg');
+    expect(categoryInList('c1', 'packing', custom)).toMatchObject({ name: 'Zelten', custom: true });
+    expect(categoryInList('c3', 'packing', custom).id).toBe('packen-sonstiges');
+    expect(categoryInList('c4', 'packing', custom).id).toBe('packen-sonstiges');
+    expect(getCategory('c4', custom).name).toBe('Asia-Laden');
+    expect(nextCategoryColor('packing', custom)).not.toBe('#5BAA45');
   });
 });
 

@@ -1,4 +1,5 @@
-import { CATEGORIES, getCategory, type CatalogItem } from '@shopping/shared';
+import { ALL_CATEGORIES, getCategory, type CatalogItem } from '@shopping/shared';
+import { useCustomCategories } from '../categories';
 import { useEffect, useMemo, useState } from 'react';
 import { sync } from '../sync/engine';
 
@@ -112,7 +113,7 @@ function fileToBase64(file: File): Promise<string> {
 
 /** The candidate as the app shows it: on the light and dark tile, at 96, 48 and 32 px. */
 function Preview({ src, categoryId }: { src: string; categoryId: string }) {
-  const color = getCategory(categoryId).color;
+  const color = getCategory(categoryId, useCustomCategories()).color;
   return (
     <div className="icon-preview">
       {(['light', 'dark'] as const).map((mode) => (
@@ -129,6 +130,7 @@ function Preview({ src, categoryId }: { src: string; categoryId: string }) {
 }
 
 export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
+  const custom = useCustomCategories();
   const [status, setStatus] = useState<Status | null>(null);
   const [targets, setTargets] = useState<ReviewTarget[]>([]);
   const [gallery, setGallery] = useState<GalleryIcon[]>([]);
@@ -224,7 +226,7 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
           <>
             <progress max={status.items} value={status.withIcon} />
             <p>
-              {status.withIcon} von {status.items} Artikeln haben ein Icon, {status.categoriesWithIcon} von {CATEGORIES.length} Kategorien.{' '}
+              {status.withIcon} von {status.items} Artikeln haben ein Icon, {status.categoriesWithIcon} von {ALL_CATEGORIES.length + custom.filter((c) => !c.deleted).length} Kategorien.{' '}
               {status.anchors} Stil-Referenzen.
             </p>
           </>
@@ -434,6 +436,7 @@ interface GalleryProps {
 }
 
 function Gallery({ icons, catalog, alternatives, busy, run }: GalleryProps) {
+  const custom = useCustomCategories();
   const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const sel = icons.find((i) => i.id === selected);
@@ -455,7 +458,7 @@ function Gallery({ icons, catalog, alternatives, busy, run }: GalleryProps) {
             key={i.id}
             type="button"
             className={`gallery__item${i.id === selected ? ' gallery__item--selected' : ''}`}
-            style={{ '--cat': getCategory(i.categoryId).color } as React.CSSProperties}
+            style={{ '--cat': getCategory(i.categoryId, custom).color } as React.CSSProperties}
             onClick={() => setSelected(i.id === selected ? null : i.id)}
             title={i.name}
           >

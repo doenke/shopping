@@ -1,8 +1,28 @@
+import type { CategoryRow } from './model.js';
+
 export interface CategoryDef {
   id: string;
   name: string;
   color: string;
   order: number;
+  /** Created by a user (see `CategoryRow`), not built in. */
+  custom?: boolean;
+}
+
+/** Own categories the user can see; every function below falls back to the built-in ones without them. */
+export type CustomCategories = readonly CategoryRow[];
+
+/** Colours offered for own categories. */
+export const CATEGORY_COLORS = ['#5BAA45', '#C98A3E', '#E3B505', '#D2544B', '#4A90C9', '#C2569A', '#3FA7A0', '#7A7FD1', '#9B6FC4', '#8C6D4F', '#6B8E3D', '#5C7CBA'];
+
+/** A colour for a new category: the first one not yet taken in that list type. */
+export function nextCategoryColor(listType: string, custom: CustomCategories = []): string {
+  const taken = new Set(categoriesFor(listType, custom).map((c) => c.color.toUpperCase()));
+  return CATEGORY_COLORS.find((c) => !taken.has(c)) ?? CATEGORY_COLORS[custom.length % CATEGORY_COLORS.length]!;
+}
+
+function toDef(c: CategoryRow): CategoryDef {
+  return { id: c.id, name: c.name, color: c.color, order: 1000, custom: true };
 }
 
 /** Grocery categories, roughly in the order of a supermarket. */
@@ -53,21 +73,35 @@ export const ALL_CATEGORIES: CategoryDef[] = [...CATEGORIES, ...PACKING_CATEGORI
 
 const byId = new Map(ALL_CATEGORIES.map((c) => [c.id, c]));
 
-export function getCategory(id: string | null | undefined): CategoryDef {
+export function getCategory(id: string | null | undefined, custom: CustomCategories = []): CategoryDef {
+  const own = id ? custom.find((c) => c.id === id && !c.deleted) : undefined;
+  if (own) return toDef(own);
   return byId.get(id ?? DEFAULT_CATEGORY) ?? byId.get(DEFAULT_CATEGORY)!;
 }
 
-export function categoriesFor(listType: string): CategoryDef[] {
+function builtIn(listType: string): CategoryDef[] {
   return listType === 'packing' ? PACKING_CATEGORIES : listType === 'memo' ? MEMO_CATEGORIES : listType === 'todo' ? TODO_CATEGORIES : CATEGORIES;
+}
+
+/** The categories of a list type; own ones (alphabetically) come before the catch-all ("Sonstiges"). */
+export function categoriesFor(listType: string, custom: CustomCategories = []): CategoryDef[] {
+  const own = builtIn(listType);
+  const extra = custom
+    .filter((c) => c.listType === listType && !c.deleted)
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+    .map(toDef);
+  if (!extra.length) return own;
+  const fallback = own.findIndex((c) => c.id === defaultCategoryFor(listType));
+  return fallback < 0 ? [...own, ...extra] : [...own.slice(0, fallback), ...extra, ...own.slice(fallback)];
 }
 
 export function defaultCategoryFor(listType: string): string {
   return listType === 'packing' ? DEFAULT_PACKING_CATEGORY : listType === 'memo' ? 'merkliste' : listType === 'todo' ? 'aufgaben' : DEFAULT_CATEGORY;
 }
 
-/** Category of an item shown in a list of the given type (unknown/other-type ones go to "Sonstiges"). */
-export function categoryInList(id: string | null | undefined, listType: string): CategoryDef {
-  const own = categoriesFor(listType);
+/** Category of an item shown in a list of the given type (unknown/other-type/deleted ones go to "Sonstiges"). */
+export function categoryInList(id: string | null | undefined, listType: string, custom: CustomCategories = []): CategoryDef {
+  const own = categoriesFor(listType, custom);
   return own.find((c) => c.id === id) ?? getCategory(defaultCategoryFor(listType));
 }
 
@@ -85,6 +119,6 @@ export function inUserOrder<T>(things: T[], order: readonly string[] | undefined
 }
 
 /** The categories of a list type in the user's order. */
-export function categoriesInOrder(listType: string, order: readonly string[] | undefined): CategoryDef[] {
-  return inUserOrder(categoriesFor(listType), order, (c) => c.id);
+export function categoriesInOrder(listType: string, order: readonly string[] | undefined, custom: CustomCategories = []): CategoryDef[] {
+  return inUserOrder(categoriesFor(listType, custom), order, (c) => c.id);
 }

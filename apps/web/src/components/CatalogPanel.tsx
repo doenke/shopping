@@ -1,3 +1,4 @@
+import { useCustomCategories } from '../categories';
 import { categoriesInOrder, type CatalogItem, type ItemRow, type ListType } from '@shopping/shared';
 import { useMemo, useState } from 'react';
 import { addItems, catalogToParsed } from '../actions';
@@ -14,7 +15,7 @@ interface Props {
 /** Laptop: browse the catalog by category and add with one click. */
 export function CatalogPanel({ listId, listType, catalog, items }: Props) {
   const me = useMe();
-  const categories = categoriesInOrder(listType, me?.categoryOrder);
+  const categories = categoriesInOrder(listType, me?.categoryOrder, useCustomCategories());
   const [category, setCategory] = useState(categories[0]!.id);
   const onList = useMemo(() => new Set(items.filter((i) => !i.checked && i.catalogItemId).map((i) => i.catalogItemId)), [items]);
   const shown = useMemo(

@@ -16,7 +16,8 @@ import {
   type UserInfo,
 } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { deleteItem, updateItem } from '../actions';
+import { createCategory, deleteItem, updateItem } from '../actions';
+import { useCustomCategories } from '../categories';
 import { useMe } from '../hooks';
 import { Avatar } from './Avatar';
 import { sync } from '../sync/engine';
@@ -51,6 +52,8 @@ function parseQuantity(s: string): number | null {
   return s.trim() && Number.isFinite(n) && n > 0 ? n : null;
 }
 
+const NEW_CATEGORY = '__new__';
+
 export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const isTemplate = list.isTemplate;
   const packing = list.listType === 'packing';
@@ -58,7 +61,11 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   // Merk- and ToDo lists: no amounts, no categories.
   const memo = list.listType === 'memo' || todo;
   const labels = attributeLabels(list.listType);
-  const categories = categoriesFor(list.listType);
+  const customCategories = useCustomCategories();
+  const categories = categoriesFor(list.listType, customCategories);
+  /** Name of a category being created right here ("+ Neue Kategorie …"); null = not creating. */
+  const [newCategory, setNewCategory] = useState<string | null>(null);
+  const canCreateCategory = list.listType === 'shopping' || list.listType === 'packing';
   const ref = useRef<HTMLDialogElement>(null);
   const first = item.amounts[0];
   const [name, setName] = useState(item.name);
@@ -67,7 +74,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const [properties, setProperties] = useState(item.properties);
   const [custom, setCustom] = useState('');
   const [note, setNote] = useState(item.note ?? '');
-  const [categoryId, setCategoryId] = useState(categoryInList(item.categoryId, list.listType).id);
+  const [categoryId, setCategoryId] = useState(categoryInList(item.categoryId, list.listType, customCategories).id);
   const [person, setPerson] = useState(packingInfo(item).person ?? '');
   const [container, setContainer] = useState(packingInfo(item).container ?? '');
   const [due, setDue] = useState(dueOf(item) ?? '');
@@ -77,6 +84,16 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const [optional, setOptional] = useState(item.optional);
   const [reported, setReported] = useState<'idle' | 'done' | 'error'>('idle');
   const me = useMe();
+  const guest = !me || me.isGuest;
+
+  const addCategory = async () => {
+    const name = newCategory?.trim();
+    if (!name || !canCreateCategory) return;
+    // Already there (built-in or own): just pick it.
+    const existing = categories.find((c) => c.name.toLowerCase() === name.toLowerCase());
+    setCategoryId(existing ? existing.id : await createCategory(list.listType as 'shopping' | 'packing', name));
+    setNewCategory(null);
+  };
 
   useEffect(() => {
     ref.current?.showModal();
@@ -229,14 +246,39 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
         {!memo && (
           <label className="field">
             <span>Kategorie</span>
-            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <select
+              value={newCategory !== null ? NEW_CATEGORY : categoryId}
+              onChange={(e) => (e.target.value === NEW_CATEGORY ? setNewCategory('') : (setNewCategory(null), setCategoryId(e.target.value)))}
+            >
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
+              {canCreateCategory && !guest && <option value={NEW_CATEGORY}>+ Neue Kategorie …</option>}
             </select>
-            {item.catalogItemId && categoryId !== categoryInList(item.categoryId, list.listType).id && (
+            {newCategory !== null && (
+              <span className="new-category">
+                <input
+                  autoFocus
+                  value={newCategory}
+                  maxLength={40}
+                  placeholder={list.listType === 'packing' ? 'z. B. Angeln' : 'z. B. Asia-Laden'}
+                  aria-label="Name der neuen Kategorie"
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void addCategory();
+                    }
+                  }}
+                />
+                <button type="button" className="btn" disabled={!newCategory.trim()} onClick={() => void addCategory()}>
+                  Anlegen
+                </button>
+              </span>
+            )}
+            {item.catalogItemId && categoryId !== categoryInList(item.categoryId, list.listType, customCategories).id && (
               <label className="check">
                 <input type="checkbox" checked={forAll} onChange={(e) => setForAll(e.target.checked)} /> für diesen Artikel immer verwenden
               </label>

@@ -84,6 +84,22 @@ export interface Me extends UserInfo {
 
 export type CatalogKind = 'shopping' | 'packing';
 
+/** List types that can have categories of their own (Merk- and ToDo lists have just one group). */
+export const CUSTOM_CATEGORY_TYPES = ['shopping', 'packing'] as const;
+export type CustomCategoryType = (typeof CUSTOM_CATEGORY_TYPES)[number];
+
+/** A category someone created themselves; shared with their household (like lists). */
+export interface CategoryRow {
+  id: string;
+  listType: CustomCategoryType;
+  name: string;
+  color: string;
+  ownerId: string;
+  deleted: boolean;
+  hlc: FieldClock;
+  seq: number;
+}
+
 export interface CatalogItem {
   id: string;
   name: string;
@@ -131,6 +147,13 @@ export interface ItemPatch {
   deleted?: boolean;
 }
 
+export interface CategoryPatch {
+  listType?: CustomCategoryType;
+  name?: string;
+  color?: string;
+  deleted?: boolean;
+}
+
 export interface MePatch {
   defaultListId?: string | null;
   categoryOrder?: string[];
@@ -150,7 +173,8 @@ interface MutationBase {
 export type Mutation =
   | (MutationBase & { entity: 'list'; patch: ListPatch })
   | (MutationBase & { entity: 'item'; patch: ItemPatch })
-  | (MutationBase & { entity: 'me'; patch: MePatch });
+  | (MutationBase & { entity: 'me'; patch: MePatch })
+  | (MutationBase & { entity: 'category'; patch: CategoryPatch });
 
 // ---- Sync messages -------------------------------------------------------
 
@@ -160,6 +184,10 @@ export interface ChangeSet {
   /** Lists the user lost access to (deleted or left). */
   removedLists: string[];
   users: UserInfo[];
+  /** Own categories (changed ones; all of them when `categoriesFull`). */
+  categories: CategoryRow[];
+  /** `categories` is the complete set the user can see – drop the others. */
+  categoriesFull?: boolean;
   me?: Me;
   /** Highest server sequence covered by this change set. */
   seq: number;

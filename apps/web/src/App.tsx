@@ -18,8 +18,9 @@ import { Login } from './components/Login';
 import { Settings } from './components/Settings';
 import { SyncBadge } from './components/SyncBadge';
 import { setMeta } from './db';
+import { CategoryContext } from './categories';
 import { IconContext } from './icons';
-import { navigate, useCatalog, useIcons, useItems, useLists, useMe, useMediaQuery, useRemoteChecks, useRoute, useUsers } from './hooks';
+import { navigate, useCatalog, useCategoryRows, useIcons, useItems, useLists, useMe, useMediaQuery, useRemoteChecks, useRoute, useUsers } from './hooks';
 import { sync } from './sync/engine';
 
 export function App() {
@@ -54,6 +55,7 @@ function Shell({ me }: { me: Me }) {
   const lists = useLists();
   const catalog = useCatalog();
   const icons = useIcons(catalog.items);
+  const customCategories = useCategoryRows();
   const users = useUsers();
   const remoteChecks = useRemoteChecks();
   const wide = useMediaQuery('(min-width: 900px)');
@@ -227,6 +229,7 @@ function Shell({ me }: { me: Me }) {
 
   return (
     <IconContext.Provider value={icons}>
+    <CategoryContext.Provider value={customCategories}>
     <div className={`shell${wide ? ' shell--wide' : ''}${extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' ? ' shell--catalog' : ''}`}>
       {wide ? sidebar : drawer && <div className="drawer" onClick={() => setDrawer(false)}>{sidebar}</div>}
 
@@ -352,7 +355,7 @@ function Shell({ me }: { me: Me }) {
         <SortDialog
           title={`Kategorien sortieren – ${LIST_TYPE_LABEL[sorting]}`}
           hint="Zum Beispiel in der Reihenfolge deines Weges durch den Laden. Gilt nur für dich, auf allen deinen Geräten."
-          groups={[{ title: null, items: categoriesInOrder(sorting, me.categoryOrder).map((c) => ({ id: c.id, label: c.name })) }]}
+          groups={[{ title: null, items: categoriesInOrder(sorting, me.categoryOrder, customCategories).map((c) => ({ id: c.id, label: c.name })) }]}
           onSave={(ids) => setCategoryOrder(sorting, ids, me.categoryOrder)}
           onReset={() => setCategoryOrder(sorting, [], me.categoryOrder)}
           onClose={() => setSorting(null)}
@@ -367,6 +370,7 @@ function Shell({ me }: { me: Me }) {
         <CatalogPanel key={list.listType} listId={list.id} listType={list.listType} catalog={catalog.items} items={items ?? []} />
       )}
     </div>
+    </CategoryContext.Provider>
     </IconContext.Provider>
   );
 }

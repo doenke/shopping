@@ -56,3 +56,5 @@ export const ITEM_FIELDS = [
   'attributes',
   'deleted',
 ] as const;
+
+export const CATEGORY_FIELDS = ['listType', 'name', 'color', 'deleted'] as const;

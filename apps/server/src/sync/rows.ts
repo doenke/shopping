@@ -1,11 +1,12 @@
 import { avatarPath } from '../auth/avatar.js';
-import type { CatalogItem, ItemRow, ListRow, Me, UserInfo } from '@shopping/shared';
-import type { catalogItems, listItems, lists, users } from '../db/schema.js';
+import type { CatalogItem, CategoryRow, ItemRow, ListRow, Me, UserInfo } from '@shopping/shared';
+import type { catalogItems, customCategories, listItems, lists, users } from '../db/schema.js';
 
 type ListRecord = typeof lists.$inferSelect;
 type ItemRecord = typeof listItems.$inferSelect;
 type UserRecord = typeof users.$inferSelect;
 type CatalogRecord = typeof catalogItems.$inferSelect;
+type CategoryRecord = typeof customCategories.$inferSelect;
 
 function iso(ts: string): string {
   return new Date(ts).toISOString();
@@ -80,4 +81,8 @@ export function toCatalogItem(r: CatalogRecord): CatalogItem {
     icon: r.icon,
     seq: r.seq,
   };
+}
+
+export function toCategoryRow(r: CategoryRecord): CategoryRow {
+  return { id: r.id, listType: r.listType, name: r.name, color: r.color, ownerId: r.ownerId, deleted: r.deleted, hlc: r.hlc, seq: r.seq };
 }

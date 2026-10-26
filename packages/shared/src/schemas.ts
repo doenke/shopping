@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LIST_TYPES, type ItemPatch, type ListPatch, type MePatch, type Mutation } from './model.js';
+import { CUSTOM_CATEGORY_TYPES, LIST_TYPES, type CategoryPatch, type ItemPatch, type ListPatch, type MePatch, type Mutation } from './model.js';
 
 export const AmountSchema = z.object({
   q: z.number().positive().nullable(),
@@ -54,10 +54,21 @@ export const MePatchSchema = z
   .partial()
   .strict();
 
+export const CategoryPatchSchema = z
+  .object({
+    listType: z.enum(CUSTOM_CATEGORY_TYPES),
+    name: z.string().trim().min(1).max(40),
+    color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    deleted: z.boolean(),
+  })
+  .partial()
+  .strict();
+
 export const MutationSchema = z.discriminatedUnion('entity', [
   z.object({ mid: id, entity: z.literal('list'), id, hlc, patch: ListPatchSchema }),
   z.object({ mid: id, entity: z.literal('item'), id, hlc, patch: ItemPatchSchema }),
   z.object({ mid: id, entity: z.literal('me'), id: z.string(), hlc, patch: MePatchSchema }),
+  z.object({ mid: id, entity: z.literal('category'), id, hlc, patch: CategoryPatchSchema }),
 ]);
 
 
@@ -75,5 +86,6 @@ export type _Checks = [
   Assert<Same<z.infer<typeof ListPatchSchema>, ListPatch>>,
   Assert<Same<z.infer<typeof ItemPatchSchema>, ItemPatch>>,
   Assert<Same<z.infer<typeof MePatchSchema>, MePatch>>,
+  Assert<Same<z.infer<typeof CategoryPatchSchema>, CategoryPatch>>,
   Assert<Same<z.infer<typeof MutationSchema>, Mutation>>,
 ];

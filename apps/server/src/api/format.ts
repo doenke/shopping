@@ -1,4 +1,4 @@
-import { categoryInList, dueOf, formatAmounts, getCategory, itemSpecification, listDescription, listGroup, packingInfo, type ItemRow, type ItemSource, type ListRow, type ListType } from '@shopping/shared';
+import { categoryInList, type CustomCategories, dueOf, formatAmounts, getCategory, itemSpecification, listDescription, listGroup, packingInfo, type ItemRow, type ItemSource, type ListRow, type ListType } from '@shopping/shared';
 
 /** The public shape of an item in the REST API, SSE and MCP. */
 export interface ApiItem {
@@ -49,9 +49,9 @@ export interface ApiList {
   openItems: number;
 }
 
-export function toApiItem(i: ItemRow, userNames: Map<string, string>, listType?: ListType): ApiItem {
+export function toApiItem(i: ItemRow, userNames: Map<string, string>, listType?: ListType, custom: CustomCategories = []): ApiItem {
   // Category ids are unique across list types; with the type known, foreign ones go to "Sonstiges".
-  const cat = listType ? categoryInList(i.categoryId, listType) : getCategory(i.categoryId);
+  const cat = listType ? categoryInList(i.categoryId, listType, custom) : getCategory(i.categoryId, custom);
   const packing = packingInfo(i);
   const sources = Array.isArray(i.attributes.sources) ? (i.attributes.sources as ItemSource[]).map((s) => s.label) : [];
   return {

@@ -1,3 +1,4 @@
+import { useCustomCategories } from '../categories';
 import { getCategory, itemSpecification, type ItemRow } from '@shopping/shared';
 import { useRef, useState } from 'react';
 import { iconUrl, useIconIndex } from '../icons';
@@ -14,7 +15,7 @@ interface ItemIconProps {
 
 /** Generated icon of the item, else of its category, else the first letter on the category colour. */
 export function ItemIcon({ name, categoryId, catalogItemId, entry, size = 'md' }: ItemIconProps) {
-  const cat = getCategory(categoryId);
+  const cat = getCategory(categoryId, useCustomCategories());
   const url = iconUrl(useIconIndex(), catalogItemId, categoryId, entry);
   const [broken, setBroken] = useState<string | null>(null);
   if (url && broken !== url) {
@@ -47,7 +48,7 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressed = useRef(false);
   const spec = itemSpecification(item);
-  const cat = getCategory(item.categoryId);
+  const cat = getCategory(item.categoryId, useCustomCategories());
 
   const start = () => {
     longPressed.current = false;

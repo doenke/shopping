@@ -1,3 +1,4 @@
+import { useCustomCategories } from '../categories';
 import { categoriesInOrder, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { clearChecked, setChecked } from '../actions';
@@ -54,17 +55,18 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
     .sort((a, b) => (b.checkedAt ?? '').localeCompare(a.checkedAt ?? ''))
     .slice(0, RECENT_LIMIT);
 
+  const custom = useCustomCategories();
   const groups = useMemo(() => {
     const byCat = new Map<string, ItemRow[]>();
     for (const i of open) {
-      const cat = categoryInList(i.categoryId, list.listType).id;
+      const cat = categoryInList(i.categoryId, list.listType, custom).id;
       byCat.set(cat, [...(byCat.get(cat) ?? []), i]);
     }
-    return categoriesInOrder(list.listType, me?.categoryOrder).filter((c) => byCat.has(c.id)).map((c) => ({
+    return categoriesInOrder(list.listType, me?.categoryOrder, custom).filter((c) => byCat.has(c.id)).map((c) => ({
       category: c,
       items: byCat.get(c.id)!.sort((a, b) => a.position.localeCompare(b.position)),
     }));
-  }, [open, list.listType, me?.categoryOrder]);
+  }, [open, list.listType, me?.categoryOrder, custom]);
 
   const boost = useMemo(() => {
     const used = new Map<string, number>();

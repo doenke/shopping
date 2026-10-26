@@ -102,6 +102,30 @@ export const lists = pgTable(
   (t) => [index('lists_seq_idx').on(t.seq)],
 );
 
+/** Categories users created themselves (shopping and packing lists), shared with the owner's household. */
+export const customCategories = pgTable(
+  'custom_categories',
+  {
+    id: uuid('id').primaryKey(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id),
+    householdId: uuid('household_id').references(() => households.id, { onDelete: 'set null' }),
+    listType: text('list_type').$type<'shopping' | 'packing'>().notNull(),
+    name: text('name').notNull(),
+    color: text('color').notNull(),
+    /** English picture description for its icon (from the name, kept once found). */
+    iconSubject: text('icon_subject'),
+    /** The name the icon was last requested for: a renamed category gets a new one. */
+    iconName: text('icon_name'),
+    deleted: boolean('deleted').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    hlc: jsonb('hlc').$type<FieldClock>().notNull().default({}),
+    seq: seq(),
+  },
+  (t) => [index('custom_categories_household_idx').on(t.householdId), index('custom_categories_seq_idx').on(t.seq)],
+);
+
 export const listMembers = pgTable(
   'list_members',
   {

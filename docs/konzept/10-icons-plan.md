@@ -32,7 +32,7 @@ Das größte Risiko generierter Icons ist ein Stil-Flickenteppich. Deshalb:
 | Ziel | Bildbeschreibung aus | Besonderheit |
 |------|----------------------|--------------|
 | Katalogartikel (`item`) | fester Text im Grundkatalog, sonst Claude/Textmodell aus Name und Kategorie | Packartikel mit eigenem Prompt (Dinge zum Einpacken) |
-| Kategorie (`category`) | fest hinterlegt | kleine Komposition aus 2–3 Objekten |
+| Kategorie (`category`) | fest hinterlegt; eigene Kategorien: Claude/Textmodell aus Name und Listentyp | kleine Komposition aus 2–3 Objekten; eigene nach dem Umbenennen neu |
 | Eintrag (`entry`) | Merkliste: Eintrag, Listenname, **Listenbeschreibung**, Ort; frei getippt: Name, Kategorie, **Listentitel** | frei getippte Einträge teilen sich ein Bild pro Name über alle Listen |
 | Liste (`list`) | Name, Typ, Beschreibung, bei ToDo-Listen die **Kategorie** | nach dem Umbenennen neu |
 

@@ -16,6 +16,7 @@
 | Zugriff | Listen gehören dem Haushalt des Besitzers oder sind privat; der Link holt andere dazu (mit Konto dauerhaft, ohne als Gast); keine Rollen innerhalb einer Liste |
 | Listentypen | `shopping`, `packing`, `memo`, `todo`, jeweils auch als Vorlage |
 | Hauptliste | je Nutzer, immer eine Einkaufsliste; Standard für Home Assistant, MCP, API, Teilen, Start |
+| Kategorien | eingebaut je Listentyp, dazu eigene für Einkauf und Packliste, geteilt im Haushalt |
 | Reihenfolgen | Kategorien, Listen und Abschnitte je Nutzer, auf allen Geräten; keine Ladenprofile |
 | Mealie | **v2**; Mealie-Liste bleibt Eingangskorb (übernehmen + in Mealie abhaken, kein Rückkanal); dazu Rezept- und Wochenplan-Import |
 | Icons | keine GPU → Cloudflare-Gratiskontingent mit Tageslimit; Claude (SVG, Vorprüfung) und OpenAI optional mit Monatsgrenze; automatische Freigabe |
@@ -37,7 +38,7 @@ Alle Phasen sind umgesetzt.
 | 3 – Offen | REST-API mit Tokens, OpenAPI, SSE; Home-Assistant-Integration; MCP-Server mit OAuth |
 | 4 – Icons | Pipeline mit Stil-Referenzen, Tagesbudget, automatischen Prüfungen und Freigabe; Claude als SVG-Zeichner und Vorprüfer |
 | 5 – Ausbau | Packlisten; Kennzeichnung „über Claude/Home Assistant“; ausgehende Webhooks; `Idempotency-Key` |
-| Danach | Merklisten mit Icons je Eintrag; Haushalte; ToDo-Listen mit Kategorien; ein Dialog „+ Neu“; Abgleich mit Vorlagen in beide Richtungen; Listen-Icons; Zuhause-/Einkaufen-Modus; eigene Reihenfolgen per Ziehen; Profilbilder; Listen einzeln in Home Assistant; Versionierung |
+| Danach | Merklisten mit Icons je Eintrag; Haushalte; ToDo-Listen mit Kategorien; ein Dialog „+ Neu“; Abgleich mit Vorlagen in beide Richtungen; Listen-Icons; Zuhause-/Einkaufen-Modus; eigene Reihenfolgen per Ziehen; Profilbilder; Listen einzeln in Home Assistant; Versionierung; Als Text teilen; Spracheingabe; Liste aus mehreren Vorlagen; eigene Kategorien |
 
 ## Bewusst nicht gemacht
 

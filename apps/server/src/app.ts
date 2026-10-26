@@ -166,11 +166,16 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
       const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
       const body = z
         .object({
-          categoryId: z.enum(ALL_CATEGORIES.map((c) => c.id) as [string, ...string[]]).optional(),
+          categoryId: z.string().max(40).optional(),
           hidden: z.boolean().optional(),
           pantry: z.boolean().optional(),
         })
         .parse(request.body);
+      // A built-in category or one of the user's own.
+      if (body.categoryId && !ALL_CATEGORIES.some((c) => c.id === body.categoryId)) {
+        const own = await sync.visibleCategories(request.userId);
+        if (!own.some((c) => c.id === body.categoryId)) return reply.code(400).send({ error: 'unknown_category' });
+      }
       const updated = await sync.exclusive(() =>
         db
           .update(catalogItems)

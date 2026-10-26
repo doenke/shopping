@@ -2,9 +2,12 @@ import {
   Hlc,
   applyPatch,
   defaultVisibility,
+  nextCategoryColor,
   mergeAmounts,
   packingInfo,
   samePacking,
+  type CategoryPatch,
+  type CategoryRow,
   type ChangeSet,
   type ItemPatch,
   type ItemRow,
@@ -18,9 +21,9 @@ import { MutationSchema } from '@shopping/shared/schemas';
 import { and, eq, gt, inArray, ne, sql } from 'drizzle-orm';
 import type { Db, Tx } from '../db/index.js';
 import { currentSeq } from '../db/seed.js';
-import { households, listItems, listMembers, lists, users } from '../db/schema.js';
+import { customCategories, households, listItems, listMembers, lists, users } from '../db/schema.js';
 import { Mutex } from './mutex.js';
-import { toItemRow, toListRow, toMe, toUserInfo } from './rows.js';
+import { toCategoryRow, toItemRow, toListRow, toMe, toUserInfo } from './rows.js';
 
 export interface ApplyResult {
   acked: string[];
@@ -30,6 +33,12 @@ export interface ApplyResult {
 }
 
 class Rejection extends Error {}
+
+/** What a mutation touched: lists whose members must hear of it, and further users. */
+interface Touched {
+  lists: string[];
+  users?: string[];
+}
 
 const nextSeq = sql`nextval('sync_seq')`;
 
@@ -74,15 +83,16 @@ export class SyncService {
         const m = parsed.data;
         this.clock.receive(m.hlc);
         try {
-          const touchedLists = await this.db.transaction((tx) => this.applyOne(tx, userId, m));
+          const touched = await this.db.transaction((tx) => this.applyOne(tx, userId, m));
           result.acked.push(m.mid);
-          if (touchedLists.length) {
+          if (touched.lists.length) {
             const members = await this.db
               .select({ userId: listMembers.userId })
               .from(listMembers)
-              .where(inArray(listMembers.listId, touchedLists));
+              .where(inArray(listMembers.listId, touched.lists));
             for (const mem of members) result.affectedUsers.add(mem.userId);
           }
+          for (const id of touched.users ?? []) result.affectedUsers.add(id);
         } catch (err) {
           if (!(err instanceof Rejection)) throw err;
           result.rejected.push({ mid: m.mid, reason: err.message });
@@ -101,17 +111,83 @@ export class SyncService {
     return !!row && !row.removed && !row.deleted;
   }
 
-  /** Applies one mutation; returns the ids of lists whose members must be notified. */
-  private async applyOne(tx: Tx, userId: string, m: Mutation): Promise<string[]> {
+  /** Applies one mutation; returns who must be notified. */
+  private async applyOne(tx: Tx, userId: string, m: Mutation): Promise<Touched> {
     switch (m.entity) {
       case 'list':
-        return this.applyList(tx, userId, m.id, m.patch, m.hlc);
+        return { lists: await this.applyList(tx, userId, m.id, m.patch, m.hlc) };
       case 'item':
-        return this.applyItem(tx, userId, m.id, m.patch, m.hlc);
+        return { lists: await this.applyItem(tx, userId, m.id, m.patch, m.hlc) };
       case 'me':
         await this.applyMe(tx, userId, m.patch, m.hlc);
-        return [];
+        return { lists: [] };
+      case 'category':
+        return this.applyCategory(tx, userId, m.id, m.patch, m.hlc);
     }
+  }
+
+  /**
+   * Own categories: created by anyone with an account, then shared with their household.
+   * Everyone in that household may rename, recolour or delete them.
+   */
+  private async applyCategory(tx: Tx, userId: string, id: string, patch: CategoryPatch, ts: string): Promise<Touched> {
+    const [user] = await tx.select({ isGuest: users.isGuest, householdId: users.householdId }).from(users).where(eq(users.id, userId));
+    if (!user || user.isGuest) throw new Rejection('guest');
+    const [existing] = await tx.select().from(customCategories).where(eq(customCategories.id, id)).for('update');
+    let householdId: string | null;
+    if (!existing) {
+      if (!patch.name || !patch.listType) throw new Rejection('missing_name');
+      const others = (await tx.select().from(customCategories).where(this.categoriesOf(userId, user.householdId))).map(toCategoryRow);
+      const row: CategoryRow = { id, listType: patch.listType, name: patch.name, color: '', ownerId: userId, deleted: false, hlc: {}, seq: 0 };
+      applyPatch(row, patch, ts);
+      if (!row.color) row.color = nextCategoryColor(row.listType, others);
+      householdId = user.householdId;
+      await tx.insert(customCategories).values({ ...row, householdId, seq: undefined });
+    } else {
+      if (existing.ownerId !== userId && (!existing.householdId || existing.householdId !== user.householdId)) throw new Rejection('forbidden');
+      const { listType: _t, ...mutable } = patch;
+      const row = toCategoryRow(existing);
+      if (applyPatch(row, mutable, ts).length === 0) return { lists: [] };
+      householdId = existing.householdId;
+      await tx
+        .update(customCategories)
+        .set({ name: row.name, color: row.color, deleted: row.deleted, hlc: row.hlc, seq: nextSeq })
+        .where(eq(customCategories.id, id));
+    }
+    return this.categoryAudience(tx, userId, householdId);
+  }
+
+  /** Who sees a household's categories: the household, plus everyone on one of its lists. */
+  private async categoryAudience(tx: Tx, userId: string, householdId: string | null): Promise<Touched> {
+    if (!householdId) return { lists: [], users: [userId] };
+    const people = await tx.select({ id: users.id }).from(users).where(eq(users.householdId, householdId));
+    const shared = await tx
+      .select({ id: lists.id })
+      .from(lists)
+      .where(and(eq(lists.householdId, householdId), eq(lists.deleted, false)));
+    return { lists: shared.map((l) => l.id), users: [userId, ...people.map((p) => p.id)] };
+  }
+
+  /**
+   * The own categories a user sees: their own, their household's, and those of every household
+   * whose lists they are on (so a list shared by link shows its categories too).
+   */
+  private categoriesOf(userId: string, householdId: string | null) {
+    return sql`(${customCategories.ownerId} = ${userId}
+      ${householdId ? sql`OR ${customCategories.householdId} = ${householdId}` : sql``}
+      OR ${customCategories.householdId} IN (
+        SELECT l.household_id FROM ${lists} l JOIN ${listMembers} m ON m.list_id = l.id
+        WHERE m.user_id = ${userId} AND m.removed = false AND l.deleted = false AND l.household_id IS NOT NULL))`;
+  }
+
+  /** The own categories a user sees (not deleted), e.g. for the API. */
+  async visibleCategories(userId: string): Promise<CategoryRow[]> {
+    const [user] = await this.db.select({ householdId: users.householdId }).from(users).where(eq(users.id, userId));
+    const rows = await this.db
+      .select()
+      .from(customCategories)
+      .where(and(eq(customCategories.deleted, false), this.categoriesOf(userId, user?.householdId ?? null)));
+    return rows.map(toCategoryRow);
   }
 
   private async applyList(tx: Tx, userId: string, id: string, patch: ListPatch, ts: string): Promise<string[]> {
@@ -257,6 +333,7 @@ export class SyncService {
         if (moved) {
           await tx.update(users).set({ householdId, seq: nextSeq }).where(eq(users.id, userId));
           await tx.update(lists).set({ householdId, seq: nextSeq }).where(eq(lists.ownerId, userId));
+          await tx.update(customCategories).set({ householdId, seq: nextSeq }).where(eq(customCategories.ownerId, userId));
         }
         // Lists of both households (and the own ones) are brought in line.
         const touched = await tx
@@ -516,11 +593,26 @@ export class SyncService {
     const userRows = await db.select().from(users).where(inArray(users.id, ids));
     const me = userRows.find((u) => u.id === userId);
 
+    // Categories are few: whenever what the user sees may have shifted (first sync, new lists,
+    // another household), all of them are sent; otherwise only the changed ones.
+    const categoriesFull = since === 0 || fresh.size > 0 || removedLists.length > 0 || (!!me && me.seq > since);
+    const categoryRows = await db
+      .select()
+      .from(customCategories)
+      .where(
+        and(
+          this.categoriesOf(userId, me?.householdId ?? null),
+          categoriesFull ? eq(customCategories.deleted, false) : gt(customCategories.seq, since),
+        ),
+      );
+
     return {
       lists: lists_.filter((l) => !l.deleted),
       items: itemRows.map(toItemRow),
       removedLists,
       users: userRows.map(toUserInfo),
+      categories: categoryRows.map(toCategoryRow),
+      ...(categoriesFull ? { categoriesFull: true } : {}),
       me: me && (since === 0 || me.seq > since) ? toMe(me, await this.householdName(me.householdId)) : undefined,
       seq,
     };

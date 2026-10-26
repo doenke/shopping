@@ -148,7 +148,9 @@ a {
 .field input,
 .field select,
 .field textarea,
-.catalog-panel select {
+.catalog-panel select,
+.own-categories li input,
+.new-category input {
   min-height: 44px;
   padding: 0 12px;
   border-radius: 10px;
@@ -652,7 +654,9 @@ a {
   background: var(--surface);
   border-left: 1px solid var(--border);
 }
-.catalog-panel select {
+.catalog-panel select,
+.own-categories li input,
+.new-category input {
   margin-bottom: 12px;
 }
 
@@ -1455,4 +1459,41 @@ img.avatar {
 }
 .addbar:has(.addbar__mic) input {
   padding-right: 48px;
+}
+
+/* "+ Neue Kategorie …" in the item editor */
+.new-category {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.new-category input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Settings: own categories */
+.own-categories {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: grid;
+  gap: 8px;
+}
+.own-categories li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.own-categories li input {
+  flex: 1;
+  min-width: 0;
+}
+.own-categories__color {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--border, rgba(0, 0, 0, 0.15));
+  cursor: pointer;
 }

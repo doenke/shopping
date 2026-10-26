@@ -30,7 +30,7 @@ Laptop-Ansicht.
   Bildschirm bleibt an. Zurück auf Zuhause, wenn alles gekauft ist oder eine Stunde nichts abgehakt
   wurde. Pro Gerät gemerkt.
 - **Editor** (Tipp zu Hause, langer Druck im Laden): Menge mit Einheit, Eigenschaften als Chips
-  (Vokabular je Listentyp), Notiz, Kategorie, Person/Packstück bzw. Tipp von/Wo bzw. Wer/Bereich,
+  (Vokabular je Listentyp), Notiz, Kategorie (auch „+ Neue Kategorie …“), Person/Packstück bzw. Tipp von/Wo bzw. Wer/Bereich,
   ToDo: „+ Fälligkeit“, Herkunft („für Lasagne“), „hinzugefügt von Anna über Claude“.
 - **Teilen-Ziel:** Text aus einer anderen App „teilen“ → landet auf der Hauptliste.
 - **Installieren:** Knopf in der Titelzeile, solange die App im Browser läuft (iPhone: Anleitung).

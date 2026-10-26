@@ -1,9 +1,12 @@
 import {
   applyPatch,
+  CATEGORY_FIELDS,
   Hlc,
   ITEM_FIELDS,
   LIST_FIELDS,
   mergeRow,
+  type CategoryPatch,
+  type CategoryRow,
   type ChangeSet,
   type ItemPatch,
   type ItemRow,
@@ -104,6 +107,10 @@ export class SyncEngine {
     await this.mutate({ mid: uuid(), entity: 'item', id, hlc: this.clock.tick(), patch });
   }
 
+  async mutateCategory(id: string, patch: CategoryPatch): Promise<void> {
+    await this.mutate({ mid: uuid(), entity: 'category', id, hlc: this.clock.tick(), patch });
+  }
+
   async mutateMe(patch: MePatch): Promise<void> {
     await this.mutate({ mid: uuid(), entity: 'me', id: 'me', hlc: this.clock.tick(), patch });
   }
@@ -124,7 +131,7 @@ export class SyncEngine {
   // ---- local changes ------------------------------------------------------
 
   private async mutate(m: Mutation): Promise<void> {
-    await db.transaction('rw', [db.lists, db.items, db.outbox, db.meta], () => this.applyLocal(m));
+    await db.transaction('rw', [db.lists, db.items, db.categories, db.outbox, db.meta], () => this.applyLocal(m));
     await this.afterMutate();
   }
 
@@ -190,6 +197,19 @@ export class SyncEngine {
       }
       applyPatch(row, patch, m.hlc);
       await db.items.put(row);
+    } else if (m.entity === 'category') {
+      const row: CategoryRow = (await db.categories.get(m.id)) ?? {
+        id: m.id,
+        listType: m.patch.listType ?? 'shopping',
+        name: '',
+        color: '#8A8F98',
+        ownerId: this.me?.id ?? '',
+        deleted: false,
+        hlc: {},
+        seq: 0,
+      };
+      applyPatch(row, m.patch, m.hlc);
+      await db.categories.put(row);
     } else {
       const me = this.me;
       if (me) {
@@ -369,7 +389,7 @@ export class SyncEngine {
 
   private async applyChanges(cs: ChangeSet, full: boolean): Promise<void> {
     const remoteChecks: RemoteCheck[] = [];
-    await db.transaction('rw', [db.lists, db.items, db.users, db.meta, db.outbox], async () => {
+    await db.transaction('rw', [db.lists, db.items, db.users, db.categories, db.meta, db.outbox], async () => {
       const pendingIds = new Set((await db.outbox.toArray()).map((e) => e.mutation.id));
       for (const incoming of cs.lists) {
         const local = await db.lists.get(incoming.id);
@@ -396,6 +416,15 @@ export class SyncEngine {
         await db.items.filter((i) => !itemIds.has(i.id) && !pendingIds.has(i.id)).delete();
       }
       if (cs.users.length) await db.users.bulkPut(cs.users);
+      // Older servers send no categories.
+      for (const incoming of cs.categories ?? []) {
+        const local = await db.categories.get(incoming.id);
+        await db.categories.put(local ? mergeRow(local, incoming, CATEGORY_FIELDS) : incoming);
+      }
+      if (cs.categoriesFull) {
+        const known = new Set((cs.categories ?? []).map((c) => c.id));
+        await db.categories.filter((c) => !known.has(c.id) && !pendingIds.has(c.id)).delete();
+      }
       if (cs.me) {
         this.me = cs.me;
         await setMeta('me', cs.me);

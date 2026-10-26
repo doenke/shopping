@@ -1,11 +1,11 @@
 import { randomInt } from 'node:crypto';
-import { ALL_CATEGORIES, getCategory, listDescription, packingInfo } from '@shopping/shared';
+import { ALL_CATEGORIES, defaultCategoryFor, getCategory, listDescription, packingInfo } from '@shopping/shared';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import sharp from 'sharp';
 import type { SecretBox } from '../crypto.js';
 import type { Db } from '../db/index.js';
-import { appSettings, catalogItems, iconJobs, icons, iconUsage, listItems, listMembers, lists, type IconTarget } from '../db/schema.js';
+import { appSettings, catalogItems, customCategories, iconJobs, icons, iconUsage, listItems, listMembers, lists, type IconTarget } from '../db/schema.js';
 import { currentSeq, stableUuid } from '../db/seed.js';
 import type { SyncHub } from '../sync/hub.js';
 import type { SyncService } from '../sync/service.js';
@@ -314,6 +314,12 @@ export class IconService {
         WHERE deleted = false AND archived_at IS NULL AND icon_name IS DISTINCT FROM name
         RETURNING id`);
       jobs.push(...named.map((r) => ({ targetType: 'list' as const, targetId: r.id, priority: 970, candidates: s.candidates })));
+      // Own categories: same as lists – a picture from the name, again after a rename.
+      const cats = await this.db.execute<{ id: string }>(sql`
+        UPDATE ${customCategories} SET icon_name = name, icon_subject = NULL
+        WHERE deleted = false AND icon_name IS DISTINCT FROM name
+        RETURNING id`);
+      jobs.push(...cats.map((r) => ({ targetType: 'category' as const, targetId: r.id, priority: 1100, candidates: s.candidates })));
     }
     if (!jobs.length) return 0;
     const inserted = await this.db.insert(iconJobs).values(jobs).onConflictDoNothing().returning({ id: iconJobs.id });
@@ -346,7 +352,7 @@ export class IconService {
 
   private async assertTarget(targetType: IconTarget, targetId: string): Promise<void> {
     if (targetType === 'category') {
-      if (!ALL_CATEGORIES.some((c) => c.id === targetId)) throw new ApiError(404, 'not_found', 'Unbekannte Kategorie');
+      if (!ALL_CATEGORIES.some((c) => c.id === targetId) && !(await this.customCategory(targetId))) throw new ApiError(404, 'not_found', 'Unbekannte Kategorie');
       return;
     }
     if (!/^[0-9a-f-]{36}$/.test(targetId)) throw new ApiError(404, 'not_found', 'Unbekannter Artikel');
@@ -360,6 +366,12 @@ export class IconService {
     }
     const [row] = await this.db.select({ id: catalogItems.id }).from(catalogItems).where(eq(catalogItems.id, targetId));
     if (!row) throw new ApiError(404, 'not_found', 'Unbekannter Artikel');
+  }
+
+  private async customCategory(id: string) {
+    if (!/^[0-9a-f-]{36}$/.test(id)) return null;
+    const [row] = await this.db.select().from(customCategories).where(and(eq(customCategories.id, id), eq(customCategories.deleted, false)));
+    return row ?? null;
   }
 
   private async listOf(listId: string) {
@@ -404,7 +416,13 @@ export class IconService {
     s: IconSettings,
   ): Promise<{ subject: string; name: string; context?: string; domain: IconDomain }> {
     if (targetType === 'category') {
-      return { subject: CATEGORY_SUBJECTS[targetId] ?? 'plain shopping bag', name: getCategory(targetId).name, domain: 'category' };
+      const own = CATEGORY_SUBJECTS[targetId] ? null : await this.customCategory(targetId);
+      if (!own) return { subject: CATEGORY_SUBJECTS[targetId] ?? 'plain shopping bag', name: getCategory(targetId).name, domain: 'category' };
+      // An own category ("Angeln", "Asia-Laden"): described from its name like a thing of that list type.
+      if (own.iconSubject) return { subject: own.iconSubject, name: own.name, domain: 'category' };
+      const subject = await this.describeThing(own.name, defaultCategoryFor(own.listType), own.listType, gen, s);
+      await this.db.update(customCategories).set({ iconSubject: subject }).where(eq(customCategories.id, own.id));
+      return { subject, name: own.name, domain: 'category' };
     }
     if (targetType === 'list') {
       const l = await this.listOf(targetId);
@@ -869,6 +887,11 @@ export class IconService {
     const listIds = targets.filter((t) => t.targetType === 'list').map((t) => t.targetId);
     const listRows = listIds.length ? await this.db.select({ id: lists.id, name: lists.name }).from(lists).where(inArray(lists.id, listIds)) : [];
     const listById = new Map(listRows.map((l) => [l.id, l.name]));
+    const catIds = targets.filter((t) => t.targetType === 'category' && /^[0-9a-f-]{36}$/.test(t.targetId)).map((t) => t.targetId);
+    const ownCats = catIds.length
+      ? await this.db.select({ id: customCategories.id, name: customCategories.name, subject: customCategories.iconSubject }).from(customCategories).where(inArray(customCategories.id, catIds))
+      : [];
+    const ownCatById = new Map(ownCats.map((c) => [c.id, c]));
     return (t: { targetType: IconTarget; targetId: string }) => {
       if (t.targetType === 'list') return { name: `${listById.get(t.targetId) ?? '?'} (Liste)`, categoryId: 'eigene', subject: null };
       if (t.targetType === 'entry') {
@@ -876,6 +899,8 @@ export class IconService {
         return { name: e ? `${e.name} (${e.list})` : '?', categoryId: e && e.listType !== 'memo' ? (e.categoryId ?? 'eigene') : 'merkliste', subject: null };
       }
       if (t.targetType === 'category') {
+        const own = ownCatById.get(t.targetId);
+        if (own) return { name: `${own.name} (eigene Kategorie)`, categoryId: t.targetId, subject: own.subject };
         return { name: getCategory(t.targetId).name, categoryId: t.targetId, subject: CATEGORY_SUBJECTS[t.targetId] ?? null };
       }
       const r = byId.get(t.targetId);

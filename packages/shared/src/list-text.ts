@@ -1,5 +1,5 @@
 import { itemSpecification } from './amounts.js';
-import { categoriesInOrder, categoryInList } from './categories.js';
+import { categoriesInOrder, categoryInList, type CustomCategories } from './categories.js';
 import { dueOf, formatDue } from './due.js';
 import type { ItemRow, ListRow } from './model.js';
 import { listDescription, packingInfo } from './packing.js';
@@ -13,6 +13,7 @@ export function listAsText(
   items: ItemRow[],
   categoryOrder?: readonly string[],
   now = new Date(),
+  custom: CustomCategories = [],
 ): string {
   const open = items.filter((i) => !i.deleted && (list.isTemplate || !i.checked));
   const head = [list.name, listDescription(list)].filter(Boolean).join('\n');
@@ -43,10 +44,10 @@ export function listAsText(
 
   const byCat = new Map<string, ItemRow[]>();
   for (const i of open) {
-    const id = categoryInList(i.categoryId, list.listType).id;
+    const id = categoryInList(i.categoryId, list.listType, custom).id;
     byCat.set(id, [...(byCat.get(id) ?? []), i]);
   }
-  const groups = categoriesInOrder(list.listType, categoryOrder)
+  const groups = categoriesInOrder(list.listType, categoryOrder, custom)
     .filter((c) => byCat.has(c.id))
     .map((c) => `${c.name}\n${byCat.get(c.id)!.sort((a, b) => a.position.localeCompare(b.position)).map(line).join('\n')}`);
   return `${head}\n\n${groups.join('\n\n')}`;

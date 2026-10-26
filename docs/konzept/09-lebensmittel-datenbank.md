@@ -25,7 +25,7 @@ Merk- und ToDo-Listen haben keinen Katalog – dort sind Einträge freier Text.
 
 ## Kategorien
 
-Fest im Code (`packages/shared/src/categories.ts`), über alle Listentypen eindeutig:
+Eingebaut im Code (`packages/shared/src/categories.ts`), über alle Listentypen eindeutig:
 
 | Listentyp | Kategorien |
 |-----------|------------|
@@ -37,6 +37,20 @@ Fest im Code (`packages/shared/src/categories.ts`), über alle Listentypen einde
 Jede Kategorie hat eine Farbe (Kachelhintergrund) und ein generiertes Icon. Die **Reihenfolge**
 stellt sich jeder Nutzer selbst ein (z. B. nach dem Weg durch den Laden); sie gilt auf allen seinen
 Geräten und auch in API und Home Assistant. Ladenprofile gibt es bewusst nicht.
+
+### Eigene Kategorien
+
+Für Einkauf und Packliste lassen sich weitere Kategorien anlegen („Angeln“, „Camping“, „Asia-Laden“) –
+im Editor („+ Neue Kategorie …“) oder in den Einstellungen.
+
+- Tabelle `custom_categories` (Typ, Name, Farbe, Besitzer, Haushalt), synchronisiert wie Listen
+  (Entität `category`, Feld-LWW, `seq`); die ID ist eine UUID.
+- Sichtbar für den Haushalt des Anlegenden und für alle, die auf einer Liste dieses Haushalts sind
+  (Link). Ändern und löschen darf der Haushalt.
+- Sie stehen vor der Auffangkategorie („Sonstiges“ bzw. „Eigene Artikel“) und folgen der eigenen
+  Reihenfolge. Gelöscht oder unbekannt → Einträge zeigen sich unter der Auffangkategorie.
+- Icon aus dem Namen wie bei Listen; nach dem Umbenennen ein neues.
+- „Für alle“ im Editor setzt sie auch am Katalogartikel.
 
 ## Befüllung
 

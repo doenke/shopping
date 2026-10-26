@@ -1,3 +1,4 @@
+import { useCustomCategories } from '../categories';
 import { categoriesInOrder, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { archiveList, setChecked } from '../actions';
@@ -56,18 +57,19 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
   const allPacked = items.length > 0 && packed === items.length;
 
   const me = useMe();
+  const custom = useCustomCategories();
   const groups = useMemo(() => {
     const keyOf = (i: ItemRow): string => {
       const p = packingInfo(i);
       if (groupBy === 'person') return p.person ?? '';
       if (groupBy === 'container') return p.container ?? '';
-      return categoryInList(i.categoryId, 'packing').id;
+      return categoryInList(i.categoryId, 'packing', custom).id;
     };
     const byKey = new Map<string, ItemRow[]>();
     for (const i of items) byKey.set(keyOf(i), [...(byKey.get(keyOf(i)) ?? []), i]);
     const sortItems = (rows: ItemRow[]) => rows.sort((a, b) => a.position.localeCompare(b.position));
     if (groupBy === 'category') {
-      return categoriesInOrder('packing', me?.categoryOrder)
+      return categoriesInOrder('packing', me?.categoryOrder, custom)
         .filter((c) => byKey.has(c.id))
         .map((c) => ({ key: c.id, title: c.name, items: sortItems(byKey.get(c.id)!) }));
     }
@@ -75,7 +77,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
     return [...byKey.keys()]
       .sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, 'de')))
       .map((k) => ({ key: k || '-', title: k || empty, items: sortItems(byKey.get(k)!) }));
-  }, [items, groupBy, me?.categoryOrder]);
+  }, [items, groupBy, me?.categoryOrder, custom]);
 
   const boost = useMemo(() => {
     const used = new Set(items.map((i) => i.catalogItemId));

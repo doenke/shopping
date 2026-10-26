@@ -1,4 +1,4 @@
-import { categoriesFor, defaultVisibility, listAsText, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem, type SectionKey } from '@shopping/shared';
+import { categoriesFor, defaultVisibility, listAsText, nextCategoryColor, type CategoryPatch, type CustomCategoryType, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem, type SectionKey } from '@shopping/shared';
 import { db } from './db';
 import { sync } from './sync/engine';
 
@@ -137,8 +137,20 @@ export async function setMainList(id: string): Promise<void> {
 
 /** Own order of one list type's categories; the other types' order is kept. */
 export async function setCategoryOrder(listType: ListType, ids: string[], current: readonly string[] = []): Promise<void> {
-  const own = new Set(categoriesFor(listType).map((c) => c.id));
+  const own = new Set(categoriesFor(listType, await db.categories.toArray()).map((c) => c.id));
   await sync.mutateMe({ categoryOrder: [...ids, ...current.filter((id) => !own.has(id))] });
+}
+
+/** A category of one's own (shared with the household); returns its id. */
+export async function createCategory(listType: CustomCategoryType, name: string): Promise<string> {
+  const id = crypto.randomUUID();
+  await sync.mutateCategory(id, { listType, name: name.trim(), color: nextCategoryColor(listType, await db.categories.toArray()) });
+  return id;
+}
+
+/** Rename, recolour or delete an own category (its items then show under "Sonstiges"). */
+export async function editCategory(id: string, patch: Omit<CategoryPatch, 'listType'>): Promise<void> {
+  await sync.mutateCategory(id, patch);
 }
 
 /** Own order of the sidebar sections (shopping, packing, memo, todo, templates). */
@@ -182,7 +194,7 @@ export async function shareList(list: ListRow, renew = false): Promise<void> {
  */
 export async function shareListAsText(list: ListRow, categoryOrder?: readonly string[]): Promise<'shared' | 'copied' | 'failed'> {
   const items = await db.items.where('listId').equals(list.id).toArray();
-  const text = listAsText(list, items, categoryOrder);
+  const text = listAsText(list, items, categoryOrder, new Date(), await db.categories.toArray());
   if (navigator.share && matchMedia('(pointer: coarse)').matches) {
     try {
       await navigator.share({ title: list.name, text });

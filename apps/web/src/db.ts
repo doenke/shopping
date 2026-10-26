@@ -1,4 +1,4 @@
-import type { CatalogItem, ItemRow, ListRow, Me, Mutation, UserInfo } from '@shopping/shared';
+import type { CatalogItem, CategoryRow, ItemRow, ListRow, Me, Mutation, UserInfo } from '@shopping/shared';
 import Dexie, { type EntityTable } from 'dexie';
 
 export interface OutboxEntry {
@@ -19,6 +19,8 @@ export class ShoppingDb extends Dexie {
   items!: EntityTable<ItemRow, 'id'>;
   catalog!: EntityTable<CatalogItem, 'id'>;
   users!: EntityTable<UserInfo, 'id'>;
+  /** Own categories of the household (and of lists shared with the user). */
+  categories!: EntityTable<CategoryRow, 'id'>;
   outbox!: EntityTable<OutboxEntry, 'n'>;
   meta!: EntityTable<MetaEntry, 'key'>;
 
@@ -32,6 +34,7 @@ export class ShoppingDb extends Dexie {
       outbox: '++n, mid',
       meta: 'key',
     });
+    this.version(2).stores({ categories: 'id' });
   }
 }
 

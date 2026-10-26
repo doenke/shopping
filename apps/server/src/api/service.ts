@@ -198,9 +198,9 @@ export class ShoppingApi {
     throw notFound(`Artikel „${ref}“`);
   }
 
-  async toNewItems(inputs: ItemInput[], listType: ListType = 'shopping'): Promise<NewItem[]> {
+  async toNewItems(inputs: ItemInput[], listType: ListType = 'shopping', userId?: string): Promise<NewItem[]> {
     const index = (await this.catalog()).index[listType];
-    const categories = categoriesFor(listType);
+    const categories = categoriesFor(listType, userId ? await this.sync.visibleCategories(userId) : []);
     const out: NewItem[] = [];
     for (const input of inputs) {
       if (typeof input === 'string') {
@@ -265,7 +265,8 @@ export class ShoppingApi {
     const list = await this.resolveList(userId, ref);
     const items = await this.itemsOf(list.id);
     const names = await this.userNames();
-    const categories = categoriesInOrder(list.listType, (await this.userOrder(userId)).categoryOrder);
+    const custom = await this.sync.visibleCategories(userId);
+    const categories = categoriesInOrder(list.listType, (await this.userOrder(userId)).categoryOrder, custom);
     const rank = (id: string | null) => {
       const i = categories.findIndex((c) => c.id === id);
       return i < 0 ? categories.length : i;
@@ -279,12 +280,12 @@ export class ShoppingApi {
       );
     return {
       ...toApiList(list, userId, await this.mainListId(userId), items.filter((i) => !i.checked).length),
-      items: shown.map((i) => toApiItem(i, names, list.listType)),
+      items: shown.map((i) => toApiItem(i, names, list.listType, custom)),
     };
   }
 
   async item(userId: string, ref: string, listRef?: string): Promise<ApiItem> {
-    return toApiItem(await this.resolveItem(userId, ref, listRef), await this.userNames());
+    return toApiItem(await this.resolveItem(userId, ref, listRef), await this.userNames(), undefined, await this.sync.visibleCategories(userId));
   }
 
   /** Recently bought items – good suggestions for "what do we usually buy?". */
@@ -382,7 +383,7 @@ export class ShoppingApi {
 
   async addItems(userId: string, listRef: string | undefined, inputs: NewItem[] | ItemInput[], parsed = false): Promise<AddResult> {
     const list = await this.resolveList(userId, listRef);
-    const items = parsed ? (inputs as NewItem[]) : await this.toNewItems(inputs as ItemInput[], list.listType);
+    const items = parsed ? (inputs as NewItem[]) : await this.toNewItems(inputs as ItemInput[], list.listType, userId);
     if (items.length === 0) throw new ApiError(400, 'empty', 'Keine Artikel erkannt');
     const existing = await this.itemsOf(list.id);
     const plan = planAdd(list.id, existing, items, randomUUID);
@@ -422,7 +423,7 @@ export class ShoppingApi {
     }
     if (input.category !== undefined) {
       const list = (await this.accessibleLists(userId)).find((l) => l.id === item.listId);
-      const cat = categoriesFor(list?.listType ?? 'shopping').find((c) => c.id === input.category || c.name.toLowerCase() === input.category?.toLowerCase());
+      const cat = categoriesFor(list?.listType ?? 'shopping', await this.sync.visibleCategories(userId)).find((c) => c.id === input.category || c.name.toLowerCase() === input.category?.toLowerCase());
       if (!cat) throw new ApiError(400, 'unknown_category', `Unbekannte Kategorie „${input.category}“`);
       patch.categoryId = cat.id;
     }

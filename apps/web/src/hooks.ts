@@ -1,4 +1,4 @@
-import { CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type Me, type UserInfo } from '@shopping/shared';
+import { CatalogIndex, type CatalogItem, type CategoryRow, type ItemRow, type ListRow, type Me, type UserInfo } from '@shopping/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { db } from './db';
@@ -28,6 +28,13 @@ export function useItems(listId: string | undefined): ItemRow[] | undefined {
     if (!listId) return [];
     return (await db.items.where('listId').equals(listId).toArray()).filter((i) => !i.deleted);
   }, [listId]);
+}
+
+const NO_CATEGORIES: CategoryRow[] = [];
+
+/** Own categories (deleted ones included; the category functions skip them). */
+export function useCategoryRows(): CategoryRow[] {
+  return useLiveQuery(() => db.categories.toArray()) ?? NO_CATEGORIES;
 }
 
 export function useUsers(): Map<string, UserInfo> {

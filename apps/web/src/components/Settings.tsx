@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { logout } from '../actions';
 import { useLists } from '../hooks';
 import { Avatar } from './Avatar';
+import { CategoriesCard } from './CategoriesCard';
 import { TokensCard } from './TokensCard';
 import { WebhooksCard } from './WebhooksCard';
 import { sync } from '../sync/engine';
@@ -318,6 +319,7 @@ export function Settings({ me, onSort }: { me: Me; onSort: (what: 'lists' | 'sho
         </div>
       )}
 
+      {!me.isGuest && <CategoriesCard />}
       {!me.isGuest && <TokensCard />}
       {!me.isGuest && <WebhooksCard />}
       <p className="muted version">Shopping {__APP_VERSION__}</p>
