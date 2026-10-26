@@ -11,11 +11,12 @@ import { toCatalogItem } from '../sync/rows.js';
 import type { SyncHub } from '../sync/hub.js';
 import type { SyncService } from '../sync/service.js';
 import { ApiError } from '../api/errors.js';
-import { ClaudeReviewer, ClaudeSvgGenerator, entryContext, ENTRY_SYSTEM, LIST_SYSTEM, listContext, type EntryContext, type ReviewVerdict } from './anthropic.js';
+import { ClaudeReviewer, ClaudeSvgGenerator, renderSvg, entryContext, ENTRY_SYSTEM, LIST_SYSTEM, listContext, type EntryContext, type ReviewVerdict } from './anthropic.js';
 import { CloudflareGenerator, OpenAiGenerator, QuotaExceeded, type IconDomain, type IconGenerator, type ProviderId } from './generators.js';
 import { processIcon, referenceImage } from './image.js';
 import { buildPrompt, DEFAULT_STYLE } from './prompt.js';
 import { ANCHOR_ITEMS, CATEGORY_SUBJECTS, PACKING_SUBJECTS, SEED_SUBJECTS } from './subjects.js';
+import { knownSpiceColor, spicePileSvg } from './spices.js';
 
 /** Below this many anchors the style is still being found: only the anchor items are generated. */
 export const MIN_ANCHORS = 4;
@@ -36,7 +37,7 @@ export interface IconSettings {
   /** monthlyCap in € (or $) – stops paid generation for the rest of the month. */
   openai: { apiKey: string | null; model: string; quality: string; monthlyCap: number };
   /** Claude: draws SVG icons, pre-reviews pictures, describes items. One cap for all three. */
-  anthropic: { apiKey: string | null; svgModel: string; review: boolean; categorize: boolean; reviewModel: string; monthlyCap: number };
+  anthropic: { apiKey: string | null; svgModel: string; review: boolean; categorize: boolean; fallback: boolean; reviewModel: string; monthlyCap: number };
   pausedUntil: string | null;
   pauseReason: string | null;
 }
@@ -49,7 +50,7 @@ const DEFAULTS: IconSettings = {
   style: DEFAULT_STYLE,
   cloudflare: { accountId: null, token: null, model: 'flux-2-klein-4b', dailyLimit: 150, size: 512 },
   openai: { apiKey: null, model: 'gpt-image-1-mini', quality: 'medium', monthlyCap: 10 },
-  anthropic: { apiKey: null, svgModel: 'claude-sonnet-5-5', review: true, categorize: true, reviewModel: 'claude-haiku-5-5', monthlyCap: 10 },
+  anthropic: { apiKey: null, svgModel: 'claude-sonnet-5-5', review: true, categorize: true, fallback: true, reviewModel: 'claude-haiku-5-5', monthlyCap: 10 },
   pausedUntil: null,
   pauseReason: null,
 };
@@ -279,12 +280,20 @@ export class IconService {
         SELECT i.target_id AS id FROM ${icons} i WHERE i.target_type = 'category'
         UNION SELECT j.target_id FROM ${iconJobs} j WHERE j.target_type = 'category'`);
       const usedCats = new Set(used.map((r) => r.id));
-      jobs = ALL_CATEGORIES.filter((c) => !usedCats.has(c.id)).map((c) => ({ targetType: 'category', targetId: c.id, priority: 1100, candidates: s.candidates }));
+      // In their usual order (Obst & Gemüse first), the catch-all ones last.
+      jobs = ALL_CATEGORIES.map((c, i) => ({ c, i }))
+        .filter(({ c }) => !usedCats.has(c.id))
+        .map(({ c, i }) => ({ targetType: 'category', targetId: c.id, priority: 1100 - i, candidates: s.candidates }));
+      // Only items that are or were on a list; the rest of the catalog shows its category icon
+      // (and gets its own picture once it is used). Jobs planned earlier for unused items go.
+      await this.db.execute(sql`DELETE FROM ${iconJobs} WHERE status = 'queued' AND target_type = 'item' AND priority = 0`);
       const items = await this.db.execute<{ id: string; uses: number }>(sql`
-        SELECT c.id, (SELECT count(*) FROM list_items li WHERE li.catalog_item_id = c.id)::int AS uses
-        FROM ${catalogItems} c
-        WHERE c.hidden = false AND ${untouched('item', sql`c.id`)}
-        ORDER BY uses DESC, c.source = 'seed' DESC, c.name
+        SELECT * FROM (
+          SELECT c.id, (SELECT count(*) FROM list_items li WHERE li.catalog_item_id = c.id)::int AS uses
+          FROM ${catalogItems} c
+          WHERE c.hidden = false AND ${untouched('item', sql`c.id`)}
+        ) used WHERE uses > 0
+        ORDER BY uses DESC
         LIMIT 1000`);
       jobs.push(...items.map((r) => ({ targetType: 'item' as const, targetId: r.id, priority: Math.min(800, r.uses), candidates: s.candidates })));
       // Merkliste entries: each gets its own picture (a film, a book …), right after the categories.
@@ -496,6 +505,8 @@ export class IconService {
     const [item] = await this.db.select().from(catalogItems).where(eq(catalogItems.id, targetId));
     if (!item) throw new Error('Artikel nicht gefunden');
     const domain: IconDomain = item.kind === 'packing' ? 'packing' : 'shopping';
+    // A spice asked for anew by hand: the AI draws a small heap of it.
+    if (item.iconSubject?.startsWith('spice:')) return { subject: `a small heap of the ground spice "${item.name}"`, name: item.name, domain };
     if (item.iconSubject) return { subject: item.iconSubject, name: item.name, domain };
     const subject = await this.describeThing(item.name, item.categoryId, item.kind, gen, s);
     await this.db.update(catalogItems).set({ iconSubject: subject }).where(eq(catalogItems.id, item.id));
@@ -541,6 +552,15 @@ export class IconService {
       .limit(1);
     if (!job) return 'idle';
 
+    // Spices: the coloured pile, no image AI (unless someone asked for a new one by hand).
+    if (job.targetType === 'item' && job.priority < 2000) {
+      const color = await this.spiceColor(job.targetId, s);
+      if (color) {
+        await this.drawSpice(job.id, job.targetId, color);
+        return 'done';
+      }
+    }
+
     // Older jobs only knew "paid" (= OpenAI).
     const providerId = (job.provider as ProviderId | null) ?? (job.paid ? 'openai' : s.provider);
     const gen = this.generator(s, providerId);
@@ -574,7 +594,10 @@ export class IconService {
       const reviewer = s.anthropic.review ? this.claude(s) : null;
       const reviewRefs = await Promise.all(anchors.slice(-3).map((a) => sharp(a.image!).png().toBuffer()));
 
-      for (let n = 0; n < job.candidates; n++) {
+      // Claude is paid per drawing: one at a time (a second round follows only if the pre-review refuses it).
+      // While the style is still being found, and when asked for by hand, as many as wanted.
+      const count = gen.provider === 'claude' && job.priority < 2000 && anchors.length >= MIN_ANCHORS ? 1 : job.candidates;
+      for (let n = 0; n < count; n++) {
         if (!(await this.withinBudget(s, gen.provider, gen.costMicro))) break;
         const seed = randomInt(1, 2 ** 31 - 1);
         const result = await gen.generate({ prompt, references, referenceSvgs, seed, subject, style: s.style, hint: job.hint, context, domain }).catch((err: Error) => {
@@ -640,7 +663,7 @@ export class IconService {
       const message = (err as Error).message;
       this.log.warn({ err: message, target: job.targetId, attempts }, 'Icon-Erzeugung fehlgeschlagen');
       if (made) await this.finishJob(job.id, 'done');
-      else if (attempts >= 3) await this.finishJob(job.id, 'failed', message);
+      else if (attempts >= 3 && !(await this.fallbackToClaude(job, s))) await this.finishJob(job.id, 'failed', message);
       else await this.db.update(iconJobs).set({ attempts, error: message, updatedAt: sql`now()` }).where(eq(iconJobs.id, job.id));
       return 'failed';
     }
@@ -655,8 +678,53 @@ export class IconService {
         .where(eq(iconJobs.id, job.id));
       return 'done';
     }
+    // Nothing usable from the free provider, even after the second round: Claude has one go.
+    if ((!made || !passed) && (await this.fallbackToClaude(job, s))) return 'done';
     await this.finishJob(job.id, made ? 'done' : 'failed', made ? null : 'Kein brauchbares Bild entstanden');
     return made ? 'done' : 'failed';
+  }
+
+  /** Hands a job FLUX (or OpenAI) could not do to Claude, once. Returns false if that is not possible. */
+  private async fallbackToClaude(job: typeof iconJobs.$inferSelect, s: IconSettings): Promise<boolean> {
+    const provider = (job.provider as ProviderId | null) ?? s.provider;
+    if (provider === 'claude' || !s.anthropic.fallback || !s.anthropic.apiKey) return false;
+    await this.db
+      .update(iconJobs)
+      .set({ provider: 'claude', candidates: 1, attempts: 1, error: null, updatedAt: sql`now()` })
+      .where(eq(iconJobs.id, job.id));
+    return true;
+  }
+
+  /** Colour of the pile if the item is a spice: built-in list, else Haiku (once; the answer is kept). */
+  private async spiceColor(itemId: string, s: IconSettings): Promise<string | null> {
+    const [item] = await this.db.select().from(catalogItems).where(eq(catalogItems.id, itemId));
+    if (!item || item.kind !== 'shopping') return null;
+    if (item.iconSubject?.startsWith('spice:')) return item.iconSubject.slice(6);
+    if (item.iconSubject) return null;
+    let color = knownSpiceColor([item.name, item.plural, ...item.aliases]) ?? null;
+    const claude = this.claude(s, 'claude-haiku-5-5');
+    if (!color && item.categoryId === 'zutaten-gewuerze' && claude && (await this.withinBudget(s, 'claude', 500))) {
+      color = await claude
+        .spiceColor(item.name)
+        .then(async (r) => {
+          await this.recordUsage('claude', 0, r.costMicro);
+          return r.color;
+        })
+        .catch(() => null);
+    }
+    if (color) await this.db.update(catalogItems).set({ iconSubject: `spice:${color}` }).where(eq(catalogItems.id, itemId));
+    return color;
+  }
+
+  private async drawSpice(jobId: string, itemId: string, color: string): Promise<void> {
+    const svg = spicePileSvg(color);
+    const processed = await processIcon(await renderSvg(svg));
+    const [icon] = await this.db
+      .insert(icons)
+      .values({ targetType: 'item', targetId: itemId, provider: 'builtin', model: 'spice', prompt: `Gewürz ${color}`, checks: { ...processed.checks }, svg, image: processed.image, thumb: processed.thumb })
+      .returning({ id: icons.id });
+    await this.approve(icon!.id, null);
+    await this.finishJob(jobId, 'done');
   }
 
   private async finishJob(id: string, status: 'done' | 'failed', error: string | null = null): Promise<void> {

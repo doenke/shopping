@@ -52,7 +52,7 @@ interface Status {
     style: string;
     cloudflare: { accountId: string | null; hasToken: boolean; model: string; dailyLimit: number; size: number };
     openai: { hasKey: boolean; model: string; quality: string; monthlyCap: number };
-    anthropic: { hasKey: boolean; svgModel: string; review: boolean; categorize: boolean; reviewModel: string; monthlyCap: number };
+    anthropic: { hasKey: boolean; svgModel: string; review: boolean; categorize: boolean; fallback: boolean; reviewModel: string; monthlyCap: number };
     pausedUntil: string | null;
     pauseReason: string | null;
   };
@@ -560,6 +560,7 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
   const [svgModel, setSvgModel] = useState(s.anthropic.svgModel);
   const [review, setReview] = useState(s.anthropic.review);
   const [categorize, setCategorize] = useState(s.anthropic.categorize ?? true);
+  const [fallback, setFallback] = useState(s.anthropic.fallback ?? true);
   const [reviewModel, setReviewModel] = useState(s.anthropic.reviewModel);
   const [anCap, setAnCap] = useState(String(s.anthropic.monthlyCap).replace('.', ','));
   const [candidates, setCandidates] = useState(String(s.candidates));
@@ -593,6 +594,7 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
             svgModel,
             review,
             categorize,
+            fallback,
             reviewModel,
             monthlyCap: Number(anCap.replace(',', '.')) || 0,
           },
@@ -725,6 +727,10 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
       <label className="check">
         <input type="checkbox" checked={categorize} onChange={(e) => setCategorize(e.target.checked)} />
         Kategorien: neue freie Einträge auf Einkaufs- und Packlisten gleich in die passende Kategorie einsortieren (Haiku, auch eigene Kategorien)
+      </label>
+      <label className="check">
+        <input type="checkbox" checked={fallback} onChange={(e) => setFallback(e.target.checked)} />
+        Claude als Ersatz: wenn FLUX (oder OpenAI) auch im zweiten Anlauf nichts Brauchbares liefert, zeichnet Claude einen Entwurf
       </label>
 
       <h3>Erzeugung</h3>

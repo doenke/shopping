@@ -44,6 +44,7 @@ const SettingsBody = z.object({
       svgModel: z.enum(CLAUDE_SVG_MODELS).optional(),
       review: z.boolean().optional(),
       categorize: z.boolean().optional(),
+      fallback: z.boolean().optional(),
       reviewModel: z.enum(CLAUDE_REVIEW_MODELS).optional(),
       monthlyCap: z.number().min(0).max(1000).optional(),
     })

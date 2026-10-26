@@ -22,7 +22,8 @@ Das größte Risiko generierter Icons ist ein Stil-Flickenteppich. Deshalb:
 2. **Kategorie-Icons** als Rückfallebene für Artikel ohne eigenes Icon; letzte Rückfallebene ist
    der Anfangsbuchstabe auf der Kategoriefarbe.
 3. **Laufend** nach Priorität: Kategorien, neue Listen, neue Einträge (Merklisten-Einträge und frei
-   getippte Einträge), dann die Katalogartikel nach Häufigkeit auf den Listen.
+   getippte Einträge), dann die Katalogartikel nach Häufigkeit auf den Listen – nur solche, die auf einer
+   Liste stehen oder standen. Gewürze bekommen ohne KI ein eingefärbtes Häufchen (`spices.ts`).
 4. **Im Betrieb**: Neue Einträge werden wenige Sekunden nach der Änderung eingeplant, auch mitten in
    einem langen Durchlauf. „Icon gefällt mir nicht“ in der App und „Neu erzeugen“ in der Übersicht
    planen neu ein.
@@ -77,6 +78,8 @@ austauschbare Schnittstelle (`IconGenerator`); der Anbieterwechsel ist Einstellu
   Kontingent als erschöpft, pausiert die Warteschlange bis Mitternacht (UTC).
 - **Monatsgrenze in €** für Claude und OpenAI; Kosten werden aus den echten Token-Zahlen verbucht.
 - Nach einer Freigabe werden für dieses Ziel keine weiteren Entwürfe bezahlt.
+- Claude zeichnet im laufenden Betrieb einen Entwurf pro Icon (zweiter Anlauf nur nach Ablehnung durch die
+  Vorprüfung). Als Ersatz hinter FLUX springt Claude nur ein, wenn FLUX auch im zweiten Anlauf scheitert.
 
 ## Datenhaltung
 

@@ -333,6 +333,33 @@ export class ClaudeReviewer {
     return { subject: subject.trim().slice(0, 200), costMicro: costMicro(msg.model, msg.usage) };
   }
 
+  /** Is it a spice or dried herb (shown as a coloured pile of powder), and which colour? */
+  async spiceColor(name: string): Promise<{ color: string | null; costMicro: number }> {
+    let msg: Anthropic.Beta.BetaMessage;
+    try {
+      msg = await this.client.beta.messages.create({
+        model: 'claude-haiku-5-5',
+        max_tokens: 300,
+        system:
+          'A German grocery item is given. If it is a ground or whole spice, a dried herb or a spice mix (sold as powder, ' +
+          'flakes or seeds), answer spice=true and the typical colour of the powder as #RRGGBB. Anything else (oil, sauce, ' +
+          'flour, sugar, nuts, fresh herbs …): spice=false.',
+        messages: [{ role: 'user', content: name }],
+        output_config: {
+          effort: 'low',
+          format: {
+            type: 'json_schema',
+            schema: { type: 'object', properties: { spice: { type: 'boolean' }, color: { type: 'string' } }, required: ['spice', 'color'], additionalProperties: false },
+          },
+        },
+      });
+    } catch (err) {
+      mapError(err);
+    }
+    const r = jsonText(msg) as { spice: boolean; color: string };
+    return { color: r.spice && /^#[0-9a-fA-F]{6}$/.test(r.color) ? r.color : null, costMicro: costMicro(msg.model, msg.usage) };
+  }
+
   /** The best fitting category for a new free-text entry (from the list type's categories, own ones included). */
   async categorize(
     entry: { name: string; listType: string; listName: string },

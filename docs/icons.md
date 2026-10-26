@@ -19,7 +19,12 @@ Artikel, jede Kategorie, jeder Merklisten-Eintrag und jede Liste ein eigenes Ico
   Stil-Referenz ★, alles Weitere wird mit ihnen als Vorlage im selben Stil erzeugt. Referenzen lassen sich in
   der Übersicht ändern.
 - **Reihenfolge**: erst Kategorien, dann neue Einträge, dann die Katalogartikel nach Häufigkeit – bis zum
-  Tageslimit (Standard 150 Bilder/Tag).
+  Tageslimit (Standard 150 Bilder/Tag). Nur Artikel, die auf einer Liste stehen oder standen, bekommen ein
+  eigenes Bild; der Rest zeigt das Kategorie-Icon, bis er zum ersten Mal gebraucht wird.
+- **Gewürze** (Pulver, Samen, getrocknete Kräuter) zeichnet keine KI: Sie sind ein Häufchen aus Punkten in
+  ihrer Farbe – immer dasselbe Häufchen, nur eingefärbt. Die Farbe steht für gängige Gewürze fest im Code,
+  bei unbekannten aus „Zutaten & Gewürze“ fragt Shopping einmal Haiku. „Neu erzeugen“ von Hand lässt doch
+  die KI zeichnen.
 - **Automatisch freigeben**: Ein Entwurf wird freigegeben, sobald er alle Prüfungen besteht (Hintergrund
   sauber, nichts abgeschnitten, nicht zu klein und – mit Anthropic-Key – die KI-Vorprüfung). Weitere Entwürfe
   werden dann gar nicht erst erzeugt. Durchgefallenes steht unter „Nicht bestanden“ und lässt sich trotzdem
@@ -36,11 +41,14 @@ Artikel, jede Kategorie, jeder Merklisten-Eintrag und jede Liste ein eigenes Ico
 
 ## Optionale Anbieter
 
-- **Anthropic (Claude)**: Claude zeichnet Icons als SVG (Sonnet, etwa 3–4 Cent pro Entwurf), prüft jeden
+- **Anthropic (Claude)**: Claude zeichnet Icons als SVG (Sonnet, etwa 3–4 Cent pro Entwurf; außer beim
+  Stil-Finden und „Neu erzeugen“ nur ein Entwurf pro Icon, ein zweiter nur, wenn die Vorprüfung ablehnt), prüft jeden
   Entwurf vorab („erkennbar? Schrift? passt zum Stil?“, Haiku, unter 0,1 Cent), beschreibt Artikel aus
   Mealie und sortiert neue freie Einträge in die passende Kategorie (Haiku, abschaltbar). Was die Vorprüfung aussortiert, steht hinten und ist blass, bleibt aber wählbar; fällt alles durch,
   gibt es automatisch einen zweiten Versuch.
 - **OpenAI** (gpt-image) als bezahlte Alternative.
+- **Sparsam kombiniert**: FLUX (Cloudflare, gratis) als Anbieter, Claude nur als **Ersatz**, wenn FLUX auch im
+  zweiten Anlauf nichts Brauchbares liefert (Haken „Claude als Ersatz“, Standard an).
 
 Für Claude und OpenAI gilt je eine Monatsgrenze in €. Wie die Icons aussehen sollen, steht in der
 [Designrichtlinie](konzept/11-icon-designrichtlinie.md).

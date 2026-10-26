@@ -240,6 +240,41 @@ describe('icon pipeline', () => {
     expect(waiting.candidates).toHaveLength(2);
   });
 
+  it('draws spices as a coloured pile, without image AI', async () => {
+    const list = (await req('POST', '/api/v1/lists', { name: 'Gewürze' })).json().id;
+    await req('POST', `/api/v1/lists/${list}/items`, { text: 'Paprikapulver' });
+    await t.icons.enqueueMissing();
+    calls.length = 0;
+    // Work through the queue until the spice is done (other items may come first).
+    for (let n = 0; n < 40; n++) {
+      const catalog = (await req('GET', '/api/v1/catalog')).json();
+      if (catalog.items.find((i: { id: string }) => i.id === seedId('Paprikapulver')).icon) break;
+      expect(['done', 'failed']).toContain((await req('POST', '/api/v1/icons/run')).json().result);
+    }
+    const [icon] = await t.db.execute<{ provider: string; status: string; svg: string }>(
+      (await import('drizzle-orm')).sql`SELECT provider, status, svg FROM icons WHERE target_type = 'item' AND target_id = ${seedId('Paprikapulver')}`,
+    );
+    expect(icon).toMatchObject({ provider: 'builtin', status: 'approved' });
+    expect(icon!.svg).toContain('#C8372D');
+    expect(calls.some((c) => c.prompt.includes('Paprikapulver'))).toBe(false);
+  });
+
+  it('only plans pictures for catalog items that are or were on a list', async () => {
+    await t.icons.enqueueMissing();
+    const rows = await t.db.execute<{ target_id: string }>(
+      (await import('drizzle-orm')).sql`SELECT target_id FROM icon_jobs WHERE target_type = 'item' AND status = 'queued' AND priority < 1000`,
+    );
+    const ids = rows.map((r) => r.target_id);
+    expect(ids.every((id) => id !== seedId('Ingwer'))).toBe(true);
+    const list = (await req('POST', '/api/v1/lists', { name: 'Asia' })).json().id;
+    await req('POST', `/api/v1/lists/${list}/items`, { text: 'Ingwer' });
+    await t.icons.enqueueMissing();
+    const after = await t.db.execute<{ target_id: string }>(
+      (await import('drizzle-orm')).sql`SELECT target_id FROM icon_jobs WHERE target_type = 'item' AND target_id = ${seedId('Ingwer')}`,
+    );
+    expect(after).toHaveLength(1);
+  });
+
   it('is for logged-in accounts only, too', async () => {
     expect((await t.app.inject({ method: 'GET', url: '/api/v1/icons/review' })).statusCode).toBe(401);
   });

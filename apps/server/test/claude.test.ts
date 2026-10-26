@@ -203,6 +203,34 @@ describe('Claude in the icon pipeline', () => {
     expect(calls.filter((c) => c.kind === 'svg')).toHaveLength(1);
     expect((await cat()).tierbedarf).toMatch(/^[0-9a-f]{10}$/);
   });
+
+  it('draws only one candidate per planned icon (a second round only if refused)', async () => {
+    await t.db.execute(sql`DELETE FROM icon_jobs WHERE status = 'queued'`);
+    await t.db.execute(sql`INSERT INTO icon_jobs (target_type, target_id, priority, candidates) VALUES ('category', 'snacks-suesses', 500, 2)`);
+    reviewOk = false;
+    calls.length = 0;
+    expect(await t.icons.runNext()).toBe('done');
+    expect(calls.filter((c) => c.kind === 'svg')).toHaveLength(1);
+    reviewOk = true;
+    await t.db.execute(sql`DELETE FROM icon_jobs WHERE status = 'queued'`);
+  });
+
+  it('steps in when FLUX cannot deliver', async () => {
+    await req('PUT', '/api/v1/icons/settings', { provider: 'cloudflare', cloudflare: { accountId: 'a', token: 't' } });
+    await t.db.execute(sql`DELETE FROM icon_jobs WHERE status = 'queued'`);
+    await t.db.execute(sql`INSERT INTO icon_jobs (target_type, target_id, priority, candidates, provider) VALUES ('category', 'baumarkt-garten', 500, 2, 'cloudflare')`);
+    // The fake Cloudflare answers 404: three failed attempts, then Claude takes over.
+    for (let n = 0; n < 3; n++) expect(await t.icons.runNext()).toBe('failed');
+    const [job] = await t.db.execute<{ status: string; provider: string; candidates: number }>(
+      sql`SELECT status, provider, candidates FROM icon_jobs WHERE target_id = 'baumarkt-garten'`,
+    );
+    expect(job).toMatchObject({ status: 'queued', provider: 'claude', candidates: 1 });
+    calls.length = 0;
+    expect(await t.icons.runNext()).toBe('done');
+    expect(calls.filter((c) => c.kind === 'svg')).toHaveLength(1);
+    expect((await req('GET', '/api/v1/catalog')).json().categoryIcons['baumarkt-garten']).toMatch(/^[0-9a-f]{10}$/);
+    await req('PUT', '/api/v1/icons/settings', { provider: 'claude' });
+  });
 });
 
 describe('categories of new entries', () => {
