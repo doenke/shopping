@@ -16,7 +16,7 @@ import { SyncTemplateDialog } from './components/SyncTemplateDialog';
 import { ListView } from './components/ListView';
 import { Login } from './components/Login';
 import { Settings } from './components/Settings';
-import { SyncBadge } from './components/SyncBadge';
+import { SyncBadge, SyncDot, useSyncInfo } from './components/SyncBadge';
 import { setMeta } from './db';
 import { CategoryContext } from './categories';
 import { IconContext } from './icons';
@@ -61,6 +61,7 @@ function Shell({ me }: { me: Me }) {
   const wide = useMediaQuery('(min-width: 900px)');
   const extraWide = useMediaQuery('(min-width: 1250px)');
   const [drawer, setDrawer] = useState(false);
+  const syncState = useSyncInfo(me.isGuest).state;
   const [menu, setMenu] = useState(false);
   const [importing, setImporting] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
@@ -254,18 +255,21 @@ function Shell({ me }: { me: Me }) {
                 🛒
               </button>
             ))}
-          {route.page === 'list' && list && <ListAvatars listId={list.id} refresh={membersSeen} onClick={() => setShowMembers(true)} />}
+          {/* Phones: the people and the sync state move into the list menu, so the name keeps its room. */}
+          {route.page === 'list' && list && wide && <ListAvatars listId={list.id} refresh={membersSeen} onClick={() => setShowMembers(true)} />}
           <InstallButton />
-          <SyncBadge guest={me.isGuest} />
+          {(wide || !list || route.page !== 'list' || syncState === 'unauthorized') && <SyncBadge guest={me.isGuest} />}
           {route.page === 'list' && list && (
             <div className="menu">
-              <button type="button" className="icon-btn" aria-label="Listenmenü" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
-                ⋮
+              <button type="button" className="icon-btn menu__button" aria-label="Listenmenü" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
+                ⋮{!wide && <SyncDot guest={me.isGuest} />}
               </button>
               {menu && (
                 <ListMenu
                   list={list}
                   me={me}
+                  compact={!wide}
+                  membersSeen={membersSeen}
                   hasTemplates={templates.some((t) => t.listType === list.listType)}
                   onClose={() => setMenu(false)}
                   onImport={() => setImporting(true)}
@@ -384,6 +388,9 @@ function OpenCount({ listId }: { listId: string }) {
 interface ListMenuProps {
   list: ListRow;
   me: Me;
+  /** Phones: sync state and the people with access are shown in the menu. */
+  compact: boolean;
+  membersSeen: number;
   hasTemplates: boolean;
   onClose: () => void;
   onImport: () => void;
@@ -394,7 +401,7 @@ interface ListMenuProps {
   onCopied: () => void;
 }
 
-function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories, onEdit, onCopied }: ListMenuProps) {
+function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories, onEdit, onCopied }: ListMenuProps) {
   const guest = me.isGuest;
   const isOwner = list.ownerId === me.id;
 
@@ -408,6 +415,11 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
 
   return (
     <div className="menu__panel" role="menu">
+      {compact && (
+        <div className="menu__status">
+          <SyncBadge guest={guest} always />
+        </div>
+      )}
       <button
         type="button"
         role="menuitem"
@@ -426,7 +438,8 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
           onClose();
         }}
       >
-        👥 Berechtigungen …
+        <span>👥 Berechtigungen …</span>
+        {compact && <ListAvatars listId={list.id} refresh={membersSeen} inline />}
       </button>
       <button
         type="button"

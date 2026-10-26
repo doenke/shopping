@@ -22,7 +22,7 @@ function cached(listId: string): Person[] {
  * Everyone with access to the list, as a row of profile pictures in the title bar.
  * The last known state is kept per list, so it also shows offline.
  */
-export function ListAvatars({ listId, refresh, onClick }: { listId: string; refresh: number; onClick: () => void }) {
+export function ListAvatars({ listId, refresh, onClick, inline = false }: { listId: string; refresh: number; onClick?: () => void; inline?: boolean }) {
   const [people, setPeople] = useState<Person[]>(() => cached(listId));
 
   useEffect(() => {
@@ -54,9 +54,19 @@ export function ListAvatars({ listId, refresh, onClick }: { listId: string; refr
   }, [listId, refresh]);
 
   if (people.length === 0) return null;
-  const limit = max();
+  const limit = inline ? 4 : max();
   const shown = people.length > limit ? people.slice(0, limit - 1) : people;
   const more = people.length - shown.length;
+  // Inside a menu item: just the pictures (the item itself is the button).
+  if (inline)
+    return (
+      <span className="avatar-stack avatar-stack--inline" aria-hidden>
+        {shown.map((p) => (
+          <Avatar key={p.id} user={p} />
+        ))}
+        {more > 0 && <span className="avatar avatar-stack__more">+{more}</span>}
+      </span>
+    );
   return (
     <button type="button" className="avatar-stack" onClick={onClick} title={people.map((p) => p.displayName).join(', ')} aria-label={`Zugriff: ${people.map((p) => p.displayName).join(', ')}`}>
       {shown.map((p) => (

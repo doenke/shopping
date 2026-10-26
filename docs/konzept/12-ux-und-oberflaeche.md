@@ -10,7 +10,7 @@ Laptop-Ansicht.
 
 ```
 ┌─────────────────────────────┐
-│ ☰  🛍 Einkauf  🛒 Ⓐ+2  ●  ⋮ │   Listen-Icon, Einkaufen-Modus, Mitglieder, Sync, Menü
+│ ☰  🛍 Einkauf       🛒   ⋮● │   Listen-Icon, Einkaufen-Modus, Menü mit Sync-Punkt
 ├─────────────────────────────┤
 │ Was brauchst du?            │   eine Zeile für alles (Parser)
 ├─────────────────────────────┤
@@ -88,7 +88,9 @@ Beschreibung, Kategorie (ToDo), aus Vorlage (Artikel einzeln wählbar, optionale
 
 ## Mehrere Nutzer sichtbar machen
 
-- Avatare aller mit Zugriff in der Titelzeile; ein Tipp öffnet „Berechtigungen“.
+- Avatare aller mit Zugriff in der Titelzeile (am Handy im Listenmenü bei „Berechtigungen“, damit der
+  Name Platz hat); ein Tipp öffnet „Berechtigungen“. Der Sync-Stand sitzt am Handy als Punkt am ⋮-Knopf
+  und steht oben im Menü als Text.
 - Fremd abgehakte Artikel: kurze Animation + „✓ von Anna“.
 
 **Keine Benachrichtigungen:** kein Push, keine Mails, keine Badges auf dem App-Icon. Alles passiert

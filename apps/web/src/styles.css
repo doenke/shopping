@@ -1504,3 +1504,37 @@ img.avatar {
   border-radius: 12px;
   padding: 6px;
 }
+
+/* Phones: sync dot on the corner of the menu button, people in the menu */
+.menu__button {
+  position: relative;
+}
+.sync--corner {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  pointer-events: none;
+}
+.sync--corner .sync__dot {
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.menu__status {
+  padding: 6px 12px 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.sync--always .sync__label {
+  display: inline;
+}
+.menu__panel button:has(.avatar-stack--inline) {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.avatar-stack--inline {
+  pointer-events: none;
+}
