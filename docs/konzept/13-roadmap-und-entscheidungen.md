@@ -51,3 +51,13 @@ Alle Phasen sind umgesetzt.
 - Pflege-Ansicht für den Katalog (Dubletten zusammenführen, Artikel ausblenden) – bisher nur
   über die API und den Mealie-Abgleich.
 - Automatische Oberflächen-Tests in der CI (bisher: Server-, Shared- und Home-Assistant-Tests).
+
+## Ideen für später
+
+Gerade ohne Bedarf, aber festgehalten:
+
+- **CalDAV**: Listen als CalDAV-Aufgabenlisten (VTODO) anbieten, damit Kalender- und Aufgaben-Apps
+  (z. B. Thunderbird, DAVx⁵ mit Tasks.org, Apple Erinnerungen) sie direkt lesen und abhaken können.
+  Naheliegend vor allem für ToDo-Listen (Fälligkeit → `DUE`, Erledigt → `STATUS:COMPLETED`), denkbar
+  auch für Einkaufslisten. Zu klären: Anmeldung (App-Passwort bzw. API-Token statt OIDC), ob nur lesen
+  oder auch schreiben, und wie Mengen, Eigenschaften und Kategorien in VTODO abgebildet werden.
