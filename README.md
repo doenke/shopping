@@ -60,7 +60,7 @@ eingebautem MCP-Server.
 
 1. Kostenloses Cloudflare-Konto anlegen, unter *AI → Workers AI → REST API* die Account-ID
    ablesen und ein API-Token (Vorlage „Workers AI“) erstellen.
-2. In der App *🖼 Icons → Bild-KI einrichten*: Account-ID und Token eintragen, speichern.
+2. In der App *⚙ Einstellungen → 🖼 Icons verwalten → Bild-KI einrichten*: Account-ID und Token eintragen, speichern.
 3. „Automatisch im Hintergrund“ einschalten. Neue Icons werden **automatisch freigegeben**, sobald ein
    Entwurf alle Prüfungen besteht (Hintergrund sauber, nichts abgeschnitten, nicht zu klein und – mit
    Anthropic-Key – die KI-Vorprüfung). Weitere Entwürfe werden dann gar nicht erst erzeugt.
