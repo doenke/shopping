@@ -159,8 +159,17 @@ a {
   display: flex;
   gap: 8px;
 }
-.field__row input {
+/* Only the amount next to its unit is narrow; fields side by side (Tipp von / Wo …) share the row. */
+.field__row > input {
   width: 35%;
+}
+.field__row > input[type='date'] {
+  width: auto;
+  flex: 1;
+}
+.field__row > .field {
+  flex: 1;
+  min-width: 0;
 }
 .check {
   display: flex;
