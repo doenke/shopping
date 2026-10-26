@@ -49,7 +49,7 @@
   fehlt und abweichende Mengen – einzeln auswählbar (Richtung Vorlage ist anfangs nichts angehakt); die Liste
   merkt sich ihre Vorlage.
 - **Packlisten** 🧳 mit eigenem Katalog (Kleidung, Dokumente, Technik …): Abgehakt heißt „eingepackt“ und
-  bleibt durchgestrichen stehen, Fortschritt „12 von 30 eingepackt“, gruppiert nach Kategorie, **Packstück**
+  bleibt durchgestrichen stehen (Schalter „Eingepackte ausblenden“, pro Liste gemerkt), Fortschritt „12 von 30 eingepackt“, gruppiert nach Kategorie, **Packstück**
   oder **Person**. Beim Tippen ordnen „@Anna“ und „#Koffer“ zu („3 T-Shirts @Anna #Koffer“). Neue Packlisten
   entstehen aus Packvorlagen, erledigte kommen ins Archiv.
 - **Merklisten** 📌 für Filme, Bücher, Restaurants …: mit **Tipp von** und **Wo** („Dune @Ben #Netflix“),

@@ -30,6 +30,23 @@ function loadGroupBy(listId: string): GroupBy {
   return 'category';
 }
 
+function loadFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function saveFlag(key: string, on: boolean): void {
+  try {
+    if (on) localStorage.setItem(key, '1');
+    else localStorage.removeItem(key);
+  } catch {
+    // Not important enough to complain about.
+  }
+}
+
 /**
  * Packing list: ticking means "packed" – the item stays where it is, crossed out,
  * so you can see what is still missing in each Packstück or for each person.
@@ -38,6 +55,9 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
   const [editing, setEditing] = useState<string | null>(null);
   const [undo, setUndo] = useState<ItemRow | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>(() => loadGroupBy(list.id));
+  const [hidePacked, setHidePacked] = useState(() => loadFlag(`packing-hide:${list.id}`));
+
+  useEffect(() => saveFlag(`packing-hide:${list.id}`, hidePacked), [hidePacked, list.id]);
 
   useEffect(() => {
     try {
@@ -113,6 +133,11 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
               {packed} von {items.length} eingepackt
             </span>
           </div>
+          {packed > 0 && (
+            <button type="button" className={`chip${hidePacked ? ' chip--on' : ''}`} aria-pressed={hidePacked} onClick={() => setHidePacked(!hidePacked)}>
+              {hidePacked ? 'Eingepackte ausgeblendet' : 'Eingepackte ausblenden'}
+            </button>
+          )}
           <div className="segmented" role="group" aria-label="Gruppieren nach">
             {(Object.keys(GROUP_LABEL) as GroupBy[]).map((g) => (
               <button key={g} type="button" className={g === groupBy ? 'active' : ''} aria-pressed={g === groupBy} onClick={() => setGroupBy(g)}>
@@ -151,13 +176,16 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
 
       {groups.map((g) => {
         const done = g.items.filter((i) => i.checked).length;
+        // Hidden: packed ones go (someone else's tick shows for a moment first); fully packed groups too.
+        const shown = hidePacked ? g.items.filter((i) => !i.checked || remoteChecks.has(i.id)) : g.items;
+        if (shown.length === 0) return null;
         return (
           <div key={g.key} className="group">
             <h2 className="group__title">
               {g.title} <span className="group__count">{done === g.items.length ? '✓' : `${done}/${g.items.length}`}</span>
             </h2>
             <div className="tiles">
-              {g.items.map((item) => {
+              {shown.map((item) => {
                 const remote = remoteChecks.get(item.id);
                 return (
                   <Tile
