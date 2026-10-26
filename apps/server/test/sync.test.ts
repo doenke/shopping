@@ -41,7 +41,7 @@ describe('health', () => {
   it('reports healthy while the database answers', async () => {
     const res = await t.app.inject({ method: 'GET', url: '/healthz' });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ ok: true });
+    expect(res.json()).toEqual({ ok: true, version: 'dev' });
   });
 });
 
