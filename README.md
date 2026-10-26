@@ -4,8 +4,6 @@ Selbst gehostete, offline-fähige Listen-App für Einkauf, Packen und Merken,
 mit nativer Mealie-Anbindung, Login über Pocket ID, REST-API für Home Assistant und
 eingebautem MCP-Server.
 
-> Status: **Phase 1 bis 5** umgesetzt (ohne Android-App) – siehe [Roadmap](docs/konzept/13-roadmap-und-entscheidungen.md).
-
 ## Was die App kann
 
 - Login über **Pocket ID** (OIDC mit PKCE), langlebige Sessions; das **Profilbild** aus Pocket ID
