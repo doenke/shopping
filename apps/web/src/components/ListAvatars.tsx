@@ -8,7 +8,7 @@ interface Person {
 }
 
 /** Phones: fewer pictures, so the list name keeps some room. */
-const max = () => (window.matchMedia('(max-width: 500px)').matches ? 3 : 4);
+const max = () => (window.matchMedia('(max-width: 500px)').matches ? 2 : 4);
 
 function cached(listId: string): Person[] {
   try {

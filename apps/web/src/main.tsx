@@ -2,11 +2,14 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import { App } from './App';
+import { listenForInstall } from './install';
 import './styles.css';
 
 // The browser looks for a new version only now and then; an installed app stays open for days.
 // So look whenever the app comes back to the foreground, and every hour. A new version takes over
 // at once and the page reloads (nothing is lost: everything lives in IndexedDB and the outbox).
+listenForInstall();
+
 registerSW({
   immediate: true,
   onRegisteredSW(_url, registration) {

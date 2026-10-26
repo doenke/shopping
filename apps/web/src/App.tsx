@@ -6,6 +6,7 @@ import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
 import { startShopping, stopShopping, useShopping, useWakeLock } from './shopMode';
 import { ListIcon } from './components/ListIcon';
+import { InstallButton } from './components/InstallButton';
 import { ListAvatars } from './components/ListAvatars';
 import { MembersDialog } from './components/MembersDialog';
 import { LIST_TYPE_LABEL, NewListDialog } from './components/NewListDialog';
@@ -238,6 +239,7 @@ function Shell({ me }: { me: Me }) {
               </button>
             ))}
           {route.page === 'list' && list && <ListAvatars listId={list.id} refresh={membersSeen} onClick={() => setShowMembers(true)} />}
+          <InstallButton />
           <SyncBadge guest={me.isGuest} />
           {route.page === 'list' && list && (
             <div className="menu">

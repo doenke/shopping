@@ -1372,3 +1372,13 @@ img.avatar {
   padding: 0;
   accent-color: var(--primary);
 }
+@media (max-width: 500px) {
+  .install-btn__label {
+    display: none;
+  }
+}
+/* Centred with left: 50% the box would only get half the screen width; let it use what the text needs. */
+.snackbar {
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
