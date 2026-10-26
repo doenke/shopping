@@ -302,6 +302,7 @@ export function Settings({ me }: { me: Me }) {
 
       {!me.isGuest && <TokensCard />}
       {!me.isGuest && <WebhooksCard />}
+      <p className="muted version">Shopping {__APP_VERSION__}</p>
     </section>
   );
 }

@@ -1,0 +1,13 @@
+{
+  "$comment": "Version x.yy.zzz: x = major (by hand), yy = days with changes since `since` (counted by scripts/version.mjs), zzz = CI run. A new major: raise major, set since to that day (yy starts again).",
+  "app": {
+    "major": 1,
+    "since": "2026-10-22",
+    "paths": ["apps", "packages", "Dockerfile", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+  },
+  "homeassistant": {
+    "major": 1,
+    "since": "2026-10-22",
+    "paths": ["custom_components", "hacs.json"]
+  }
+}

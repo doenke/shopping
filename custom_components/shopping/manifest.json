@@ -1,7 +1,9 @@
 {
   "domain": "shopping",
   "name": "Shopping",
-  "codeowners": ["@doenke"],
+  "codeowners": [
+    "@doenke"
+  ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/doenke/shopping#home-assistant",
@@ -9,5 +11,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/doenke/shopping/issues",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.0.0"
 }

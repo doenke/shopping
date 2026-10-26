@@ -140,6 +140,13 @@ Neue Listen sind für den ganzen Haushalt da; „Privat – nur für mich“ bei
 nimmt sie heraus. Über den Link lassen sich Listen weiterhin mit anderen Haushalten und Gästen teilen.
 Nur Pocket-ID-Benutzer gehören zu einem Haushalt, Gäste nie.
 
+## Versionen
+
+App und Home-Assistant-Integration haben getrennte Versionen `x.yy.zzz`: `x` ist die Hauptversion
+(`versions.json`), `yy` zählt die Tage, an denen sich die jeweilige Komponente geändert hat, `zzz` den
+CI-Lauf. Das Image gibt es als `ghcr.io/doenke/shopping:latest` und mit Versionsnummer; die App zeigt ihre
+Version unten in den Einstellungen. Die Integration erscheint in HACS als Release `v…` mit Update-Hinweis.
+
 ## Betrieb
 
 1. In Pocket ID einen OIDC-Client anlegen:

@@ -81,7 +81,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
         db.execute(sql`SELECT 1`),
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
       ]);
-      return { ok: true };
+      return { ok: true, version: process.env.APP_VERSION || 'dev' };
     } catch {
       return reply.code(503).send({ ok: false, error: 'database unavailable' });
     }

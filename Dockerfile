@@ -9,13 +9,18 @@ COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter @shopping/web build \
+# x.yy.zzz, computed by CI (scripts/version.mjs); declared late so it does not invalidate the install layer.
+ARG APP_VERSION=dev
+RUN APP_VERSION=$APP_VERSION pnpm --filter @shopping/web build \
  && pnpm --filter @shopping/server build \
  && pnpm --filter @shopping/server deploy --prod --legacy /out
 
 FROM node:22-alpine
+ARG APP_VERSION=dev
+LABEL org.opencontainers.image.version=$APP_VERSION
 WORKDIR /app
-ENV NODE_ENV=production \
+ENV APP_VERSION=$APP_VERSION \
+    NODE_ENV=production \
     PORT=3000 \
     WEB_DIST=/app/web \
     MIGRATIONS_DIR=/app/drizzle

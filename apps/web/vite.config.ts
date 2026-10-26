@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 const backend = process.env.BACKEND_URL ?? 'http://localhost:3000';
 
 export default defineConfig({
+  // x.yy.zzz from CI (scripts/version.mjs), "dev" for local builds.
+  define: { __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || 'dev') },
   plugins: [
     react(),
     VitePWA({

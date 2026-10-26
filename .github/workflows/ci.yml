@@ -3,13 +3,30 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
+  # x.yy.zzz per component (versions.json, scripts/version.mjs): yy counts days with changes, zzz is this run.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.v.outputs.app }}
+      homeassistant: ${{ steps.v.outputs.homeassistant }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: v
+        run: |
+          echo "app=$(node scripts/version.mjs app)" >> "$GITHUB_OUTPUT"
+          echo "homeassistant=$(node scripts/version.mjs homeassistant)" >> "$GITHUB_OUTPUT"
+      - run: |
+          echo "App: ${{ steps.v.outputs.app }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Home Assistant: ${{ steps.v.outputs.homeassistant }}" >> "$GITHUB_STEP_SUMMARY"
+
   test:
     runs-on: ubuntu-latest
     services:
@@ -67,7 +84,7 @@ jobs:
         working-directory: ha-tests
 
   image:
-    needs: [test, homeassistant]
+    needs: [version, test, homeassistant]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
@@ -88,7 +105,7 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=semver,pattern={{version}}
+            type=raw,value=${{ needs.version.outputs.app }}
             type=sha
       - uses: docker/build-push-action@v6
         with:
@@ -97,5 +114,37 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: APP_VERSION=${{ needs.version.outputs.app }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # HACS installs the integration from GitHub releases (shopping.zip with the version in the manifest).
+  # A release only when the integration changed since the last one.
+  homeassistant-release:
+    needs: [version, homeassistant]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: changed
+        run: |
+          last=$(git tag --list 'v*' --sort=-creatordate | head -1)
+          if [ -z "$last" ] || ! git diff --quiet "$last" HEAD -- custom_components hacs.json; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.changed.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.homeassistant }}
+        run: |
+          cd custom_components/shopping
+          jq --arg v "$VERSION" '.version = $v' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+          rm -rf __pycache__
+          zip -r ../../shopping.zip . -x '*.pyc'
+          cd ../..
+          gh release create "v$VERSION" shopping.zip --target "$GITHUB_SHA" --title "Home Assistant $VERSION" \
+            --notes "Home-Assistant-Integration $VERSION (App-Version im selben Lauf: ${{ needs.version.outputs.app }})."
