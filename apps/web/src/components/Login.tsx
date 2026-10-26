@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { db } from '../db';
 
 export function Login() {
-  const [cfg, setCfg] = useState<{ oidc: boolean; devLogin: boolean } | null>(null);
+  const [cfg, setCfg] = useState<{ oidc: boolean; devLogin: boolean; loginLabel?: string } | null>(null);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const params = new URLSearchParams(location.search);
@@ -59,7 +59,7 @@ export function Login() {
       {error && <p className="error">{error}</p>}
       {cfg?.oidc && (
         <a className="btn btn--primary btn--large" href={next ? `/auth/login?next=${encodeURIComponent(next)}` : '/auth/login'}>
-          Mit Pocket ID anmelden
+          {cfg.loginLabel ?? 'Mit Pocket ID anmelden'}
         </a>
       )}
       {isListLink && (

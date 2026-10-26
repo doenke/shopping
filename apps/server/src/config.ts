@@ -20,6 +20,8 @@ const EnvSchema = z.object({
   OIDC_HOUSEHOLD_CLAIM: z.string().default('household'),
   /** Name of the household for users without a tag. */
   DEFAULT_HOUSEHOLD_NAME: z.string().trim().min(1).default('Haushalt'),
+  /** Text of the login button, e.g. "Mit Firmenkonto anmelden". */
+  OIDC_LOGIN_LABEL: z.string().trim().min(1).max(60).default('Mit Pocket ID anmelden'),
   /** Local development only: allows logging in with just a name, without OIDC. */
   DEV_LOGIN: bool,
   WEB_DIST: z.string().optional(),

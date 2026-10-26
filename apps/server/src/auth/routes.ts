@@ -91,7 +91,7 @@ export async function authRoutes(
     return discovered;
   };
 
-  app.get('/auth/config', async () => ({ oidc: !!config.OIDC_ISSUER, devLogin: config.DEV_LOGIN }));
+  app.get('/auth/config', async () => ({ oidc: !!config.OIDC_ISSUER, devLogin: config.DEV_LOGIN, loginLabel: config.OIDC_LOGIN_LABEL }));
 
   app.get('/auth/login', async (request, reply) => {
     const next = safeNext((request.query as Record<string, unknown>).next);

@@ -42,6 +42,8 @@ describe('health', () => {
     const res = await t.app.inject({ method: 'GET', url: '/healthz' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ ok: true, version: 'dev' });
+    // The login button's text is configurable (OIDC_LOGIN_LABEL).
+    expect((await t.app.inject({ method: 'GET', url: '/auth/config' })).json().loginLabel).toBe('Mit Pocket ID anmelden');
   });
 });
 
