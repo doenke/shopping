@@ -168,12 +168,7 @@ function Shell({ me }: { me: Me }) {
         </details>
       )}
       <span className="spacer" />
-      {!guest && (
-        <a href="#/icons" className={route.page === 'icons' ? 'active' : ''} onClick={() => setDrawer(false)}>
-          🖼 Icons
-        </a>
-      )}
-      <a href="#/settings" className={route.page === 'settings' ? 'active' : ''} onClick={() => setDrawer(false)}>
+      <a href="#/settings" className={route.page === 'settings' || route.page === 'icons' ? 'active' : ''} onClick={() => setDrawer(false)}>
         ⚙ Einstellungen
       </a>
     </nav>

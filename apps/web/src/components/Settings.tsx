@@ -290,6 +290,16 @@ export function Settings({ me }: { me: Me }) {
       </form>
       )}
 
+      {!me.isGuest && (
+        <div className="card">
+          <h2>Icons</h2>
+          <p className="muted">Bild-KI einrichten, Stand und Budget, Icons prüfen oder neu erzeugen.</p>
+          <a className="btn" href="#/icons">
+            🖼 Icons verwalten
+          </a>
+        </div>
+      )}
+
       {!me.isGuest && <TokensCard />}
       {!me.isGuest && <WebhooksCard />}
     </section>

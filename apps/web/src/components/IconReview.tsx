@@ -204,6 +204,9 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
 
   return (
     <div className="settings icons-page">
+      <a className="link" href="#/settings">
+        ← Einstellungen
+      </a>
       <section className="card">
         <h2>Stand</h2>
         {status.phase === 'style' ? (
