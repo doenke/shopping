@@ -135,6 +135,7 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
         name: z.string().trim().min(1).max(80),
         type: ListType.optional(),
         description: Description.optional(),
+        group: z.string().trim().max(40).optional().describe('ToDo-Listen: Kategorie, z. B. Arbeit, Hobby, Urlaub'),
         private: z.boolean().optional().describe('Nur für mich – sonst sieht der ganze Haushalt die Liste (ToDo-Listen: standardmäßig privat)'),
         template: z.string().optional(),
         isTemplate: z.boolean().optional(),
@@ -147,6 +148,7 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
         type: body.type,
         description: body.description,
         private: body.private,
+        group: body.group,
       }),
   );
 
@@ -166,12 +168,13 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
     'PATCH',
     '/api/v1/lists/:id',
     {
-      summary: 'Liste umbenennen, beschreiben oder archivieren',
+      summary: 'Liste umbenennen, beschreiben, einordnen (ToDo-Kategorie) oder archivieren',
       tag: 'Listen',
       params: ListRef,
       body: z.object({
         name: z.string().trim().min(1).max(80).optional(),
         description: Description.optional(),
+        group: z.string().trim().max(40).nullable().optional().describe('ToDo-Listen: Kategorie; leer/null = Allgemein'),
         archived: z.boolean().optional(),
         visibility: z.enum(['household', 'private']).optional().describe('Nur der Besitzer: mit dem Haushalt teilen oder privat'),
       }),
@@ -180,6 +183,7 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
       if (body.visibility) await api.setVisibility(userId, params.id, body.visibility);
       if (body.name) await api.renameList(userId, params.id, body.name);
       if (body.description !== undefined) await api.describeList(userId, params.id, body.description);
+      if (body.group !== undefined) await api.groupList(userId, params.id, body.group);
       if (body.archived !== undefined) await api.archiveList(userId, params.id, body.archived);
       return api.list(userId, params.id);
     },

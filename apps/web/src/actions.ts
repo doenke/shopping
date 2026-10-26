@@ -38,13 +38,24 @@ export async function createList(
   visibility: 'household' | 'private' = defaultVisibility(listType),
   /** The template it came from – preselected later in "Mit Vorlage abgleichen". */
   templateId?: string,
+  /** ToDo lists: Kategorie (Arbeit, Hobby …). */
+  group?: string,
 ): Promise<string> {
   const id = crypto.randomUUID();
   const settings: Record<string, unknown> = {};
   if (description?.trim()) settings.description = description.trim();
   if (templateId) settings.templateId = templateId;
+  if (group?.trim()) settings.group = group.trim();
   await sync.mutateList(id, { name, listType, isTemplate, visibility, ...(Object.keys(settings).length ? { settings } : {}) });
   return id;
+}
+
+/** Kategorie of a ToDo list; empty = none. */
+export async function setListGroup(list: ListRow, group: string): Promise<void> {
+  const settings = { ...list.settings };
+  if (group.trim()) settings.group = group.trim();
+  else delete settings.group;
+  await sync.mutateList(list.id, { settings });
 }
 
 /** What the list is about (Merklisten: also guides the icons). */

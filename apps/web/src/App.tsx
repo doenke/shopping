@@ -1,6 +1,6 @@
-import { categoriesInOrder, inUserOrder, listDescription, parseInput, type ListRow, type ListType, type Me } from '@shopping/shared';
+import { categoriesInOrder, groupLists, inUserOrder, listDescription, listGroup, parseInput, type ListRow, type ListType, type Me } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, archiveList, createList, deleteList, describeList, leaveList, renameList, saveAsTemplate, setCategoryOrder, setListOrder, setMainList, setVisibility, shareList } from './actions';
+import { addItems, archiveList, createList, deleteList, describeList, leaveList, renameList, saveAsTemplate, setCategoryOrder, setListGroup, setListOrder, setMainList, setVisibility, shareList } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
@@ -76,13 +76,31 @@ function Shell({ me }: { me: Me }) {
   const [sorting, setSorting] = useState<'lists' | ListType | null>(null);
   const TYPE_ICON: Record<ListType, string> = { shopping: '', packing: '🧳 ', memo: '📌 ', todo: '✅ ' };
   /** Sidebar: only sections that have lists. */
-  const sections: { title: string | null; lists: ListRow[]; prefix: (l: ListRow) => string }[] = [
+  const sections: { title: string | null; lists: ListRow[]; prefix: (l: ListRow) => string; grouped?: boolean }[] = [
     { title: null, lists: shoppingLists, prefix: () => '' },
     { title: 'Packlisten', lists: packingLists, prefix: () => '🧳 ' },
     { title: 'Merklisten', lists: memoLists, prefix: () => '📌 ' },
-    { title: 'ToDo', lists: todoLists, prefix: () => '✅ ' },
+    { title: 'ToDo', lists: todoLists, prefix: () => '✅ ', grouped: true },
     { title: 'Vorlagen', lists: templates, prefix: (l) => TYPE_ICON[l.listType] },
   ];
+  const listLinks = (ls: ListRow[], prefix: (l: ListRow) => string) => (
+    <ul>
+      {ls.map((l) => (
+        <li key={l.id}>
+          <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
+            <span>
+              {l.id === me.defaultListId && <span title="Hauptliste">⭐ </span>}
+              {l.isTemplate && '◇ '}
+              <ListIcon list={l} fallback={prefix(l)} />
+              {l.name}
+              {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
+            </span>
+            {!l.isTemplate && <OpenCount listId={l.id} />}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
   const mainList = shoppingLists.find((l) => l.id === me.defaultListId) ?? shoppingLists[0];
   const listId = route.page === 'list' ? (route.listId ?? (mainList ?? packingLists[0])?.id) : undefined;
   const addRef = useRef<HTMLInputElement>(null);
@@ -146,22 +164,14 @@ function Shell({ me }: { me: Me }) {
           sec.lists.length > 0 && (
             <div key={sec.title}>
               {sec.title && <h3 className="sidebar__section">{sec.title}</h3>}
-              <ul>
-                {sec.lists.map((l) => (
-                  <li key={l.id}>
-                    <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
-                      <span>
-                        {l.id === me.defaultListId && <span title="Hauptliste">⭐ </span>}
-                        {l.isTemplate && '◇ '}
-                        <ListIcon list={l} fallback={sec.prefix(l)} />
-                        {l.name}
-                        {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
-                      </span>
-                      {!l.isTemplate && <OpenCount listId={l.id} />}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              {sec.grouped
+                ? groupLists(sec.lists).map((g, _i, all) => (
+                    <div key={g.group}>
+                      {all.length > 1 && <h4 className="sidebar__subsection">{g.group}</h4>}
+                      {listLinks(g.lists, sec.prefix)}
+                    </div>
+                  ))
+                : listLinks(sec.lists, sec.prefix)}
             </div>
           ),
       )}
@@ -280,7 +290,11 @@ function Shell({ me }: { me: Me }) {
         </main>
       </div>
 
-      {newDialog && <NewListDialog templates={templates} onClose={() => setNewDialog(false)} />}
+      {newDialog && <NewListDialog
+          templates={templates}
+          groups={[...new Set(todoLists.map(listGroup).filter((g): g is string => !!g))]}
+          onClose={() => setNewDialog(false)}
+        />}
       {syncDialog && list && (
         <SyncTemplateDialog list={list} templates={templates.filter((t) => t.listType === list.listType)} onClose={() => setSyncDialog(false)} />
       )}
@@ -373,6 +387,19 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
       >
         Beschreibung …
       </button>
+      {list.listType === 'todo' && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            const g = prompt('Kategorie (z. B. Arbeit, Hobby, Urlaub – leer = Allgemein)', listGroup(list) ?? '');
+            if (g !== null) void setListGroup(list, g);
+            onClose();
+          }}
+        >
+          Kategorie …
+        </button>
+      )}
       <button
         type="button"
         role="menuitem"

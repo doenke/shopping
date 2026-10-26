@@ -1,4 +1,4 @@
-import { defaultVisibility, itemSpecification, packingInfo, type ListRow, type ListType } from '@shopping/shared';
+import { defaultVisibility, itemSpecification, SUGGESTED_LIST_GROUPS, packingInfo, type ListRow, type ListType } from '@shopping/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, createList, itemToNew } from '../actions';
 import { navigate, useItems } from '../hooks';
@@ -16,12 +16,14 @@ const TEMPLATE_NAME: Record<ListType, string> = { shopping: 'Wocheneinkauf Basis
 
 interface Props {
   templates: ListRow[];
+  /** Kategorien already used by ToDo lists (suggestions). */
+  groups?: string[];
   initialType?: ListType;
   onClose: () => void;
 }
 
 /** One dialog for everything new: name, type, template, "as template", private, description. */
-export function NewListDialog({ templates: allTemplates, initialType = 'shopping', onClose }: Props) {
+export function NewListDialog({ templates: allTemplates, groups = [], initialType = 'shopping', onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [type, setType] = useState<ListType>(initialType);
   const [asTemplate, setAsTemplate] = useState(false);
@@ -29,6 +31,7 @@ export function NewListDialog({ templates: allTemplates, initialType = 'shopping
   const [nameTouched, setNameTouched] = useState(false);
   const [isPrivate, setIsPrivate] = useState(defaultVisibility(initialType) === 'private');
   const [description, setDescription] = useState('');
+  const [group, setGroup] = useState('');
   const templates = allTemplates.filter((t) => t.listType === type);
   const [templateId, setTemplateId] = useState('');
   const template = templates.find((t) => t.id === templateId);
@@ -54,7 +57,15 @@ export function NewListDialog({ templates: allTemplates, initialType = 'shopping
 
   const submit = async () => {
     if (!name.trim()) return;
-    const id = await createList(name.trim(), asTemplate, type, description || listDescriptionOf(template), isPrivate ? 'private' : 'household', template?.id);
+    const id = await createList(
+      name.trim(),
+      asTemplate,
+      type,
+      description || listDescriptionOf(template),
+      isPrivate ? 'private' : 'household',
+      template?.id,
+      type === 'todo' ? group : undefined,
+    );
     const chosen = template ? sorted.filter((i) => selected.has(i.id)).map((i) => ({ ...itemToNew(i), optional: asTemplate ? i.optional : undefined })) : [];
     if (chosen.length) {
       await addItems(
@@ -122,6 +133,18 @@ export function NewListDialog({ templates: allTemplates, initialType = 'shopping
             placeholder={type === 'memo' ? 'z. B. Filme und Serien, die wir sehen wollen' : template ? 'wie die Vorlage' : ''}
           />
         </label>
+
+        {type === 'todo' && (
+          <label className="field">
+            <span>Kategorie</span>
+            <input value={group} onChange={(e) => setGroup(e.target.value)} list="todo-groups" placeholder="Allgemein" />
+            <datalist id="todo-groups">
+              {[...new Set([...groups, ...SUGGESTED_LIST_GROUPS])].map((g) => (
+                <option key={g} value={g} />
+              ))}
+            </datalist>
+          </label>
+        )}
 
         {templates.length > 0 && (
           <label className="field">

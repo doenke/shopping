@@ -1343,3 +1343,23 @@ img.avatar {
   margin: 0 12px 4px;
   font-size: 0.9rem;
 }
+.sidebar__subsection {
+  margin: 8px 12px 2px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted, #6b6f6c);
+}
+/* Checkbox rows inside forms ("Als Vorlage anlegen", "Privat"): box and text side by side. */
+.check.field {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.check.field input[type='checkbox'] {
+  width: 20px;
+  min-height: 20px;
+  height: 20px;
+  flex: none;
+  padding: 0;
+  accent-color: var(--primary);
+}

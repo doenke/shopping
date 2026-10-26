@@ -1,4 +1,4 @@
-import { categoryInList, dueOf, formatAmounts, getCategory, itemSpecification, listDescription, packingInfo, type ItemRow, type ItemSource, type ListRow, type ListType } from '@shopping/shared';
+import { categoryInList, dueOf, formatAmounts, getCategory, itemSpecification, listDescription, listGroup, packingInfo, type ItemRow, type ItemSource, type ListRow, type ListType } from '@shopping/shared';
 
 /** The public shape of an item in the REST API, SSE and MCP. */
 export interface ApiItem {
@@ -38,6 +38,8 @@ export interface ApiList {
   /** "shopping", "packing" or "memo" (Merkliste). */
   type: ListType;
   description: string | null;
+  /** ToDo lists: Kategorie (Arbeit, Hobby …), null = Allgemein. */
+  group: string | null;
   /** "household" (everyone in the household) or "private". */
   visibility: 'household' | 'private';
   isTemplate: boolean;
@@ -85,6 +87,7 @@ export function toApiList(l: ListRow, userId: string, mainListId: string | null,
     name: l.name,
     type: l.listType,
     description: listDescription(l),
+    group: listGroup(l),
     visibility: l.visibility,
     isTemplate: l.isTemplate,
     archived: !!l.archivedAt,

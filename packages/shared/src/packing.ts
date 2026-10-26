@@ -70,3 +70,26 @@ export function listDescription(list: { settings: Record<string, unknown> }): st
   const d = list.settings.description;
   return typeof d === 'string' && d.trim() ? d.trim() : null;
 }
+
+/** Kategorie of a ToDo list (Arbeit, Hobby, Urlaub …), null = none ("Allgemein"). */
+export function listGroup(list: { settings: Record<string, unknown> }): string | null {
+  const g = list.settings.group;
+  return typeof g === 'string' && g.trim() ? g.trim() : null;
+}
+
+export const SUGGESTED_LIST_GROUPS = ['Allgemein', 'Arbeit', 'Haushalt', 'Hobby', 'Urlaub', 'Garten', 'Finanzen'];
+
+/**
+ * Groups lists by their Kategorie: "Allgemein" (and lists without one) first, then alphabetically;
+ * inside a group the given order stays.
+ */
+export function groupLists<T extends { settings: Record<string, unknown> }>(lists: T[]): { group: string; lists: T[] }[] {
+  const byGroup = new Map<string, T[]>();
+  for (const l of lists) {
+    const g = listGroup(l) ?? 'Allgemein';
+    byGroup.set(g, [...(byGroup.get(g) ?? []), l]);
+  }
+  return [...byGroup.entries()]
+    .sort(([a], [b]) => (a === 'Allgemein' ? -1 : b === 'Allgemein' ? 1 : a.localeCompare(b, 'de')))
+    .map(([group, ls]) => ({ group, lists: ls }));
+}

@@ -55,7 +55,9 @@ eingebautem MCP-Server.
   **eigenes Icon**, das mit dieser Beschreibung entsteht – bei Filmen also ein Motiv aus dem Film.
 - **ToDo-Listen** ✅ (standardmäßig **privat**): Aufgaben als Checkliste mit **Fälligkeit** („!morgen“,
   „!Fr“, „!12.11.“), **Wer** („@Ben“) und **Bereich** („#Garten“), gruppiert nach Fälligkeit (Überfällig, Heute,
-  Diese Woche …), Bereich oder Person. In Home Assistant mit Fälligkeitsdatum.
+  Diese Woche …), Bereich oder Person. In Home Assistant mit Fälligkeitsdatum. Die Listen selbst lassen
+  sich in **Kategorien** ordnen (Arbeit, Hobby, Urlaub …; beim Anlegen oder *⋮ → Kategorie …*) und
+  stehen in der Seitenleiste darunter gruppiert.
 
 - **REST-API** mit API-Tokens (lesen / ändern / Mealie), OpenAPI-Doku unter `/api/docs`,
   Echtzeit-Ereignisse per Server-Sent Events

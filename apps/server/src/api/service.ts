@@ -315,7 +315,7 @@ export class ShoppingApi {
   async createList(
     userId: string,
     name: string,
-    opts: { template?: string; isTemplate?: boolean; type?: ListType; description?: string | null; private?: boolean } = {},
+    opts: { template?: string; isTemplate?: boolean; type?: ListType; description?: string | null; private?: boolean; group?: string | null } = {},
   ): Promise<ApiList> {
     const template = opts.template ? await this.resolveList(userId, opts.template, { templates: true }) : undefined;
     if (template && !template.isTemplate) throw new ApiError(400, 'not_a_template', `„${template.name}“ ist keine Vorlage`);
@@ -330,7 +330,9 @@ export class ShoppingApi {
           listType,
           isTemplate: opts.isTemplate ?? false,
           visibility: opts.private === undefined ? defaultVisibility(listType) : opts.private ? 'private' : 'household',
-          ...(description ? { settings: { description } } : {}),
+          ...(description || opts.group?.trim()
+            ? { settings: { ...(description ? { description } : {}), ...(opts.group?.trim() ? { group: opts.group.trim() } : {}) } }
+            : {}),
         },
       },
     ]);
@@ -361,6 +363,15 @@ export class ShoppingApi {
     const settings = { ...list.settings };
     if (description?.trim()) settings.description = description.trim();
     else delete settings.description;
+    await this.mutate(userId, 'list', [{ id: list.id, patch: { settings } }]);
+  }
+
+  /** Kategorie of a ToDo list (Arbeit, Hobby …); empty = Allgemein. */
+  async groupList(userId: string, ref: string, group: string | null): Promise<void> {
+    const list = await this.resolveList(userId, ref);
+    const settings = { ...list.settings };
+    if (group?.trim()) settings.group = group.trim();
+    else delete settings.group;
     await this.mutate(userId, 'list', [{ id: list.id, patch: { settings } }]);
   }
 

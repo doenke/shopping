@@ -42,3 +42,18 @@ describe('own order per user', () => {
     expect(lists.map((l: { name: string }) => l.name)).toEqual(['Einkauf', 'Drogerie']);
   });
 });
+
+describe('ToDo lists in Kategorien', () => {
+  it('get a Kategorie when created and can be moved to another one', async () => {
+    const work = (await req('POST', '/api/v1/lists', { name: 'Projekt X', type: 'todo', group: 'Arbeit' })).json();
+    expect(work).toMatchObject({ type: 'todo', group: 'Arbeit' });
+    const general = (await req('POST', '/api/v1/lists', { name: 'Allerlei', type: 'todo' })).json();
+    expect(general.group).toBeNull();
+
+    const moved = await t.app.inject({ method: 'PATCH', url: `/api/v1/lists/${work.id}`, headers: { cookie }, payload: { group: 'Hobby' } });
+    expect(moved.json().group).toBe('Hobby');
+    const back = await t.app.inject({ method: 'PATCH', url: `/api/v1/lists/${work.id}`, headers: { cookie }, payload: { group: null } });
+    expect(back.json().group).toBeNull();
+  });
+});
+
