@@ -91,7 +91,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
 
   return (
     <section className="listview">
-      <AddBar ref={addRef} listId={list.id} index={index} boost={boost} placeholder="Was kommt mit? z. B. 3 T-Shirts @Anna #Koffer" />
+      <AddBar ref={addRef} listId={list.id} listType={list.listType} index={index} boost={boost} placeholder="Was kommt mit? z. B. 3 T-Shirts @Anna #Koffer" />
 
       {list.archivedAt && (
         <p className="template-hint">

@@ -9,6 +9,7 @@ import { categoriesFor, categoryInList } from './categories.js';
 import { extractDue, formatDue, parseDue } from './due.js';
 import { defaultVisibility } from './packing.js';
 import { planAdd } from './plan-add.js';
+import { suggestedProperties } from './properties.js';
 import { seedCatalog } from './seed-catalog.js';
 
 const catalog: CatalogItem[] = seedCatalog()
@@ -226,5 +227,28 @@ describe('due dates (ToDo lists)', () => {
   it('makes ToDo lists private by default', () => {
     expect(defaultVisibility('todo')).toBe('private');
     expect(defaultVisibility('shopping')).toBe('household');
+  });
+});
+
+describe('properties per list type', () => {
+  it('knows grocery words only on shopping lists', () => {
+    expect(parseItem('Kartoffeln festkochend bio')).toMatchObject({ name: 'Kartoffeln', properties: ['festkochend', 'bio'] });
+    // Merkliste: a title stays a title.
+    expect(parseItem('Der kleine Prinz', undefined, 'memo')).toMatchObject({ name: 'Der kleine Prinz', properties: [] });
+  });
+
+  it('has its own words on packing and ToDo lists', () => {
+    expect(parseItem('Powerbank aufladen @Anna', undefined, 'packing')).toMatchObject({ name: 'Powerbank', properties: ['aufladen'], person: 'Anna' });
+    expect(parseItem('Sonnencreme kaufen', undefined, 'packing')).toMatchObject({ name: 'Sonnencreme', properties: ['kaufen'] });
+    expect(parseItem('Kleine Tasche', undefined, 'packing')).toMatchObject({ name: 'Kleine Tasche', properties: [] });
+    expect(parseItem('dringend Steuererklärung abgeben', undefined, 'todo')).toMatchObject({ name: 'Steuererklärung abgeben', properties: ['dringend'] });
+    expect(parseInput('Reifen wechseln bio', undefined, 'todo')[0]).toMatchObject({ name: 'Reifen wechseln bio', properties: [] });
+  });
+
+  it('suggests fitting chips', () => {
+    expect(suggestedProperties('shopping')).toContain('bio');
+    expect(suggestedProperties('packing')).toContain('Handgepäck');
+    expect(suggestedProperties('memo')).not.toContain('bio');
+    expect(suggestedProperties('todo')).toContain('dringend');
   });
 });

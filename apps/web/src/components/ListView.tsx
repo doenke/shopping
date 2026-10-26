@@ -77,6 +77,7 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
       <AddBar
         ref={addRef}
         listId={list.id}
+        listType={list.listType}
         index={index}
         boost={boost}
         placeholder={list.listType === 'packing' ? 'Was kommt mit? z. B. 3 T-Shirts @Anna #Koffer' : undefined}

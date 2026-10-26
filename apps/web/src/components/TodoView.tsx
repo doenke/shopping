@@ -119,7 +119,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
 
   return (
     <section className="listview">
-      <AddBar ref={addRef} listId={list.id} index={index} boost={noBoost} placeholder="Neue Aufgabe, z. B. Reifen wechseln !Fr @Ben #Auto" />
+      <AddBar ref={addRef} listId={list.id} listType={list.listType} index={index} boost={noBoost} placeholder="Neue Aufgabe, z. B. Reifen wechseln !Fr @Ben #Auto" />
 
       {description && <p className="list-description">{description}</p>}
 

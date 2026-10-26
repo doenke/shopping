@@ -79,7 +79,7 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
 
   return (
     <section className="listview">
-      <AddBar ref={addRef} listId={list.id} index={index} boost={noBoost} placeholder="Was wollt ihr euch merken? z. B. Dune @Ben #Netflix" />
+      <AddBar ref={addRef} listId={list.id} listType={list.listType} index={index} boost={noBoost} placeholder="Was wollt ihr euch merken? z. B. Dune @Ben #Netflix" />
 
       {description && <p className="list-description">{description}</p>}
 

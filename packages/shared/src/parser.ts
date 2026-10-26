@@ -1,5 +1,5 @@
 import type { CatalogIndex } from './catalog-index.js';
-import type { Amount } from './model.js';
+import type { Amount, ListType } from './model.js';
 import { extractDue } from './due.js';
 import { extractPackingTokens } from './packing.js';
 import { findProperty } from './properties.js';
@@ -63,7 +63,7 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export function parseItem(text: string, catalog?: CatalogIndex): ParsedItem | null {
+export function parseItem(text: string, catalog?: CatalogIndex, listType: ListType = 'shopping'): ParsedItem | null {
   const dated = extractDue(text);
   const packing = extractPackingTokens(dated.text);
   let rest = packing.text;
@@ -113,7 +113,7 @@ export function parseItem(text: string, catalog?: CatalogIndex): ParsedItem | nu
         continue;
       }
     }
-    const prop = findProperty(lower);
+    const prop = findProperty(lower, listType);
     if (prop && tokens.length > 1) {
       if (!properties.includes(prop)) properties.push(prop);
       continue;
@@ -163,8 +163,9 @@ export function parseItem(text: string, catalog?: CatalogIndex): ParsedItem | nu
   };
 }
 
-export function parseInput(text: string, catalog?: CatalogIndex): ParsedItem[] {
+/** Splits and parses an input line; the list type decides which words are properties. */
+export function parseInput(text: string, catalog?: CatalogIndex, listType: ListType = 'shopping'): ParsedItem[] {
   return splitInput(text)
-    .map((part) => parseItem(part, catalog))
+    .map((part) => parseItem(part, catalog, listType))
     .filter((p): p is ParsedItem => p !== null);
 }

@@ -5,13 +5,14 @@ import {
   dueOf,
   formatAmount,
   packingInfo,
-  SUGGESTED_PROPERTIES,
+  suggestedProperties,
   UNITS,
   withPacking,
   type Amount,
   type ItemRow,
   type ItemSource,
   type ListRow,
+  type ListType,
   type UserInfo,
 } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
@@ -37,6 +38,13 @@ function withDue(attributes: Record<string, unknown>, due: string | undefined): 
   else delete next.due;
   return next;
 }
+
+const NOTE_EXAMPLE: Record<ListType, string> = {
+  shopping: 'z. B. die von Oma',
+  packing: 'z. B. liegt im Keller',
+  memo: 'z. B. ab Staffel 2',
+  todo: 'z. B. Schrauben liegen in der Garage',
+};
 
 function parseQuantity(s: string): number | null {
   const n = Number(s.replace(',', '.'));
@@ -98,7 +106,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
     onClose();
   };
 
-  const allProps = [...new Set([...SUGGESTED_PROPERTIES, ...item.properties, ...properties])];
+  const allProps = [...new Set([...suggestedProperties(list.listType), ...item.properties, ...properties])];
   const sources = Array.isArray(item.attributes.sources) ? (item.attributes.sources as ItemSource[]) : [];
   const checkedBy = item.checkedBy ? users.get(item.checkedBy) : undefined;
   const createdBy = item.createdBy ? users.get(item.createdBy) : undefined;
@@ -161,7 +169,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
 
         <label className="field">
           <span>Notiz</span>
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="z. B. die von Oma" />
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={NOTE_EXAMPLE[list.listType]} />
         </label>
 
         {todo && (

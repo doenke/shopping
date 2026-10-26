@@ -11,6 +11,9 @@ eingebautem MCP-Server.
 - Login über **Pocket ID** (OIDC mit PKCE), langlebige Sessions; das **Profilbild** aus Pocket ID
   erscheint bei Mitgliedern, „✓ von …“ und „Hinzugefügt von“ (lokale Kopie, auch offline)
 - Einkaufslisten mit **Hauptliste** ⭐, Artikel mit **Menge, Einheit, Eigenschaften, Notiz**
+- **Eigenschaften je Listentyp**: Einkauf „bio“, „TK“, „festkochend“ …; Packliste „Handgepäck“, „aufladen“,
+  „kaufen“, „leihen“ …; ToDo „wichtig“, „dringend“, „Hilfe nötig“ …; Merkliste „Highlight“, „zu zweit“, „Kino“ …
+  (Merklisten erkennen keine Eigenschaften im Text – „Der kleine Prinz“ bleibt der Titel)
 - **Eine Eingabezeile für alles**: „2 kg Kartoffeln“, „500g Hack gemischt bio“, „Milch, Butter, 6 Eier“
 - Doppelte Artikel werden zusammengeführt (1 l + 2 l Milch = 3 l)
 - **🏠 Zuhause / 🛒 Einkaufen** (pro Gerät): zu Hause öffnet Antippen den Artikel statt ihn abzuhaken;

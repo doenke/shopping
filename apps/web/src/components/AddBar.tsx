@@ -1,10 +1,12 @@
-import { extractPackingTokens, itemSpecification, parseInput, type CatalogIndex, type CatalogItem } from '@shopping/shared';
+import { extractPackingTokens, itemSpecification, parseInput, type CatalogIndex, type CatalogItem, type ListType } from '@shopping/shared';
 import { forwardRef, useMemo, useState } from 'react';
 import { addItems, catalogToParsed } from '../actions';
 import { Tile } from './Tile';
 
 interface Props {
   listId: string;
+  /** Decides which words count as properties ("bio" on a shopping list, "Handgepäck" on a packing list). */
+  listType: ListType;
   index: CatalogIndex;
   /** Ranks frequently used items higher. */
   boost: (item: CatalogItem) => number;
@@ -12,9 +14,9 @@ interface Props {
 }
 
 /** One input for everything: "2 kg Kartoffeln", "Milch, Butter, 6 Eier" or a search. */
-export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ listId, index, boost, placeholder }, ref) {
+export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ listId, listType, index, boost, placeholder }, ref) {
   const [text, setText] = useState('');
-  const parsed = useMemo(() => parseInput(text, index), [text, index]);
+  const parsed = useMemo(() => parseInput(text, index, listType), [text, index, listType]);
   const single = parsed.length === 1 ? parsed[0] : undefined;
   const hasAmount = !!single && (single.amounts.length > 0 || single.properties.length > 0 || !!single.note);
   // "@Anna" / "#Koffer" (packing lists) are not part of the search.

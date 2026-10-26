@@ -202,7 +202,7 @@ export class ShoppingApi {
     const out: NewItem[] = [];
     for (const input of inputs) {
       if (typeof input === 'string') {
-        out.push(...parseInput(input, index));
+        out.push(...parseInput(input, index, listType));
         continue;
       }
       const hit = index.match(input.name);
@@ -295,7 +295,7 @@ export class ShoppingApi {
   }
 
   async parse(text: string, kind: CatalogKind = 'shopping') {
-    return parseInput(text, (await this.catalog()).index[kind]);
+    return parseInput(text, (await this.catalog()).index[kind], kind);
   }
 
   // ---- writes --------------------------------------------------------------
