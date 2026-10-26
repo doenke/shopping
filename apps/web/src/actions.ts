@@ -30,9 +30,15 @@ export async function deleteItem(id: string): Promise<void> {
   await sync.mutateItem(id, { deleted: true });
 }
 
-export async function createList(name: string, isTemplate = false, listType: ListType = 'shopping', description?: string | null): Promise<string> {
+export async function createList(
+  name: string,
+  isTemplate = false,
+  listType: ListType = 'shopping',
+  description?: string | null,
+  visibility: 'household' | 'private' = 'household',
+): Promise<string> {
   const id = crypto.randomUUID();
-  await sync.mutateList(id, { name, listType, isTemplate, ...(description?.trim() ? { settings: { description: description.trim() } } : {}) });
+  await sync.mutateList(id, { name, listType, isTemplate, visibility, ...(description?.trim() ? { settings: { description: description.trim() } } : {}) });
   return id;
 }
 
@@ -42,6 +48,11 @@ export async function describeList(list: ListRow, description: string): Promise<
   if (description.trim()) settings.description = description.trim();
   else delete settings.description;
   await sync.mutateList(list.id, { settings });
+}
+
+/** Shared with the whole household, or only for me. */
+export async function setVisibility(id: string, visibility: 'household' | 'private'): Promise<void> {
+  await sync.mutateList(id, { visibility });
 }
 
 /** Done packing lists go to the archive instead of being deleted. */

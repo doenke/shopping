@@ -23,6 +23,7 @@ export function toListRow(r: ListRecord): ListRow {
     settings: r.settings,
     archivedAt: r.archivedAt,
     deleted: r.deleted,
+    visibility: r.visibility,
     createdAt: iso(r.createdAt),
     hlc: r.hlc,
     seq: r.seq,
@@ -59,8 +60,8 @@ export function toUserInfo(r: UserRecord): UserInfo {
   return { id: r.id, displayName: r.displayName, avatarUrl: avatarPath(r.id, r.avatarVersion), isGuest: r.isGuest };
 }
 
-export function toMe(r: UserRecord): Me {
-  return { ...toUserInfo(r), email: r.email, isAdmin: r.isAdmin, defaultListId: r.defaultListId };
+export function toMe(r: UserRecord, household: string | null = null): Me {
+  return { ...toUserInfo(r), email: r.email, isAdmin: r.isAdmin, defaultListId: r.defaultListId, household };
 }
 
 export function toCatalogItem(r: CatalogRecord): CatalogItem {

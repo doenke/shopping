@@ -290,7 +290,7 @@ export class ShoppingApi {
   async createList(
     userId: string,
     name: string,
-    opts: { template?: string; isTemplate?: boolean; type?: ListType; description?: string | null } = {},
+    opts: { template?: string; isTemplate?: boolean; type?: ListType; description?: string | null; private?: boolean } = {},
   ): Promise<ApiList> {
     const template = opts.template ? await this.resolveList(userId, opts.template, { templates: true }) : undefined;
     if (template && !template.isTemplate) throw new ApiError(400, 'not_a_template', `„${template.name}“ ist keine Vorlage`);
@@ -298,10 +298,25 @@ export class ShoppingApi {
     const id = randomUUID();
     const description = opts.description?.trim() || (template ? listDescription(template) : null);
     await this.mutate(userId, 'list', [
-      { id, patch: { name, listType, isTemplate: opts.isTemplate ?? false, ...(description ? { settings: { description } } : {}) } },
+      {
+        id,
+        patch: {
+          name,
+          listType,
+          isTemplate: opts.isTemplate ?? false,
+          visibility: opts.private ? 'private' : 'household',
+          ...(description ? { settings: { description } } : {}),
+        },
+      },
     ]);
     if (template) await this.applyTemplate(userId, id, template.id, false);
     return (await this.lists(userId, 'include', { archived: true })).find((l) => l.id === id)!;
+  }
+
+  /** Shared with the whole household, or private (owner only). */
+  async setVisibility(userId: string, ref: string, visibility: 'household' | 'private'): Promise<void> {
+    const list = await this.resolveList(userId, ref);
+    await this.mutate(userId, 'list', [{ id: list.id, patch: { visibility } }]);
   }
 
   /** Done packing lists are archived instead of deleted. */

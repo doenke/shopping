@@ -94,7 +94,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         lists
           .map(
             (l) =>
-              `- ${l.isTemplate ? '◇ ' : ''}${l.name}${l.type === 'packing' ? ' [Packliste]' : l.type === 'memo' ? ' [Merkliste]' : ''}${l.isMain ? ' ⭐ Hauptliste' : ''}${l.archived ? ' (archiviert)' : ''} – ${l.openItems} offen${l.description ? ` – ${l.description}` : ''} (id: ${l.id})`,
+              `- ${l.isTemplate ? '◇ ' : ''}${l.name}${l.type === 'packing' ? ' [Packliste]' : l.type === 'memo' ? ' [Merkliste]' : ''}${l.visibility === 'private' ? ' 🔒 privat' : ''}${l.isMain ? ' ⭐ Hauptliste' : ''}${l.archived ? ' (archiviert)' : ''} – ${l.openItems} offen${l.description ? ` – ${l.description}` : ''} (id: ${l.id})`,
           )
           .join('\n') || 'Keine Listen.',
       );
@@ -215,12 +215,16 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         template: z.string().optional().describe('Name einer Vorlage'),
         type: z.enum(['shopping', 'packing', 'memo']).optional().describe('Ohne Vorlage: Einkaufsliste (Standard), Packliste oder Merkliste'),
         description: z.string().max(300).optional().describe('Worum es geht, z. B. „Filme und Serien, die wir sehen wollen“ (wichtig für die Icons von Merklisten)'),
+        private: z.boolean().default(false).describe('Nur für mich – sonst sieht der ganze Haushalt die Liste'),
       },
     },
-    guard('write', async ({ name, template, type, description }: { name: string; template?: string; type?: 'shopping' | 'packing' | 'memo'; description?: string }) => {
-      const l = await api.createList(userId, name, { template, type, description });
-      return text(`${l.type === 'packing' ? 'Packliste' : l.type === 'memo' ? 'Merkliste' : 'Liste'} „${l.name}“ angelegt (${l.openItems} Einträge).`);
-    }),
+    guard(
+      'write',
+      async ({ name, template, type, description, private: priv }: { name: string; template?: string; type?: 'shopping' | 'packing' | 'memo'; description?: string; private: boolean }) => {
+      const l = await api.createList(userId, name, { template, type, description, private: priv });
+      return text(`${l.type === 'packing' ? 'Packliste' : l.type === 'memo' ? 'Merkliste' : 'Liste'} „${l.name}“ angelegt (${l.openItems} Einträge${l.visibility === 'private' ? ', privat' : ', für den ganzen Haushalt'}).`);
+      },
+    ),
   );
 
   server.registerTool(

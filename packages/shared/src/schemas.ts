@@ -21,6 +21,7 @@ export const ListPatchSchema = z
     settings: z.record(z.string(), z.unknown()),
     archivedAt: z.string().datetime().nullable(),
     deleted: z.boolean(),
+    visibility: z.enum(['household', 'private']),
   })
   .partial()
   .strict();

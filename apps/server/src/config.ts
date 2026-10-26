@@ -16,6 +16,10 @@ const EnvSchema = z.object({
   OIDC_CLIENT_ID: z.string().optional(),
   OIDC_CLIENT_SECRET: z.string().optional(),
   OIDC_ADMIN_GROUP: z.string().default('admins'),
+  /** Claim with the household tag (Pocket ID: custom claim on the user or a group). */
+  OIDC_HOUSEHOLD_CLAIM: z.string().default('household'),
+  /** Name of the household for users without a tag. */
+  DEFAULT_HOUSEHOLD_NAME: z.string().trim().min(1).default('Haushalt'),
   /** Local development only: allows logging in with just a name, without OIDC. */
   DEV_LOGIN: bool,
   WEB_DIST: z.string().optional(),

@@ -16,7 +16,7 @@ import { MutationSchema } from '@shopping/shared/schemas';
 import { and, eq, gt, inArray, ne, sql } from 'drizzle-orm';
 import type { Db, Tx } from '../db/index.js';
 import { currentSeq } from '../db/seed.js';
-import { listItems, listMembers, lists, users } from '../db/schema.js';
+import { households, listItems, listMembers, lists, users } from '../db/schema.js';
 import { Mutex } from './mutex.js';
 import { toItemRow, toListRow, toMe, toUserInfo } from './rows.js';
 
@@ -116,7 +116,7 @@ export class SyncService {
     const [existing] = await tx.select().from(lists).where(eq(lists.id, id)).for('update');
     if (!existing) {
       if (!patch.name) throw new Rejection('missing_name');
-      const [creator] = await tx.select({ isGuest: users.isGuest }).from(users).where(eq(users.id, userId));
+      const [creator] = await tx.select({ isGuest: users.isGuest, householdId: users.householdId }).from(users).where(eq(users.id, userId));
       if (creator?.isGuest) throw new Rejection('guest');
       const row: ListRow = {
         id,
@@ -129,6 +129,7 @@ export class SyncService {
         settings: {},
         archivedAt: null,
         deleted: false,
+        visibility: 'household',
         createdAt: new Date().toISOString(),
         hlc: {},
         seq: 0,
@@ -145,9 +146,13 @@ export class SyncService {
         settings: row.settings,
         archivedAt: row.archivedAt,
         deleted: row.deleted,
+        visibility: row.visibility,
+        householdId: creator?.householdId ?? null,
         hlc: row.hlc,
       });
-      await tx.insert(listMembers).values({ listId: id, userId });
+      await tx.insert(listMembers).values({ listId: id, userId, via: 'owner' });
+      // Shared with the household right away (unless created as private).
+      await this.reconcileList(tx, id);
       // The first shopping list becomes the user's main list.
       if (!row.isTemplate) {
         await tx
@@ -160,7 +165,7 @@ export class SyncService {
 
     if (!(await this.hasAccess(tx, userId, id))) throw new Rejection('forbidden');
     const { listType: _t, isTemplate: _i, ...mutable } = patch;
-    if (mutable.deleted !== undefined && existing.ownerId !== userId) throw new Rejection('owner_only');
+    if ((mutable.deleted !== undefined || mutable.visibility !== undefined) && existing.ownerId !== userId) throw new Rejection('owner_only');
     const row = toListRow(existing);
     const applied = applyPatch(row, mutable, ts);
     if (applied.length === 0) return [];
@@ -173,12 +178,109 @@ export class SyncService {
         settings: row.settings,
         archivedAt: row.archivedAt,
         deleted: row.deleted,
+        visibility: row.visibility,
         hlc: row.hlc,
         seq: nextSeq,
       })
       .where(eq(lists.id, id));
+    // Private ↔ household: the household's members come or go (apply() notifies former members too).
+    if (applied.includes('visibility')) await this.reconcileList(tx, id, { revive: true });
     return [id];
   }
+
+  /**
+   * Brings a list's household memberships in line with its visibility and household:
+   * shared → every OIDC user of the household is a member (via "household");
+   * private → those memberships end. Owner and link members are never touched.
+   * `only` limits it to one user; `revive` brings back household members who
+   * had left (only when the list is shared anew, not on every login).
+   * Returns the users whose access changed.
+   */
+  private async reconcileList(tx: Tx, listId: string, opts: { only?: string; revive?: boolean } = {}): Promise<string[]> {
+    const [list] = await tx.select().from(lists).where(eq(lists.id, listId));
+    if (!list) return [];
+    const wanted =
+      list.visibility === 'household' && list.householdId && !list.deleted
+        ? (
+            await tx
+              .select({ id: users.id })
+              .from(users)
+              .where(and(eq(users.householdId, list.householdId), eq(users.isGuest, false)))
+          )
+            .map((u) => u.id)
+            .filter((id) => id !== list.ownerId && (!opts.only || id === opts.only))
+        : [];
+    const changed: string[] = [];
+    const current = await tx.select().from(listMembers).where(eq(listMembers.listId, listId));
+    for (const m of current) {
+      if (opts.only && m.userId !== opts.only) continue;
+      if (m.via === 'household' && !m.removed && !wanted.includes(m.userId)) {
+        await tx
+          .update(listMembers)
+          .set({ removed: true, seq: nextSeq })
+          .where(and(eq(listMembers.listId, listId), eq(listMembers.userId, m.userId)));
+        changed.push(m.userId);
+      }
+    }
+    for (const userId of wanted) {
+      const m = current.find((c) => c.userId === userId);
+      if (!m) {
+        await tx.insert(listMembers).values({ listId, userId, via: 'household' });
+        changed.push(userId);
+      } else if (m.removed && m.via === 'household' && opts.revive) {
+        await tx
+          .update(listMembers)
+          .set({ removed: false, seq: nextSeq })
+          .where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId)));
+        changed.push(userId);
+      }
+    }
+    return changed;
+  }
+
+  /**
+   * Puts a user into a household (at login, from the OIDC tag). Their own lists
+   * move with them; they see the shared lists of the new household and no longer
+   * those of the old one. Returns everyone who must get a delta.
+   */
+  setHousehold(userId: string, householdId: string): Promise<Set<string>> {
+    return this.mutex.run(() =>
+      this.db.transaction(async (tx) => {
+        const affected = new Set<string>([userId]);
+        const [user] = await tx.select({ householdId: users.householdId, isGuest: users.isGuest }).from(users).where(eq(users.id, userId));
+        if (!user || user.isGuest) return affected;
+        const moved = user.householdId !== householdId;
+        if (moved) {
+          await tx.update(users).set({ householdId, seq: nextSeq }).where(eq(users.id, userId));
+          await tx.update(lists).set({ householdId, seq: nextSeq }).where(eq(lists.ownerId, userId));
+        }
+        // Lists of both households (and the own ones) are brought in line.
+        const touched = await tx
+          .select({ id: lists.id })
+          .from(lists)
+          .where(
+            and(
+              eq(lists.deleted, false),
+              sql`(${lists.householdId} = ${householdId} OR ${lists.ownerId} = ${userId} OR ${lists.id} IN (
+                SELECT list_id FROM list_members WHERE user_id = ${userId} AND via = 'household'))`,
+            ),
+          );
+        for (const l of touched) {
+          const own = (await tx.select({ ownerId: lists.ownerId }).from(lists).where(eq(lists.id, l.id)))[0]?.ownerId === userId;
+          // Own lists that moved: the whole new household comes in, the old one goes.
+          // Other lists: only this user – and someone who left a list stays out unless they moved.
+          const changed = await this.reconcileList(tx, l.id, own ? { revive: moved } : { only: userId, revive: moved });
+          for (const id of changed) affected.add(id);
+          if (moved && own) {
+            const members = await tx.select({ userId: listMembers.userId }).from(listMembers).where(eq(listMembers.listId, l.id));
+            for (const m of members) affected.add(m.userId);
+          }
+        }
+        return affected;
+      }),
+    );
+  }
+
 
   private async applyItem(tx: Tx, userId: string, id: string, patch: ItemPatch, ts: string): Promise<string[]> {
     const [existing] = await tx.select().from(listItems).where(eq(listItems.id, id)).for('update');
@@ -344,6 +446,12 @@ export class SyncService {
     return this.mutex.run(() => this.pullUnlocked(userId, since));
   }
 
+  private async householdName(id: string | null): Promise<string | null> {
+    if (!id) return null;
+    const [h] = await this.db.select({ name: households.name }).from(households).where(eq(households.id, id));
+    return h?.name ?? null;
+  }
+
   async pullUnlocked(userId: string, since: number): Promise<ChangeSet> {
     const db = this.db;
     const seq = await currentSeq(db);
@@ -393,7 +501,7 @@ export class SyncService {
       items: itemRows.map(toItemRow),
       removedLists,
       users: userRows.map(toUserInfo),
-      me: me && (since === 0 || me.seq > since) ? toMe(me) : undefined,
+      me: me && (since === 0 || me.seq > since) ? toMe(me, await this.householdName(me.householdId)) : undefined,
       seq,
     };
   }

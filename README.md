@@ -20,6 +20,8 @@ eingebautem MCP-Server.
 - Lebensmittel-Katalog (Grundkatalog + **Import aus Mealie**, Labels → Kategorien)
 - Kategorien nach Supermarkt-Bereichen, **generierte Icons** im einheitlichen Stil (Kategorie-Icon bzw.
   Anfangsbuchstabe, solange ein Artikel noch keins hat), offline verfügbar
+- **Haushalte**: Listen gehören automatisch dem ganzen Haushalt, können aber **privat** 🔒 sein
+  („⋮ → Privat machen“). Der Haushalt kommt aus Pocket ID (Haushalts-Tag), ohne Tag gilt der Standard-Haushalt.
 - **Teilen per Link** über den Teilen-Dialog des Handys: Wer den Link angemeldet öffnet,
   ist dabei (Besitzer kann den Link erneuern, Mitglieder können die Liste verlassen)
 - **Gäste ohne Account**: Link öffnen, Namen eingeben, nur diese Liste; Link erneuern wirft Gäste raus.
@@ -99,6 +101,22 @@ MCP-Server-Adresse: `https://<deine-adresse>/mcp`. In Claude als *Custom Connect
 eintragen; beim Verbinden meldest du dich über Pocket ID an und erlaubst den Zugriff.
 Verbundene Assistenten stehen in den Einstellungen und lassen sich dort trennen.
 Für einfache Clients geht statt OAuth auch ein API-Token als `Authorization: Bearer shp_…`.
+
+### Haushalte
+
+Wer zu welchem Haushalt gehört, steht in Pocket ID: Lege einen **Custom Claim** `household` an – am
+Benutzer oder an einer Gruppe (dann gilt er für alle Mitglieder), z. B. `household = Müller`.
+Alle mit demselben Tag sehen gegenseitig ihre Listen; wer keinen Tag hat, ist im Standard-Haushalt.
+Der Tag wird bei jeder Anmeldung gelesen, ein Umzug nimmt die eigenen Listen mit.
+
+| Variable | Standard | Bedeutung |
+|----------|----------|-----------|
+| `OIDC_HOUSEHOLD_CLAIM` | `household` | Name des Claims mit dem Haushalts-Tag |
+| `DEFAULT_HOUSEHOLD_NAME` | `Haushalt` | Name des Haushalts für alle ohne Tag |
+
+Neue Listen sind für den ganzen Haushalt da; „Privat – nur für mich“ beim Anlegen oder „⋮ → Privat machen“
+nimmt sie heraus. Über den Link lassen sich Listen weiterhin mit anderen Haushalten und Gästen teilen.
+Nur Pocket-ID-Benutzer gehören zu einem Haushalt, Gäste nie.
 
 ## Betrieb
 

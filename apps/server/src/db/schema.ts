@@ -29,6 +29,17 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   dataType: () => 'bytea',
 });
 
+/**
+ * Households: OIDC users with the same household tag (claim, e.g. "household")
+ * share their lists automatically. key '' is the default household (no tag).
+ */
+export const households = pgTable('households', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(),
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
   oidcSubject: text('oidc_subject').notNull().unique(),
@@ -42,6 +53,8 @@ export const users = pgTable('users', {
   isAdmin: boolean('is_admin').notNull().default(false),
   /** Guests come in through a list link without an account and only see that list. */
   isGuest: boolean('is_guest').notNull().default(false),
+  /** Only OIDC users belong to a household; guests never do. */
+  householdId: uuid('household_id').references(() => households.id, { onDelete: 'set null' }),
   defaultListId: uuid('default_list_id'),
   hlc: jsonb('hlc').$type<FieldClock>().notNull().default({}),
   seq: seq(),
@@ -72,6 +85,9 @@ export const lists = pgTable(
     settings: jsonb('settings').$type<Record<string, unknown>>().notNull().default({}),
     archivedAt: text('archived_at'),
     deleted: boolean('deleted').notNull().default(false),
+    /** household: everyone in the owner's household sees it; private: owner (and link guests) only. */
+    visibility: text('visibility').$type<'household' | 'private'>().notNull().default('household'),
+    householdId: uuid('household_id').references(() => households.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
     hlc: jsonb('hlc').$type<FieldClock>().notNull().default({}),
     seq: seq(),
@@ -89,6 +105,8 @@ export const listMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     removed: boolean('removed').notNull().default(false),
+    /** How the user got in: owner, list link, or the household. */
+    via: text('via').$type<'owner' | 'link' | 'household'>().notNull().default('link'),
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
     seq: seq(),
   },

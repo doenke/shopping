@@ -1,10 +1,13 @@
 import { randomUUID } from 'node:crypto';
+import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import * as oidc from 'openid-client';
 import { z } from 'zod';
 import type { Config } from '../config.js';
 import type { Db } from '../db/index.js';
-import { users } from '../db/schema.js';
+import { households, users } from '../db/schema.js';
+import type { SyncHub } from '../sync/hub.js';
+import type { SyncService } from '../sync/service.js';
 import type { AvatarService } from './avatar.js';
 import { createSession, destroySession } from './session.js';
 
@@ -39,8 +42,34 @@ export async function upsertUser(db: Db, p: Profile): Promise<string> {
   return row!.id;
 }
 
-export async function authRoutes(app: FastifyInstance, opts: { config: Config; db: Db; avatars: AvatarService }): Promise<void> {
-  const { config, db, avatars } = opts;
+/** The household tag from the claims ('' = default household). Arrays: the first value. */
+export function householdTag(claims: Record<string, unknown>, claim: string): string {
+  const raw = claims[claim];
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  return typeof v === 'string' || typeof v === 'number' ? String(v).trim().slice(0, 80) : '';
+}
+
+/** The household for a tag, created on first use (the tag is its name). */
+export async function householdFor(db: Db, key: string, defaultName: string): Promise<string> {
+  await db
+    .insert(households)
+    .values({ key, name: key || defaultName })
+    .onConflictDoNothing({ target: households.key });
+  const [row] = await db.select({ id: households.id }).from(households).where(eq(households.key, key));
+  return row!.id;
+}
+
+export async function authRoutes(
+  app: FastifyInstance,
+  opts: { config: Config; db: Db; avatars: AvatarService; sync: SyncService; hub: SyncHub },
+): Promise<void> {
+  const { config, db, avatars, sync, hub } = opts;
+
+  /** Puts the user into the household of their tag; their devices and list mates get the changes. */
+  const joinHousehold = async (userId: string, tag: string) => {
+    const affected = await sync.setHousehold(userId, await householdFor(db, tag, config.DEFAULT_HOUSEHOLD_NAME));
+    hub.notify(affected);
+  };
   const secure = config.PUBLIC_URL.startsWith('https://');
   const redirectUri = `${config.PUBLIC_URL}/auth/callback`;
 
@@ -110,7 +139,7 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config; d
       return reply.redirect('/?login=failed');
     }
     let claims: Record<string, unknown> = { ...tokens.claims() };
-    if (!claims.groups || !claims.email || !claims.picture) {
+    if (!claims.groups || !claims.email || !claims.picture || claims[config.OIDC_HOUSEHOLD_CLAIM] === undefined) {
       const info = await oidc.fetchUserInfo(cfg, tokens.access_token, String(claims.sub)).catch(() => ({}));
       claims = { ...info, ...claims };
     }
@@ -123,6 +152,7 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config; d
       avatarUrl: picture,
       isAdmin: groups.includes(config.OIDC_ADMIN_GROUP),
     });
+    await joinHousehold(userId, householdTag(claims, config.OIDC_HOUSEHOLD_CLAIM));
     // In the background: the login does not wait for the picture.
     void avatars.refresh(userId, picture, tokens.access_token);
     await createSession(db, userId, reply, secure);
@@ -132,7 +162,7 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config; d
   if (config.DEV_LOGIN) {
     app.log.warn('DEV_LOGIN ist aktiv – Anmeldung ohne Passwort möglich. Nur für die lokale Entwicklung!');
     app.post('/auth/dev', async (request, reply) => {
-      const { name } = z.object({ name: z.string().trim().min(1).max(40) }).parse(request.body);
+      const { name, household } = z.object({ name: z.string().trim().min(1).max(40), household: z.string().trim().max(80).default('') }).parse(request.body);
       const userId = await upsertUser(db, {
         subject: `dev:${name.toLowerCase()}`,
         email: null,
@@ -140,6 +170,7 @@ export async function authRoutes(app: FastifyInstance, opts: { config: Config; d
         avatarUrl: null,
         isAdmin: false,
       });
+      await joinHousehold(userId, household);
       await createSession(db, userId, reply, secure);
       return { ok: true };
     });

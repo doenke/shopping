@@ -125,12 +125,19 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
         name: z.string().trim().min(1).max(80),
         type: ListType.optional(),
         description: Description.optional(),
+        private: z.boolean().optional().describe('Nur für mich – sonst sieht der ganze Haushalt die Liste'),
         template: z.string().optional(),
         isTemplate: z.boolean().optional(),
       }),
     },
     ({ userId, body }) =>
-      api.createList(userId, body.name, { template: body.template, isTemplate: body.isTemplate, type: body.type, description: body.description }),
+      api.createList(userId, body.name, {
+        template: body.template,
+        isTemplate: body.isTemplate,
+        type: body.type,
+        description: body.description,
+        private: body.private,
+      }),
   );
 
   route(
@@ -152,9 +159,15 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
       summary: 'Liste umbenennen, beschreiben oder archivieren',
       tag: 'Listen',
       params: ListRef,
-      body: z.object({ name: z.string().trim().min(1).max(80).optional(), description: Description.optional(), archived: z.boolean().optional() }),
+      body: z.object({
+        name: z.string().trim().min(1).max(80).optional(),
+        description: Description.optional(),
+        archived: z.boolean().optional(),
+        visibility: z.enum(['household', 'private']).optional().describe('Nur der Besitzer: mit dem Haushalt teilen oder privat'),
+      }),
     },
     async ({ userId, params, body }) => {
+      if (body.visibility) await api.setVisibility(userId, params.id, body.visibility);
       if (body.name) await api.renameList(userId, params.id, body.name);
       if (body.description !== undefined) await api.describeList(userId, params.id, body.description);
       if (body.archived !== undefined) await api.archiveList(userId, params.id, body.archived);

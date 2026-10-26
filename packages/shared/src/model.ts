@@ -20,10 +20,14 @@ export interface ListRow {
   settings: Record<string, unknown>;
   archivedAt: string | null;
   deleted: boolean;
+  /** household: the whole household sees it; private: only the owner (and people with the link). */
+  visibility: ListVisibility;
   createdAt: string;
   hlc: FieldClock;
   seq: number;
 }
+
+export type ListVisibility = 'household' | 'private';
 
 /** Where (part of) an item came from, kept in `attributes.sources`. */
 export interface ItemSource {
@@ -68,6 +72,8 @@ export interface Me extends UserInfo {
   email: string | null;
   isAdmin: boolean;
   defaultListId: string | null;
+  /** Name of the user's household (null for guests). */
+  household: string | null;
 }
 
 export type CatalogKind = 'shopping' | 'packing';
@@ -101,6 +107,7 @@ export interface ListPatch {
   settings?: Record<string, unknown>;
   archivedAt?: string | null;
   deleted?: boolean;
+  visibility?: ListVisibility;
 }
 
 export interface ItemPatch {

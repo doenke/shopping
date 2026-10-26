@@ -142,6 +142,7 @@ export class SyncEngine {
         name: '',
         listType: 'shopping',
         isTemplate: false,
+        visibility: 'household',
         icon: null,
         color: null,
         settings: {},

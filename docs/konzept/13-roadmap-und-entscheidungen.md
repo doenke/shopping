@@ -137,3 +137,13 @@ Nichts Blockierendes. Beim Bau zu klären:
 
 - Ob Pocket ID die MCP-OAuth-Anforderungen direkt erfüllt (sonst übernimmt Shopping die Rolle, siehe [08](08-mcp-server.md)).
 - Aktuelle Gratis-Limits der Bild-Dienste.
+
+### Haushalte ✅ umgesetzt
+- Haushalt = OIDC-Claim (Standard `household`, z. B. Custom Claim in Pocket ID); ohne Tag Standard-Haushalt
+  mit konfigurierbarem Namen (`DEFAULT_HOUSEHOLD_NAME`). Gäste gehören zu keinem Haushalt.
+- Listen sind standardmäßig für den Haushalt des Besitzers sichtbar (`visibility = household`) oder privat.
+- Umgesetzt über die vorhandenen Mitgliedschaften (`list_members.via = owner | link | household`):
+  Sync, Rechte und Echtzeit bleiben unverändert. Wer eine Liste verlässt, bleibt draußen, bis sie
+  neu geteilt wird. Ein Haushaltswechsel (beim Login) nimmt die eigenen Listen mit.
+- Bestehende Daten: alle Accounts und Listen landen bei der Migration im Standard-Haushalt.
+

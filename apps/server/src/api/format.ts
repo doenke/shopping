@@ -34,6 +34,8 @@ export interface ApiList {
   /** "shopping", "packing" or "memo" (Merkliste). */
   type: ListType;
   description: string | null;
+  /** "household" (everyone in the household) or "private". */
+  visibility: 'household' | 'private';
   isTemplate: boolean;
   archived: boolean;
   isMain: boolean;
@@ -76,6 +78,7 @@ export function toApiList(l: ListRow, userId: string, mainListId: string | null,
     name: l.name,
     type: l.listType,
     description: listDescription(l),
+    visibility: l.visibility,
     isTemplate: l.isTemplate,
     archived: !!l.archivedAt,
     isMain: l.id === mainListId,

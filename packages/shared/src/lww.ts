@@ -39,7 +39,7 @@ export function mergeRow<T extends { hlc: FieldClock }>(local: T, incoming: T, c
   return merged;
 }
 
-export const LIST_FIELDS = ['name', 'listType', 'isTemplate', 'icon', 'color', 'settings', 'archivedAt', 'deleted'] as const;
+export const LIST_FIELDS = ['name', 'listType', 'isTemplate', 'icon', 'color', 'settings', 'archivedAt', 'deleted', 'visibility'] as const;
 export const ITEM_FIELDS = [
   'listId',
   'catalogItemId',

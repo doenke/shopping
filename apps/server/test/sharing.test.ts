@@ -21,7 +21,8 @@ const shareUrl = async (u: User) => t.app.inject({ method: 'GET', url: `/api/v1/
 beforeAll(async () => {
   t = await createTestApp();
   owner = await t.login('Owner');
-  member = await t.login('Member');
+  // Another household: sees the owner's lists only through the link.
+  member = await t.login('Member', 'Nachbarn');
   await t.app.inject({
     method: 'POST',
     url: '/api/v1/sync/push',

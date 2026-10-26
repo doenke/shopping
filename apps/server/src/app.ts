@@ -15,7 +15,7 @@ import { resolvePrincipal, requiredScope, type Principal } from './auth/principa
 import type { Config } from './config.js';
 import { SecretBox } from './crypto.js';
 import type { Db } from './db/index.js';
-import { catalogItems, users } from './db/schema.js';
+import { catalogItems, households, users } from './db/schema.js';
 import { currentSeq } from './db/seed.js';
 import { ApiError, problemHandler } from './api/errors.js';
 import { apiRoutes } from './api/routes.js';
@@ -67,7 +67,12 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   await app.register(websocket, { options: { maxPayload: 1024 * 1024 } });
   const avatars = new AvatarService(db, sync, hub, app.log, fetchImpl, config.OIDC_ISSUER);
   app.addHook('onClose', async () => avatars.stop());
-  await app.register(authRoutes, { config, db, avatars });
+  await app.register(authRoutes, { config, db, avatars, sync, hub });
+  // The default household's name comes from the configuration.
+  await db
+    .insert(households)
+    .values({ key: '', name: config.DEFAULT_HOUSEHOLD_NAME })
+    .onConflictDoUpdate({ target: households.key, set: { name: config.DEFAULT_HOUSEHOLD_NAME } });
 
   // Used by the Docker/Compose health check: healthy only if the database answers.
   app.get('/healthz', async (_request, reply) => {
@@ -126,7 +131,8 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
 
     api.get('/api/v1/me', async (request) => {
       const [u] = await db.select().from(users).where(eq(users.id, request.userId));
-      return toMe(u!);
+      const [h] = u?.householdId ? await db.select({ name: households.name }).from(households).where(eq(households.id, u.householdId)) : [];
+      return toMe(u!, h?.name ?? null);
     });
 
     api.get('/api/v1/sync/pull', async (request) => {

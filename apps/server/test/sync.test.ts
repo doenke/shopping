@@ -29,7 +29,8 @@ async function pull(user: User, since = 0): Promise<ChangeSet> {
 beforeAll(async () => {
   t = await createTestApp();
   anna = await t.login('Anna');
-  ben = await t.login('Ben');
+  // Another household: lists are shared with Ben only explicitly.
+  ben = await t.login('Ben', 'Nachbarn');
 });
 
 afterAll(async () => {

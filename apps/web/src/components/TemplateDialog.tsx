@@ -30,6 +30,7 @@ export function TemplateDialog({ templates: allTemplates, targetList, listType: 
   const items = useItems(template?.id);
   const sorted = useMemo(() => [...(items ?? [])].sort((a, b) => a.position.localeCompare(b.position)), [items]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isPrivate, setIsPrivate] = useState(false);
 
   useEffect(() => ref.current?.showModal(), []);
   // Optional items (e.g. sun cream) start deselected.
@@ -40,7 +41,7 @@ export function TemplateDialog({ templates: allTemplates, targetList, listType: 
     let listId = targetList?.id;
     if (!listId) {
       if (!name.trim()) return;
-      listId = await createList(name.trim(), false, listType);
+      listId = await createList(name.trim(), false, listType, undefined, isPrivate ? 'private' : 'household');
       navigate({ page: 'list', listId });
     }
     if (chosen.length) await addItems(listId, chosen);
@@ -75,6 +76,12 @@ export function TemplateDialog({ templates: allTemplates, targetList, listType: 
           <label className="field">
             <span>Name</span>
             <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+          </label>
+        )}
+        {!targetList && (
+          <label className="check field">
+            <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} /> Privat – nur für mich (sonst sieht der
+            ganze Haushalt die Liste)
           </label>
         )}
 

@@ -36,8 +36,9 @@ export async function createTestApp(extra: { fetchImpl?: typeof fetch } = {}) {
     icons,
     avatars,
     webhooks,
-    async login(userName: string) {
-      const res = await app.inject({ method: 'POST', url: '/auth/dev', payload: { name: userName } });
+    /** Dev login; `household` is the household tag (default: the default household). */
+    async login(userName: string, household = '') {
+      const res = await app.inject({ method: 'POST', url: '/auth/dev', payload: { name: userName, household } });
       const cookie = res.cookies.find((c) => c.name === 'sid')!;
       const me = await app.inject({ method: 'GET', url: '/api/v1/me', cookies: { sid: cookie.value } });
       return { cookie: `sid=${cookie.value}`, sid: cookie.value, id: me.json().id as string };

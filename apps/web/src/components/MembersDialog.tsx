@@ -9,6 +9,7 @@ interface Member {
   avatarUrl: string | null;
   isGuest: boolean;
   isOwner: boolean;
+  via: 'owner' | 'link' | 'household';
 }
 
 /** Who is on this list; the owner can remove people. */
@@ -55,6 +56,8 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
                   {m.id === me.id && <small className="muted"> (du)</small>}
                   {m.isOwner && <small className="muted"> · Besitzer</small>}
                   {m.isGuest && <small className="muted"> · Gast</small>}
+                  {m.via === 'household' && <small className="muted"> · Haushalt</small>}
+                  {m.via === 'link' && !m.isGuest && <small className="muted"> · über Link</small>}
                 </span>
                 {isOwner && !m.isOwner && (
                   <button type="button" className="link danger" onClick={() => void remove(m)}>
@@ -65,7 +68,10 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
             </li>
           ))}
         </ul>
-        <p className="muted">Dazu kommt man über den Link der Liste. Gäste ohne Account fliegen raus, wenn der Link erneuert wird.</p>
+        <p className="muted">
+          {list.visibility === 'private' ? 'Diese Liste ist privat. ' : 'Der ganze Haushalt sieht diese Liste. '}
+          Andere kommen über den Link dazu. Gäste ohne Account fliegen raus, wenn der Link erneuert wird.
+        </p>
         <footer className="sheet__actions">
           <span className="spacer" />
           <button type="button" className="btn btn--primary" onClick={() => void shareList(list)}>

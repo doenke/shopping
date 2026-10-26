@@ -157,6 +157,12 @@ export function Settings({ me }: { me: Me }) {
           <p>
             Angemeldet als <strong>{me.displayName}</strong>
             {me.email && <> ({me.email})</>}
+            {me.household && (
+              <>
+                <br />
+                Haushalt: <strong>{me.household}</strong>
+              </>
+            )}
           </p>
         </div>
         <button className="btn" type="button" onClick={() => void logout()}>

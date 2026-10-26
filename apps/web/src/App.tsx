@@ -1,6 +1,6 @@
 import { listDescription, parseInput, type ListRow, type ListType, type Me } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, archiveList, createList, deleteList, describeList, leaveList, renameList, saveAsTemplate, setMainList, shareList } from './actions';
+import { addItems, archiveList, createList, deleteList, describeList, leaveList, renameList, saveAsTemplate, setMainList, setVisibility, shareList } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
@@ -139,6 +139,7 @@ function Shell({ me }: { me: Me }) {
               <span>
                 {l.id === me.defaultListId && <span title="Hauptliste">⭐ </span>}
                 {l.name}
+                {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
               </span>
               <OpenCount listId={l.id} />
             </a>
@@ -159,7 +160,10 @@ function Shell({ me }: { me: Me }) {
               className={l.id === list?.id && route.page === 'list' ? 'active' : ''}
               onClick={() => setDrawer(false)}
             >
-              <span>🧳 {l.name}</span>
+              <span>
+                🧳 {l.name}
+                {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
+              </span>
               <OpenCount listId={l.id} />
             </a>
           </li>
@@ -175,7 +179,10 @@ function Shell({ me }: { me: Me }) {
         {memoLists.map((l) => (
           <li key={l.id}>
             <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
-              <span>📌 {l.name}</span>
+              <span>
+                📌 {l.name}
+                {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
+              </span>
               <OpenCount listId={l.id} />
             </a>
           </li>
@@ -481,6 +488,18 @@ function ListMenu({ list, me, hasTemplates, onClose, onImport, onApplyTemplate, 
           }}
         >
           {wakeLock ? 'Bildschirm darf ausgehen' : 'Einkaufsmodus: Bildschirm anlassen'}
+        </button>
+      )}
+      {isOwner && !guest && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            void setVisibility(list.id, list.visibility === 'private' ? 'household' : 'private');
+            onClose();
+          }}
+        >
+          {list.visibility === 'private' ? '🏠 Mit dem Haushalt teilen' : '🔒 Privat machen'}
         </button>
       )}
       {isOwner && (
