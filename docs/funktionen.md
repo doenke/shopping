@@ -6,6 +6,8 @@
 
 - **Eine Eingabezeile für alles**: „2 kg Kartoffeln“, „500g Hack gemischt bio“, „Milch, Butter, 6 Eier“.
   Menge, Einheit und Eigenschaften werden erkannt, mehrere Artikel mit Komma.
+- **Spracheingabe**: 🎤 in der Eingabezeile, „zwei Liter Milch und Butter“ – auf Einkaufs- und Packlisten
+  wird „und“ zum Trenner, das Gesagte steht zur Kontrolle im Feld (Chrome/Android, Safari; braucht Netz).
 - **Doppelte Artikel** werden zusammengeführt (1 l + 2 l Milch = 3 l); zuletzt gekaufte kommen zurück
   auf die Liste statt doppelt.
 - **Eigenschaften je Listentyp**: Einkauf „bio“, „TK“, „festkochend“ …; Packliste „Handgepäck“,
@@ -28,7 +30,8 @@
 
 ## Listen
 
-- **Eine Schaltfläche „+ Neu“** für alles: Name, Typ (Einkauf, Packliste, Merkliste, ToDo), Vorlage,
+- **Eine Schaltfläche „+ Neu“** für alles: Name, Typ (Einkauf, Packliste, Merkliste, ToDo), eine oder
+  **mehrere Vorlagen** (z. B. „Basis“ + „Ski“ + „Kinder“; was in mehreren steht, kommt einmal),
   „Als Vorlage anlegen“, privat, Beschreibung, bei ToDo-Listen die Kategorie.
 - **Vorlagen** (◇) für jeden Listentyp: nicht abhakbar, füllen neue Listen vor, „Als Vorlage speichern“,
   optionale Artikel. **Mit Vorlage abgleichen** in beide Richtungen: was der Liste fehlt, was der Vorlage

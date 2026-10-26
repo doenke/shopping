@@ -1,5 +1,5 @@
 import { extractPackingTokens, itemSpecification, parseInput, type CatalogIndex, type CatalogItem, type ListType } from '@shopping/shared';
-import { forwardRef, useMemo, useState } from 'react';
+import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, catalogToParsed } from '../actions';
 import { Tile } from './Tile';
 
@@ -38,6 +38,31 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
     await addItems(listId, [{ ...catalogToParsed(c), person: packing.person, container: packing.container }]);
   };
 
+  // Voice input (Chrome/Android, Safari; not Firefox): what is said lands in the field, Enter or a tap adds it.
+  const [listening, setListening] = useState(false);
+  const recognition = useRef<SpeechRecognitionLike | null>(null);
+  const Recognition = speechRecognition();
+  useEffect(() => () => recognition.current?.abort(), []);
+  const listen = () => {
+    if (listening) return recognition.current?.stop();
+    if (!Recognition) return;
+    const r = new Recognition();
+    r.lang = 'de-DE';
+    r.interimResults = true;
+    r.continuous = false;
+    r.onresult = (e) => {
+      const said = Array.from({ length: e.results.length }, (_, i) => e.results[i]![0]!.transcript).join(' ');
+      // "Milch und Butter" are two things on shopping and packing lists ("Krieg und Frieden" on a Merkliste is one).
+      setText(listType === 'shopping' || listType === 'packing' ? said.replace(/\s+und\s+/gi, ', ') : said);
+    };
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    recognition.current = r;
+    setText('');
+    setListening(true);
+    r.start();
+  };
+
   const freeText = single && !single.catalogItemId && !suggestions.some((s) => s.name.toLowerCase() === single.name.toLowerCase());
 
   return (
@@ -61,6 +86,17 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
           }}
           aria-label="Artikel hinzufügen"
         />
+        {Recognition && (
+          <button
+            type="button"
+            className={`addbar__mic${listening ? ' addbar__mic--on' : ''}`}
+            aria-label={listening ? 'Zuhören beenden' : 'Sprechen'}
+            aria-pressed={listening}
+            onClick={listen}
+          >
+            🎤
+          </button>
+        )}
       </form>
       {text.trim() && (
         <div className="addbar__results">
@@ -87,3 +123,21 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
     </div>
   );
 });
+
+/** The bits of the Web Speech API used here (not in TypeScript's DOM types everywhere). */
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+function speechRecognition(): (new () => SpeechRecognitionLike) | null {
+  const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}

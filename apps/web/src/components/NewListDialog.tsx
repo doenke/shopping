@@ -1,7 +1,9 @@
-import { defaultVisibility, itemSpecification, SUGGESTED_LIST_GROUPS, packingInfo, type ListRow, type ListType } from '@shopping/shared';
+import { defaultVisibility, itemSpecification, SUGGESTED_LIST_GROUPS, packingInfo, type ItemRow, type ListRow, type ListType } from '@shopping/shared';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, createList, itemToNew } from '../actions';
-import { navigate, useItems } from '../hooks';
+import { db } from '../db';
+import { navigate } from '../hooks';
 import { ItemIcon } from './Tile';
 
 export const LIST_TYPE_LABEL: Record<ListType, string> = {
@@ -33,20 +35,41 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
   const [description, setDescription] = useState('');
   const [group, setGroup] = useState('');
   const templates = allTemplates.filter((t) => t.listType === type);
-  const [templateId, setTemplateId] = useState('');
-  const template = templates.find((t) => t.id === templateId);
-  const items = useItems(template?.id);
-  const sorted = useMemo(() => [...(items ?? [])].sort((a, b) => a.position.localeCompare(b.position)), [items]);
+  // Several templates at once, e.g. "Basis" + "Ski" + "Kinder" – in the order they were picked.
+  const [templateIds, setTemplateIds] = useState<string[]>([]);
+  const chosenTemplates = templateIds.map((id) => templates.find((t) => t.id === id)).filter((t): t is ListRow => !!t);
+  const template = chosenTemplates[0];
+  const items = useLiveQuery(
+    () => (templateIds.length ? db.items.where('listId').anyOf(templateIds).toArray() : Promise.resolve([] as ItemRow[])),
+    [templateIds.join(',')],
+  );
+  /** All items of the chosen templates; the same thing in two templates comes once (the first one counts). */
+  const sorted = useMemo(() => {
+    const seen = new Map<string, { item: ItemRow; from: string[] }>();
+    for (const t of chosenTemplates) {
+      const own = (items ?? []).filter((i) => i.listId === t.id && !i.deleted).sort((a, b) => a.position.localeCompare(b.position));
+      for (const i of own) {
+        const p = packingInfo(i);
+        const key = [i.catalogItemId ?? i.name.trim().toLowerCase(), p.person?.toLowerCase() ?? '', p.container?.toLowerCase() ?? ''].join('|');
+        const hit = seen.get(key);
+        if (hit) hit.from.push(t.name);
+        else seen.set(key, { item: i, from: [t.name] });
+      }
+    }
+    return [...seen.values()];
+  }, [items, templateIds.join(',')]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => ref.current?.showModal(), []);
   // Optional template items (e.g. sun cream) start deselected.
-  useEffect(() => setSelected(new Set(sorted.filter((i) => !i.optional).map((i) => i.id))), [sorted]);
+  useEffect(() => setSelected(new Set(sorted.filter((e) => !e.item.optional).map((e) => e.item.id))), [sorted]);
+
+  const toggleTemplate = (id: string) => setTemplateIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   // Type change: sensible defaults, as long as the user has not typed a name.
   const chooseType = (t: ListType) => {
     setType(t);
-    setTemplateId('');
+    setTemplateIds([]);
     setIsPrivate(defaultVisibility(t) === 'private');
     if (!nameTouched) setName(asTemplate ? TEMPLATE_NAME[t] : DEFAULT_NAME[t]);
   };
@@ -66,11 +89,14 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
       template?.id,
       type === 'todo' ? group : undefined,
     );
-    const chosen = template ? sorted.filter((i) => selected.has(i.id)).map((i) => ({ ...itemToNew(i), optional: asTemplate ? i.optional : undefined })) : [];
+    const chosen = sorted.filter((e) => selected.has(e.item.id));
     if (chosen.length) {
       await addItems(
         id,
-        chosen.map((c) => (asTemplate ? c : { ...c, sources: [{ type: 'template' as const, label: template!.name }] })),
+        chosen.map(({ item, from }) => {
+          const c = { ...itemToNew(item), optional: asTemplate ? item.optional : undefined };
+          return asTemplate ? c : { ...c, sources: from.map((label) => ({ type: 'template' as const, label })) };
+        }),
       );
     }
     navigate({ page: 'list', listId: id });
@@ -147,17 +173,22 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
         )}
 
         {templates.length > 0 && (
-          <label className="field">
-            <span>{asTemplate ? 'Kopie von' : 'Aus Vorlage'}</span>
-            <select value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
-              <option value="">leer starten</option>
+          <div className="field">
+            <span>{asTemplate ? 'Kopie von' : 'Aus Vorlagen'} – auch mehrere, z. B. Basis + Ski</span>
+            <div className="chips">
               {templates.map((t) => (
-                <option key={t.id} value={t.id}>
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`chip${templateIds.includes(t.id) ? ' chip--on' : ''}`}
+                  aria-pressed={templateIds.includes(t.id)}
+                  onClick={() => toggleTemplate(t.id)}
+                >
                   ◇ {t.name}
-                </option>
+                </button>
               ))}
-            </select>
-          </label>
+            </div>
+          </div>
         )}
 
         <label className="check field">
@@ -171,7 +202,7 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
 
         {template && (
           <ul className="checklist">
-            {sorted.map((i) => {
+            {sorted.map(({ item: i, from }) => {
               const p = packingInfo(i);
               return (
                 <li key={i.id}>
@@ -182,12 +213,13 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
                       {i.name}
                       <small className="muted"> {[itemSpecification(i), p.person, p.container].filter(Boolean).join(' · ')}</small>
                       {i.optional && <small className="muted"> · optional</small>}
+                      {chosenTemplates.length > 1 && <small className="muted"> · {from.join(', ')}</small>}
                     </span>
                   </label>
                 </li>
               );
             })}
-            {sorted.length === 0 && <li className="muted">Die Vorlage ist noch leer.</li>}
+            {sorted.length === 0 && items && <li className="muted">{chosenTemplates.length > 1 ? 'Die Vorlagen sind noch leer.' : 'Die Vorlage ist noch leer.'}</li>}
           </ul>
         )}
 
