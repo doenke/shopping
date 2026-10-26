@@ -5,9 +5,9 @@ import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
 
-type GroupBy = 'due' | 'area' | 'who';
+type GroupBy = 'none' | 'due' | 'area' | 'who';
 
-const GROUP_LABEL: Record<GroupBy, string> = { due: 'Fällig', area: 'Bereich', who: 'Wer' };
+const GROUP_LABEL: Record<GroupBy, string> = { none: 'Alle', due: 'Fällig', area: 'Bereich', who: 'Wer' };
 
 interface Props {
   list: ListRow;
@@ -20,7 +20,7 @@ interface Props {
 function loadGroupBy(listId: string): GroupBy {
   try {
     const v = localStorage.getItem(`todo-group:${listId}`);
-    if (v === 'due' || v === 'area' || v === 'who') return v;
+    if (v === 'none' || v === 'due' || v === 'area' || v === 'who') return v;
   } catch {
     // Storage unavailable: default grouping.
   }
@@ -63,18 +63,25 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
   const open = items.filter((i) => !i.checked || remoteChecks.has(i.id));
   const done = items.filter((i) => i.checked && !remoteChecks.has(i.id)).sort((a, b) => (b.checkedAt ?? '').localeCompare(a.checkedAt ?? ''));
 
+  // Due dates stay out of sight until a task has one: then a plain checklist instead of "Ohne Datum".
+  const hasDue = open.some((i) => dueOf(i));
+  const hasMeta = hasDue || open.some((i) => packingInfo(i).person || packingInfo(i).container);
+  const options: GroupBy[] = hasDue ? ['due', 'area', 'who'] : ['none', 'area', 'who'];
+  const shown: GroupBy = groupBy === 'due' && !hasDue ? 'none' : groupBy === 'none' && hasDue ? 'due' : groupBy;
+
   const groups = useMemo(() => {
     const now = new Date();
     const today = isoDate(now);
     const weekEnd = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + ((7 - now.getDay()) % 7)));
     const sorted = [...open].sort((a, b) => (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || a.position.localeCompare(b.position));
-    const byKey = new Map<string, { title: string; order: number; items: ItemRow[] }>();
+    if (shown === 'none') return [{ key: 'all', title: null as string | null, order: 0, items: sorted }];
+    const byKey = new Map<string, { title: string | null; order: number; items: ItemRow[] }>();
     for (const i of sorted) {
       const p = packingInfo(i);
       const g =
-        groupBy === 'due'
+        shown === 'due'
           ? dueBucket(dueOf(i), today, weekEnd)
-          : groupBy === 'area'
+          : shown === 'area'
             ? { key: p.container ?? '', title: p.container ?? 'Ohne Bereich', order: p.container ? 0 : 1 }
             : { key: p.person ?? '', title: p.person ?? 'Ohne Zuständigkeit', order: p.person ? 0 : 1 };
       const entry = byKey.get(g.key) ?? { title: g.title, order: g.order, items: [] };
@@ -82,9 +89,9 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
       byKey.set(g.key, entry);
     }
     return [...byKey.entries()]
-      .sort(([, a], [, b]) => a.order - b.order || a.title.localeCompare(b.title, 'de'))
+      .sort(([, a], [, b]) => a.order - b.order || (a.title ?? '').localeCompare(b.title ?? '', 'de'))
       .map(([key, g]) => ({ key, ...g }));
-  }, [open, groupBy]);
+  }, [open, shown]);
 
   const toggle = (item: ItemRow) => {
     void setChecked(item, !item.checked);
@@ -105,8 +112,8 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
           <span className="task__title">{item.name}</span>
           <span className="task__meta">
             {fmt && <span className={`due${fmt.overdue && !item.checked ? ' due--overdue' : fmt.today ? ' due--today' : ''}`}>{fmt.label}</span>}
-            {p.person && groupBy !== 'who' && <span>@{p.person}</span>}
-            {p.container && groupBy !== 'area' && <span>#{p.container}</span>}
+            {p.person && shown !== 'who' && <span>@{p.person}</span>}
+            {p.container && shown !== 'area' && <span>#{p.container}</span>}
             {item.note && <span className="muted">{item.note}</span>}
             {remote && <span>✓ {users.get(remote.by)?.displayName}</span>}
           </span>
@@ -129,13 +136,15 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
             {open.length} offen{done.length ? ` · ${done.length} erledigt` : ''}
             {list.visibility === 'private' ? ' · 🔒 privat' : ''}
           </span>
-          <div className="segmented" role="group" aria-label="Gruppieren nach">
-            {(Object.keys(GROUP_LABEL) as GroupBy[]).map((g) => (
-              <button key={g} type="button" className={g === groupBy ? 'active' : ''} aria-pressed={g === groupBy} onClick={() => setGroupBy(g)}>
-                {GROUP_LABEL[g]}
-              </button>
-            ))}
-          </div>
+          {hasMeta && (
+            <div className="segmented" role="group" aria-label="Gruppieren nach">
+              {options.map((g) => (
+                <button key={g} type="button" className={g === shown ? 'active' : ''} aria-pressed={g === shown} onClick={() => setGroupBy(g)}>
+                  {GROUP_LABEL[g]}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -157,9 +166,11 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
 
       {groups.map((g) => (
         <div key={g.key} className="group">
-          <h2 className={`group__title${g.key === 'overdue' ? ' group__title--alert' : ''}`}>
-            {g.title} <span className="group__count">{g.items.length}</span>
-          </h2>
+          {g.title && (
+            <h2 className={`group__title${g.key === 'overdue' ? ' group__title--alert' : ''}`}>
+              {g.title} <span className="group__count">{g.items.length}</span>
+            </h2>
+          )}
           <ul className="tasks">{g.items.map(row)}</ul>
         </div>
       ))}

@@ -71,6 +71,8 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const [person, setPerson] = useState(packingInfo(item).person ?? '');
   const [container, setContainer] = useState(packingInfo(item).container ?? '');
   const [due, setDue] = useState(dueOf(item) ?? '');
+  // The date field only shows once a task has (or gets) a due date.
+  const [showDue, setShowDue] = useState(!!dueOf(item));
   const [forAll, setForAll] = useState(false);
   const [optional, setOptional] = useState(item.optional);
   const [reported, setReported] = useState<'idle' | 'done' | 'error'>('idle');
@@ -172,16 +174,26 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={NOTE_EXAMPLE[list.listType]} />
         </label>
 
-        {todo && (
+        {todo && !showDue && (
+          <button type="button" className="link field" onClick={() => setShowDue(true)}>
+            + Fälligkeit
+          </button>
+        )}
+        {todo && showDue && (
           <label className="field">
             <span>Fällig am</span>
             <div className="field__row">
-              <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
-              {due && (
-                <button type="button" className="link" onClick={() => setDue('')}>
-                  kein Datum
-                </button>
-              )}
+              <input type="date" value={due} onChange={(e) => setDue(e.target.value)} autoFocus={!due} />
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  setDue('');
+                  setShowDue(false);
+                }}
+              >
+                kein Datum
+              </button>
             </div>
           </label>
         )}

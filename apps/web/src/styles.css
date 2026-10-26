@@ -1422,3 +1422,7 @@ img.avatar {
 .list-icon-preview .list-icon {
   margin: 0;
 }
+.link.field {
+  align-self: flex-start;
+  padding-left: 0;
+}
