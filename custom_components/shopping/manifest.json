@@ -6,7 +6,7 @@
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/doenke/shopping#home-assistant",
+  "documentation": "https://github.com/doenke/shopping/blob/main/docs/home-assistant.md",
   "integration_type": "service",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/doenke/shopping/issues",
