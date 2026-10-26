@@ -1215,3 +1215,29 @@ img.avatar {
   flex-wrap: wrap;
   border-radius: 14px;
 }
+
+/* Who has access, in the title bar. */
+.avatar-stack {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.avatar-stack .avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 0.8rem;
+  border: 2px solid var(--bg);
+  box-sizing: content-box;
+}
+.avatar-stack .avatar + .avatar {
+  margin-left: -7px;
+}
+.avatar-stack__more {
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.7rem;
+}

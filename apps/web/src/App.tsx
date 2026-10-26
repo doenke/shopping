@@ -4,6 +4,7 @@ import { addItems, archiveList, createList, deleteList, describeList, leaveList,
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
+import { ListAvatars } from './components/ListAvatars';
 import { MembersDialog } from './components/MembersDialog';
 import { NewListDialog } from './components/NewListDialog';
 import { SyncTemplateDialog } from './components/SyncTemplateDialog';
@@ -56,6 +57,8 @@ function Shell({ me }: { me: Me }) {
   const [menu, setMenu] = useState(false);
   const [importing, setImporting] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  /** Bumped when the members dialog closes, so the avatars in the title bar reload. */
+  const [membersSeen, setMembersSeen] = useState(0);
   const guest = me.isGuest;
   const [newDialog, setNewDialog] = useState(false);
   const [syncDialog, setSyncDialog] = useState(false);
@@ -187,6 +190,7 @@ function Shell({ me }: { me: Me }) {
             </button>
           )}
           <h1 className="topbar__title">{route.page === 'settings' ? 'Einstellungen' : route.page === 'icons' ? 'Icons' : (list?.name ?? 'Shopping')}</h1>
+          {route.page === 'list' && list && <ListAvatars listId={list.id} refresh={membersSeen} onClick={() => setShowMembers(true)} />}
           <SyncBadge guest={me.isGuest} />
           {route.page === 'list' && list && (
             <div className="menu">
@@ -242,7 +246,10 @@ function Shell({ me }: { me: Me }) {
       {syncDialog && list && (
         <SyncTemplateDialog list={list} templates={templates.filter((t) => t.listType === list.listType)} onClose={() => setSyncDialog(false)} />
       )}
-      {showMembers && list && <MembersDialog list={list} me={me} onClose={() => setShowMembers(false)} />}
+      {showMembers && list && <MembersDialog list={list} me={me} onClose={() => {
+            setShowMembers(false);
+            setMembersSeen((n) => n + 1);
+          }} />}
       {importing && list && <ImportDialog listId={list.id} onClose={() => setImporting(false)} />}
       {extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' && (
         <CatalogPanel key={list.listType} listId={list.id} listType={list.listType} catalog={catalog.items} items={items ?? []} />
