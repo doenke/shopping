@@ -13,6 +13,7 @@ import { MembersDialog } from './components/MembersDialog';
 import { LIST_TYPE_LABEL, NewListDialog } from './components/NewListDialog';
 import { SortDialog } from './components/SortDialog';
 import { SyncTemplateDialog } from './components/SyncTemplateDialog';
+import { ToShoppingDialog } from './components/ToShoppingDialog';
 import { ListView } from './components/ListView';
 import { Login } from './components/Login';
 import { SECTION_TITLE, Settings } from './components/Settings';
@@ -79,12 +80,14 @@ function Shell({ me }: { me: Me }) {
   const archived = ordered.filter((l) => !l.isTemplate && l.archivedAt);
   const templates = ordered.filter((l) => l.isTemplate);
   const [editing, setEditing] = useState(false);
-  const [copied, setCopied] = useState(false);
+  /** Short note at the bottom ("Liste als Text kopiert"). */
+  const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
-    if (!copied) return;
-    const t = setTimeout(() => setCopied(false), 2500);
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 2500);
     return () => clearTimeout(t);
-  }, [copied]);
+  }, [notice]);
+  const [toShopping, setToShopping] = useState(false);
   const [sorting, setSorting] = useState<'lists' | ListType | null>(null);
   const TYPE_ICON: Record<ListType, string> = { shopping: '', packing: '🧳 ', memo: '📌 ', todo: '✅ ' };
   /** Sidebar: only sections that have lists. */
@@ -277,7 +280,8 @@ function Shell({ me }: { me: Me }) {
                   onMembers={() => setShowMembers(true)}
                   onSortCategories={() => setSorting(list.listType)}
                   onEdit={() => setEditing(true)}
-                  onCopied={() => setCopied(true)}
+                  onCopied={() => setNotice('Liste als Text kopiert')}
+                  onToShopping={() => setToShopping(true)}
                 />
               )}
             </div>
@@ -327,9 +331,19 @@ function Shell({ me }: { me: Me }) {
       {syncDialog && list && (
         <SyncTemplateDialog list={list} templates={templates.filter((t) => t.listType === list.listType)} onClose={() => setSyncDialog(false)} />
       )}
-      {copied && (
+      {toShopping && list && (
+        <ToShoppingDialog
+          list={list}
+          me={me}
+          onClose={(message) => {
+            setToShopping(false);
+            if (message) setNotice(message);
+          }}
+        />
+      )}
+      {notice && (
         <div className="snackbar" role="status">
-          <span>Liste als Text kopiert</span>
+          <span>{notice}</span>
         </div>
       )}
       {editing && list && (
@@ -404,9 +418,10 @@ interface ListMenuProps {
   onSortCategories: () => void;
   onEdit: () => void;
   onCopied: () => void;
+  onToShopping: () => void;
 }
 
-function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories, onEdit, onCopied }: ListMenuProps) {
+function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories, onEdit, onCopied, onToShopping }: ListMenuProps) {
   const guest = me.isGuest;
   const isOwner = list.ownerId === me.id;
 
@@ -478,6 +493,18 @@ function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImp
           }}
         >
           Aus Mealie hinzufügen …
+        </button>
+      )}
+      {list.listType === 'packing' && !guest && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onToShopping();
+            onClose();
+          }}
+        >
+          🛒 Auf Einkaufsliste setzen …
         </button>
       )}
       {!list.isTemplate && hasTemplates && !guest && (

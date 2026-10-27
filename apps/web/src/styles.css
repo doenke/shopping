@@ -1646,7 +1646,7 @@ img.avatar {
     gap: 6px;
     margin-bottom: 4px;
   }
-  .sheet__body > .sheet__actions {
+  .sheet__body--editor > .sheet__actions {
     display: none;
   }
 }

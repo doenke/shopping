@@ -29,6 +29,8 @@ interface Props {
   /** The other items of the list, for person/Packstück suggestions. */
   items?: ItemRow[];
   onClose: () => void;
+  /** Packing lists: "Auf Einkaufsliste …" (put it on a shopping list). */
+  onToShopping?: () => void;
 }
 
 /** Sets or removes the due date (undefined: leave as is). */
@@ -54,7 +56,7 @@ function parseQuantity(s: string): number | null {
 
 const NEW_CATEGORY = '__new__';
 
-export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
+export function ItemEditor({ item, list, items = [], users, onClose, onToShopping }: Props) {
   const isTemplate = list.isTemplate;
   const packing = list.listType === 'packing';
   const todo = list.listType === 'todo';
@@ -148,7 +150,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
     <dialog ref={ref} className="sheet" onClose={onClose} onClick={(e) => e.target === ref.current && ref.current?.close()}>
       <form
         method="dialog"
-        className="sheet__body"
+        className="sheet__body sheet__body--editor"
         onSubmit={(e) => {
           e.preventDefault();
           void save();
@@ -336,6 +338,14 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
             </>
           )}
         </p>
+
+        {onToShopping && me && !me.isGuest && (
+          <p className="sheet__meta">
+            <button type="button" className="link" onClick={onToShopping}>
+              🛒 Auf Einkaufsliste setzen …
+            </button>
+          </p>
+        )}
 
         {/* Catalog items share their icon; Merkliste and free-text entries have one of their own. */}
         {(item.catalogItemId || memo || item.icon) && me && !me.isGuest && list.listType !== 'todo' && (

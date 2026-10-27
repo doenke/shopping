@@ -31,7 +31,7 @@ export type ListVisibility = 'household' | 'private';
 
 /** Where (part of) an item came from, kept in `attributes.sources`. */
 export interface ItemSource {
-  type: 'mealie_recipe' | 'mealie_list' | 'mealie_mealplan' | 'template' | 'api' | 'mcp';
+  type: 'mealie_recipe' | 'mealie_list' | 'mealie_mealplan' | 'template' | 'list' | 'api' | 'mcp';
   label: string;
 }
 
