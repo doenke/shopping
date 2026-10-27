@@ -158,7 +158,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
           .select()
           .from(catalogItems)
           .where(since ? gt(catalogItems.seq, since) : undefined);
-        return { items: rows.map(toCatalogItem), categories: CATEGORIES, categoryIcons: await icons.categoryIcons(), seq };
+        return { items: rows.map(toCatalogItem), categories: CATEGORIES, categoryIcons: await icons.categoryIcons(), pendingIcons: await icons.pendingTargets(), seq };
       });
     });
 

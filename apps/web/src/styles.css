@@ -1684,3 +1684,58 @@ img.avatar {
   background: var(--surface);
   font-size: 0.95rem;
 }
+
+/* Item editor: icon drafts waiting for review */
+.icon-check {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.icon-check p {
+  margin: 0 0 8px;
+}
+.icon-check__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.icon-check figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.icon-check img {
+  border-radius: 12px;
+  background: var(--surface);
+}
+.icon-check__current {
+  padding: 4px;
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+}
+.icon-check__current figcaption {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.icon-check__doubtful img {
+  opacity: 0.6;
+}
+
+/* Tile: new icon drafts wait for review */
+.tile__unreviewed {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 0 0 2px var(--warn, #e3b505);
+  font-size: 0.7rem;
+}

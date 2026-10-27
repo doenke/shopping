@@ -85,6 +85,10 @@ export async function iconRoutes(app: FastifyInstance, { icons, requireAccount }
     });
 
     api.get('/api/v1/icons/review', async () => ({ targets: await icons.reviewQueue() }));
+    api.get('/api/v1/icons/pending/:targetType/:targetId', async (request) => {
+      const t = Target.parse(request.params);
+      return icons.pendingFor(t.targetType, t.targetId);
+    });
     api.get('/api/v1/icons/gallery', async () => ({ icons: await icons.gallery() }));
 
     api.get('/api/v1/icons/:id/image', async (request, reply) => {

@@ -21,6 +21,7 @@ import { addItems, createCategory, deleteItem, itemToNew, updateItem } from '../
 import { useCustomCategories } from '../categories';
 import { useCatalog, useLists, useMe } from '../hooks';
 import { Avatar } from './Avatar';
+import { IconCheck } from './IconCheck';
 import { sync } from '../sync/engine';
 
 interface Props {
@@ -430,6 +431,10 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
               </span>
             )}
           </div>
+        )}
+
+        {me && !me.isGuest && list.listType !== 'todo' && (
+          <IconCheck targetType={item.catalogItemId ? 'item' : 'entry'} targetId={item.catalogItemId ?? item.id} />
         )}
 
         {/* Catalog items share their icon; Merkliste and free-text entries have one of their own. */}

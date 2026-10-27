@@ -275,6 +275,14 @@ describe('icon pipeline', () => {
     expect(after).toHaveLength(1);
   });
 
+  it('tells the app which things have drafts waiting, and shows them per thing', async () => {
+    const catalog = (await req('GET', '/api/v1/catalog')).json();
+    expect(catalog.pendingIcons).toContain(seedId('Mehl'));
+    const pending = (await req('GET', `/api/v1/icons/pending/item/${seedId('Mehl')}`)).json();
+    expect(pending).toMatchObject({ targetType: 'item', targetId: seedId('Mehl'), approved: null });
+    expect(pending.candidates.length).toBeGreaterThan(0);
+  });
+
   it('lets a person keep the current icon when the replacement is worse', async () => {
     await req('PUT', '/api/v1/icons/settings', { autoApprove: true });
     const before = (await req('GET', '/api/v1/catalog')).json().items.find((i: { id: string }) => i.id === seedId('Zucker')).icon;

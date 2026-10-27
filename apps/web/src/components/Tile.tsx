@@ -53,6 +53,9 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
   const offer = item.properties.some(isOffer);
   const spec = itemSpecification(offer ? { ...item, properties: item.properties.filter((p) => !isOffer(p)) } : item);
   const cat = getCategory(item.categoryId, useCustomCategories());
+  const icons = useIconIndex();
+  // New icon drafts wait for review (shared free-text pictures count by their own entry only).
+  const unreviewed = (item.catalogItemId && icons.pending.has(item.catalogItemId)) || (!!item.id && icons.pending.has(item.id));
 
   const start = () => {
     longPressed.current = false;
@@ -83,7 +86,7 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
         cancel();
         onLongPress();
       }}
-      aria-label={[item.name, offer ? 'im Angebot' : null, spec, extra].filter(Boolean).join(', ')}
+      aria-label={[item.name, offer ? 'im Angebot' : null, spec, extra, unreviewed ? 'neues Icon zu prüfen' : null].filter(Boolean).join(', ')}
     >
       <ItemIcon
         name={item.name}
@@ -94,6 +97,11 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
       <span className="tile__name">{item.name}</span>
       {spec && <span className="tile__spec">{spec}</span>}
       {extra && <span className="tile__spec tile__extra">{extra}</span>}
+      {unreviewed && (
+        <span className="tile__unreviewed" title="Neues Icon wartet auf Prüfung – lange drücken bzw. öffnen" aria-hidden>
+          🖼
+        </span>
+      )}
       {offer && (
         <span className="tile__offer" title="Angebot" aria-hidden>
           %

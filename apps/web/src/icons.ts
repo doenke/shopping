@@ -5,18 +5,20 @@ import { createContext, useContext } from 'react';
 export interface IconIndex {
   items: Map<string, string>;
   categories: Record<string, string>;
+  /** Catalog items and entries with drafts waiting for review. */
+  pending: Set<string>;
 }
 
-export const IconContext = createContext<IconIndex>({ items: new Map(), categories: {} });
+export const IconContext = createContext<IconIndex>({ items: new Map(), categories: {}, pending: new Set() });
 
 export function useIconIndex(): IconIndex {
   return useContext(IconContext);
 }
 
-export function buildIconIndex(catalog: CatalogItem[], categories: Record<string, string> | undefined): IconIndex {
+export function buildIconIndex(catalog: CatalogItem[], categories: Record<string, string> | undefined, pending: string[] = []): IconIndex {
   const items = new Map<string, string>();
   for (const c of catalog) if (c.icon) items.set(c.id, c.icon);
-  return { items, categories: categories ?? {} };
+  return { items, categories: categories ?? {}, pending: new Set(pending) };
 }
 
 /** Entry icon (Merkliste), else item icon, else category icon, else null (letter placeholder). */

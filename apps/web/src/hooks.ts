@@ -70,7 +70,8 @@ export function useCatalog(): Catalog {
 
 export function useIcons(catalog: CatalogItem[]): IconIndex {
   const categories = useLiveQuery(async () => (await db.meta.get('categoryIcons'))?.value as Record<string, string> | undefined);
-  const index = useMemo(() => buildIconIndex(catalog, categories), [catalog, categories]);
+  const pending = useLiveQuery(async () => (await db.meta.get('pendingIcons'))?.value as string[] | undefined);
+  const index = useMemo(() => buildIconIndex(catalog, categories, pending), [catalog, categories, pending]);
   useEffect(() => {
     if (index.items.size || Object.keys(index.categories).length) void warmIconCache(index);
   }, [index]);

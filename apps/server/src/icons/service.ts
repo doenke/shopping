@@ -686,6 +686,8 @@ export class IconService {
         .where(eq(iconJobs.id, job.id));
       return 'done';
     }
+    // Drafts wait for a person: the app marks the tile.
+    if (made) await this.broadcastCatalog();
     // Nothing usable from the free provider, even after the second round: Claude has one go.
     if ((!made || !passed) && (await this.fallbackToClaude(job, s))) return 'done';
     await this.finishJob(job.id, made ? 'done' : 'failed', made ? null : 'Kein brauchbares Bild entstanden');
@@ -1092,6 +1094,7 @@ export class IconService {
       .update(iconJobs)
       .set({ status: 'done', updatedAt: sql`now()` })
       .where(and(eq(iconJobs.targetType, targetType), eq(iconJobs.targetId, targetId), eq(iconJobs.status, 'queued')));
+    await this.broadcastCatalog();
     return dropped.length;
   }
 
@@ -1176,6 +1179,7 @@ export class IconService {
       .insert(icons)
       .values({ targetType, targetId, provider: 'upload', model: 'manual', prompt: '', checks: { ...processed.checks }, image: processed.image, thumb: processed.thumb })
       .returning({ id: icons.id });
+    await this.broadcastCatalog();
     return row!.id;
   }
 
@@ -1218,6 +1222,44 @@ export class IconService {
       }
       const r = byId.get(t.targetId);
       return { name: r?.name ?? '?', categoryId: r?.categoryId ?? 'eigene', subject: r?.subject ?? (r ? (SEED_SUBJECTS[r.name] ?? PACKING_SUBJECTS[r.name] ?? null) : null) };
+    };
+  }
+
+  /** Catalog items and entries with drafts waiting for review (the app marks their tiles). */
+  async pendingTargets(): Promise<string[]> {
+    const rows = await this.db.execute<{ target_id: string }>(sql`
+      SELECT DISTINCT target_id FROM ${icons} WHERE status = 'candidate' AND target_type IN ('item', 'entry')`);
+    return rows.map((r) => r.target_id);
+  }
+
+  /** Drafts of one target waiting for review, and its current picture (for the item editor). */
+  async pendingFor(targetType: IconTarget, targetId: string) {
+    // Free-text entries share one picture per name: the drafts may hang on another entry of that name.
+    if (targetType === 'entry' && /^[0-9a-f-]{36}$/.test(targetId)) {
+      const [shared] = await this.db.execute<{ target_id: string }>(sql`
+        SELECT i.target_id FROM ${icons} i
+        JOIN ${listItems} o ON i.target_id = o.id::text JOIN ${lists} ol ON ol.id = o.list_id
+        JOIN ${listItems} e ON e.id = ${targetId}::uuid
+        WHERE i.target_type = 'entry' AND i.status = 'candidate' AND o.id <> e.id
+          AND ol.list_type IN ('shopping', 'packing') AND o.catalog_item_id IS NULL
+          AND lower(trim(o.name)) = lower(trim(e.name))
+          AND NOT EXISTS (SELECT 1 FROM ${icons} x WHERE x.target_type = 'entry' AND x.target_id = e.id::text AND x.status = 'candidate')
+        ORDER BY i.created_at DESC LIMIT 1`);
+      if (shared) targetId = shared.target_id;
+    }
+    const rows = await this.db
+      .select({ id: icons.id, status: icons.status, aiReview: icons.aiReview, checks: icons.checks, provider: icons.provider })
+      .from(icons)
+      .where(and(eq(icons.targetType, targetType), eq(icons.targetId, targetId), inArray(icons.status, ['candidate', 'approved'])))
+      .orderBy(asc(icons.createdAt));
+    return {
+      targetType,
+      targetId,
+      approved: rows.find((r) => r.status === 'approved')?.id ?? null,
+      candidates: rows
+        .filter((r) => r.status === 'candidate')
+        .map((r) => ({ id: r.id, aiReview: r.aiReview, checks: r.checks, provider: r.provider }))
+        .sort((a, b) => Number(a.aiReview?.ok === false) - Number(b.aiReview?.ok === false)),
     };
   }
 
