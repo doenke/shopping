@@ -35,7 +35,7 @@ export const CATEGORIES: CategoryDef[] = [
   { id: 'fertig-tk', name: 'Fertig- & Tiefkühlprodukte', color: '#4A90C9', order: 60 },
   { id: 'getreide', name: 'Getreideprodukte', color: '#D8A94E', order: 70 },
   { id: 'snacks-suesses', name: 'Snacks & Süßwaren', color: '#C2569A', order: 80 },
-  { id: 'getraenke', name: 'Getränke & Tabak', color: '#3FA7A0', order: 90 },
+  { id: 'getraenke', name: 'Getränke', color: '#3FA7A0', order: 90 },
   { id: 'haushalt', name: 'Haushalt & Gesundheit', color: '#7A7FD1', order: 100 },
   { id: 'pflege', name: 'Pflege & Gesundheit', color: '#9B6FC4', order: 110 },
   { id: 'tierbedarf', name: 'Tierbedarf', color: '#8C6D4F', order: 120 },

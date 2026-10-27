@@ -29,7 +29,7 @@ Eingebaut im Code (`packages/shared/src/categories.ts`), über alle Listentypen 
 
 | Listentyp | Kategorien |
 |-----------|------------|
-| Einkauf | Obst & Gemüse · Brot & Gebäck · Milch & Käse · Fleisch & Fisch · Zutaten & Gewürze · Fertig- & Tiefkühlprodukte · Getreideprodukte · Snacks & Süßwaren · Getränke & Tabak · Haushalt & Gesundheit · Pflege & Gesundheit · Tierbedarf · Baumarkt & Garten · Eigene Artikel |
+| Einkauf | Obst & Gemüse · Brot & Gebäck · Milch & Käse · Fleisch & Fisch · Zutaten & Gewürze · Fertig- & Tiefkühlprodukte · Getreideprodukte · Snacks & Süßwaren · Getränke · Haushalt & Gesundheit · Pflege & Gesundheit · Tierbedarf · Baumarkt & Garten · Eigene Artikel |
 | Packliste | Dokumente & Geld · Kleidung · Schuhe · Körperpflege · Reiseapotheke · Technik · Unterwegs & Proviant · Freizeit & Sport · Kinder · Ausrüstung · Sonstiges |
 | Merkliste | Merkliste |
 | ToDo | Aufgaben |

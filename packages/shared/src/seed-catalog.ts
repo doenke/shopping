@@ -263,7 +263,6 @@ Kaffee|Kaffeebohnen,Kaffeepulver
 Espresso|
 Tee|Schwarzer Tee,Grüner Tee,Kräutertee
 Kakao|Kakaopulver
-Zigaretten|Tabak
 `,
   haushalt: `
 Toilettenpapier|Klopapier,WC-Papier

@@ -245,7 +245,7 @@ export const SEED_SUBJECTS: Record<string, string> = {
   Müsliriegel: 'two cereal bars',
   Cracker: 'three square crackers',
 
-  // Getränke & Tabak
+  // Getränke
   Mineralwasser: 'plain clear water bottle with bubbles and a blue cap',
   'Stilles Wasser': 'plain clear water bottle with a pink cap',
   Apfelsaft: 'plain glass bottle of apple juice with an apple beside it',
@@ -263,7 +263,6 @@ export const SEED_SUBJECTS: Record<string, string> = {
   Espresso: 'small espresso cup with crema',
   Tee: 'cup of tea with a tea bag string',
   Kakao: 'mug of hot cocoa',
-  Zigaretten: 'plain white cigarette pack with two cigarettes sticking out',
 
   // Haushalt
   Toilettenpapier: 'single roll of toilet paper',
