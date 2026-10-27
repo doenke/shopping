@@ -29,7 +29,7 @@ Laptop-Ansicht.
   abgehakt wird. Im Laden 🛒: grüner Kopf, ein Tipp hakt ab („Rückgängig“ in der Leiste unten),
   Bildschirm bleibt an. Zurück auf Zuhause, wenn alles gekauft ist oder eine Stunde nichts abgehakt
   wurde. Pro Gerät gemerkt.
-- **Editor** (Tipp zu Hause, langer Druck im Laden): Menge mit Einheit, Eigenschaften als Chips
+- **Editor** (Tipp zu Hause, langer Druck im Laden; am Handy 🗑 ✕ ✓ Speichern oben): Menge mit Einheit, Eigenschaften als Chips
   (Vokabular je Listentyp), Notiz, Kategorie (auch „+ Neue Kategorie …“), Person/Packstück bzw. Tipp von/Wo bzw. Wer/Bereich,
   ToDo: „+ Fälligkeit“, Herkunft („für Lasagne“), „hinzugefügt von Anna über Claude“.
 - **Teilen-Ziel:** Text aus einer anderen App „teilen“ → landet auf der Hauptliste.

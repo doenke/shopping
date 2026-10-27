@@ -100,6 +100,19 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   }, []);
 
   const toggle = (p: string) => setProperties((ps) => (ps.includes(p) ? ps.filter((x) => x !== p) : [...ps, p]));
+  /** A property typed in "+ eigene": becomes a chip (Enter, leaving the field, or saving). */
+  const withCustom = (ps: string[]) => {
+    const c = custom.trim();
+    return c && !ps.some((p) => p.toLowerCase() === c.toLowerCase()) ? [...ps, c] : ps;
+  };
+  const addCustom = () => {
+    setProperties(withCustom);
+    setCustom('');
+  };
+  const remove = () => {
+    void deleteItem(item.id);
+    onClose();
+  };
 
   const save = async () => {
     const q = parseQuantity(quantity);
@@ -108,7 +121,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
     await updateItem(item.id, {
       name: name.trim() || item.name,
       amounts,
-      properties,
+      properties: withCustom(properties),
       note: note.trim() || null,
       categoryId,
       ...(isTemplate ? { optional } : {}),
@@ -125,7 +138,8 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
     onClose();
   };
 
-  const allProps = [...new Set([...suggestedProperties(list.listType), ...item.properties, ...properties])];
+  // Own properties used on this list's other entries can be picked again.
+  const allProps = [...new Set([...suggestedProperties(list.listType), ...items.flatMap((i) => i.properties), ...item.properties, ...properties])];
   const sources = Array.isArray(item.attributes.sources) ? (item.attributes.sources as ItemSource[]) : [];
   const checkedBy = item.checkedBy ? users.get(item.checkedBy) : undefined;
   const createdBy = item.createdBy ? users.get(item.createdBy) : undefined;
@@ -141,6 +155,19 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
         }}
       >
         <header className="sheet__header">
+          {/* Phones: the actions sit up here, within reach and above the keyboard. */}
+          <div className="sheet__quick">
+            <button type="button" className="icon-btn" aria-label="Entfernen" title="Entfernen" onClick={remove}>
+              🗑
+            </button>
+            <span className="spacer" />
+            <button type="button" className="icon-btn" aria-label="Abbrechen" title="Abbrechen" onClick={onClose}>
+              ✕
+            </button>
+            <button type="submit" className="btn btn--primary" aria-label="Speichern">
+              ✓ Speichern
+            </button>
+          </div>
           <input className="sheet__title" value={name} onChange={(e) => setName(e.target.value)} aria-label="Name" />
         </header>
 
@@ -174,12 +201,13 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
               className="chip chip--input"
               placeholder="+ eigene"
               value={custom}
+              enterKeyHint="done"
               onChange={(e) => setCustom(e.target.value)}
+              onBlur={() => custom.trim() && addCustom()}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && custom.trim()) {
                   e.preventDefault();
-                  if (!properties.includes(custom.trim())) setProperties([...properties, custom.trim()]);
-                  setCustom('');
+                  addCustom();
                 }
               }}
             />
@@ -341,10 +369,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
           <button
             type="button"
             className="btn btn--danger"
-            onClick={() => {
-              void deleteItem(item.id);
-              onClose();
-            }}
+            onClick={remove}
           >
             Entfernen
           </button>

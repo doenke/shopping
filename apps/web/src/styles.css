@@ -1626,3 +1626,27 @@ img.avatar {
 .settings--section .card > h2:first-child {
   display: none;
 }
+
+/* Item editor: on phones the actions sit in a sticky bar on top (the bottom is under the keyboard). */
+.sheet__quick {
+  display: none;
+}
+@media (max-width: 599px) {
+  .sheet__header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: -18px -18px 0;
+    padding: 10px 18px 0;
+    background: var(--surface);
+  }
+  .sheet__quick {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .sheet__body > .sheet__actions {
+    display: none;
+  }
+}
