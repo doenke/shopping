@@ -294,6 +294,35 @@ describe('icon pipeline', () => {
     expect((await req('GET', '/api/v1/catalog')).json().items.find((i: { id: string }) => i.id === seedId('Zucker')).icon).toBe(before);
   });
 
+  it('gives the same thing to buy and to pack the same picture', async () => {
+    const { sql } = await import('drizzle-orm');
+    const packId = stableUuid('shopping-seed-packing', 'zahnpasta');
+    const iconOf = async (id: string) =>
+      (await t.db.execute<{ image: Buffer }>(sql`SELECT image FROM icons WHERE target_type = 'item' AND target_id = ${id} AND status = 'approved'`))[0]?.image;
+    await req('POST', '/api/v1/icons/generate', { targetType: 'item', targetId: seedId('Zahnpasta'), candidates: 1 });
+    expect(await t.icons.runNext()).toBe('done');
+    // Approved for the grocery: the packing item has it as well.
+    const shop = await iconOf(seedId('Zahnpasta'));
+    expect(shop).toBeTruthy();
+    expect((await iconOf(packId))?.equals(shop!)).toBe(true);
+    const catalog = (await req('GET', '/api/v1/catalog')).json().items;
+    expect(catalog.find((i: { id: string }) => i.id === packId).icon).toMatch(/^[0-9a-f]{10}$/);
+
+    // Planned for a twin that has a picture already: taken over, nothing drawn.
+    const sunShop = seedId('Sonnencreme');
+    const sunPack = stableUuid('shopping-seed-packing', 'sonnencreme');
+    await req('POST', '/api/v1/icons/generate', { targetType: 'item', targetId: sunShop, candidates: 1 });
+    expect(await t.icons.runNext()).toBe('done');
+    await t.db.execute(sql`DELETE FROM icons WHERE target_type = 'item' AND target_id = ${sunPack}`);
+    await t.db.execute(sql`DELETE FROM icon_jobs WHERE status = 'queued'`);
+    await t.db.execute(sql`INSERT INTO icon_jobs (target_type, target_id, priority, candidates) VALUES ('item', ${sunPack}, 500, 1)`);
+    calls.length = 0;
+    expect(await t.icons.runNext()).toBe('done');
+    expect(calls).toHaveLength(0);
+    expect((await iconOf(sunPack))?.equals((await iconOf(sunShop))!)).toBe(true);
+    expect(await t.icons.alignTwins()).toBe(0);
+  });
+
   it('is for logged-in accounts only, too', async () => {
     expect((await t.app.inject({ method: 'GET', url: '/api/v1/icons/review' })).statusCode).toBe(401);
   });

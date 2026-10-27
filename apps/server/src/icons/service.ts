@@ -284,6 +284,8 @@ export class IconService {
       jobs = ALL_CATEGORIES.map((c, i) => ({ c, i }))
         .filter(({ c }) => !usedCats.has(c.id))
         .map(({ c, i }) => ({ targetType: 'category', targetId: c.id, priority: 1100 - i, candidates: s.candidates }));
+      // Same thing to buy and to pack: one picture.
+      await this.alignTwins();
       // Only items that are or were on a list; the rest of the catalog shows its category icon
       // (and gets its own picture once it is used). Jobs planned earlier for unused items go.
       await this.db.execute(sql`DELETE FROM ${iconJobs} WHERE status = 'queued' AND target_type = 'item' AND priority = 0`);
@@ -551,6 +553,12 @@ export class IconService {
       .orderBy(desc(iconJobs.priority), asc(iconJobs.createdAt))
       .limit(1);
     if (!job) return 'idle';
+
+    // The same thing on the other kind of list (Zahnpasta to buy and to pack) already has a picture: that one.
+    if (job.targetType === 'item' && job.priority < 2000 && (await this.shareFromTwin(job.targetId))) {
+      await this.finishJob(job.id, 'done');
+      return 'done';
+    }
 
     // Spices: the coloured pile, no image AI (unless someone asked for a new one by hand).
     if (job.targetType === 'item' && job.priority < 2000) {
@@ -934,6 +942,60 @@ export class IconService {
     await this.db.update(catalogItems).set({ icon: iconToken(copy!.id), seq: sql`nextval('sync_seq')` }).where(eq(catalogItems.id, catalogItemId));
   }
 
+  /**
+   * Catalog items of the other kind with the same name ("Zahnpasta" to buy and to pack) are twins:
+   * they show the same picture.
+   */
+  private async twinsOf(itemId: string): Promise<{ id: string; iconId: string | null }[]> {
+    return this.db.execute<{ id: string; iconId: string | null }>(sql`
+      SELECT o.id, (SELECT i.id FROM ${icons} i WHERE i.target_type = 'item' AND i.target_id = o.id::text AND i.status = 'approved' LIMIT 1) AS "iconId"
+      FROM ${catalogItems} c JOIN ${catalogItems} o ON o.id <> c.id AND o.kind <> c.kind
+        AND lower(trim(o.name)) IN (lower(trim(c.name)), lower(trim(coalesce(c.plural, ''))))
+      WHERE c.id = ${itemId}::uuid`);
+  }
+
+  /** Copies an approved picture to another target and approves it there (without passing it on again). */
+  private async copyIcon(sourceIconId: string, targetType: IconTarget, targetId: string): Promise<void> {
+    const [full] = await this.db.select().from(icons).where(eq(icons.id, sourceIconId));
+    if (!full?.image) return;
+    const { id: _id, targetType: _t, targetId: _i, isAnchor: _a, status: _s, ...rest } = full;
+    const [copy] = await this.db.insert(icons).values({ ...rest, status: 'candidate', targetType, targetId }).returning({ id: icons.id });
+    await this.approve(copy!.id, null, undefined, false);
+  }
+
+  /** Takes the twin's picture, if it has one. */
+  private async shareFromTwin(itemId: string): Promise<boolean> {
+    const twin = (await this.twinsOf(itemId)).find((t) => t.iconId);
+    if (!twin?.iconId) return false;
+    await this.copyIcon(twin.iconId, 'item', itemId);
+    return true;
+  }
+
+  /** A new picture for a catalog item goes to its twins too. */
+  private async shareWithTwins(iconId: string): Promise<void> {
+    const [icon] = await this.db.select({ targetType: icons.targetType, targetId: icons.targetId }).from(icons).where(eq(icons.id, iconId));
+    if (icon?.targetType !== 'item') return;
+    for (const twin of await this.twinsOf(icon.targetId)) await this.copyIcon(iconId, 'item', twin.id);
+  }
+
+  /**
+   * Once: twins that got different pictures before they were shared take the most recently approved one;
+   * twins without a picture get their twin's.
+   */
+  async alignTwins(): Promise<number> {
+    const rows = await this.db.execute<{ target: string; source: string }>(sql`
+      SELECT DISTINCT ON (c.id) c.id AS target, oi.id AS source
+      FROM ${catalogItems} c
+      JOIN ${catalogItems} o ON o.id <> c.id AND o.kind <> c.kind
+        AND lower(trim(o.name)) IN (lower(trim(c.name)), lower(trim(coalesce(c.plural, ''))))
+      JOIN ${icons} oi ON oi.target_type = 'item' AND oi.target_id = o.id::text AND oi.status = 'approved'
+      LEFT JOIN ${icons} ci ON ci.target_type = 'item' AND ci.target_id = c.id::text AND ci.status = 'approved'
+      WHERE ci.id IS NULL OR (ci.image IS DISTINCT FROM oi.image AND coalesce(oi.reviewed_at, oi.created_at) > coalesce(ci.reviewed_at, ci.created_at))
+      ORDER BY c.id, coalesce(oi.reviewed_at, oi.created_at) DESC`);
+    for (const r of rows) await this.copyIcon(r.source, 'item', r.target);
+    return rows.length;
+  }
+
   async stop(): Promise<void> {
     clearInterval(this.timer);
     clearTimeout(this.changeTimer);
@@ -968,7 +1030,7 @@ export class IconService {
     return done.size;
   }
 
-  async approve(iconId: string, userId: string | null, anchor?: boolean): Promise<void> {
+  async approve(iconId: string, userId: string | null, anchor?: boolean, twins = true): Promise<void> {
     await this.sync.exclusive(() =>
       this.db.transaction(async (tx) => {
         const [icon] = await tx.select({ id: icons.id, targetType: icons.targetType, targetId: icons.targetId, status: icons.status }).from(icons).where(eq(icons.id, iconId));
@@ -1002,6 +1064,7 @@ export class IconService {
       }),
     );
     await this.shareWithUserItem(iconId);
+    if (twins) await this.shareWithTwins(iconId);
     if (await this.notifyEntry(iconId)) return;
     await this.broadcastCatalog();
   }

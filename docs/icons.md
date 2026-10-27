@@ -21,6 +21,8 @@ Artikel, jede Kategorie, jeder Merklisten-Eintrag und jede Liste ein eigenes Ico
 - **Reihenfolge**: erst Kategorien, dann neue Einträge, dann die Katalogartikel nach Häufigkeit – bis zum
   Tageslimit (Standard 150 Bilder/Tag). Nur Artikel, die auf einer Liste stehen oder standen, bekommen ein
   eigenes Bild; der Rest zeigt das Kategorie-Icon, bis er zum ersten Mal gebraucht wird.
+- **Gleiche Dinge, ein Bild**: Was es im Katalog für Einkauf und Packliste gleichnamig gibt (Zahnpasta,
+  Sonnencreme …), teilt sich ein Bild – das zuletzt freigegebene gilt für beide.
 - **Gewürze** (Pulver, Samen, getrocknete Kräuter) zeichnet keine KI: Sie sind ein Häufchen aus Punkten in
   ihrer Farbe – immer dasselbe Häufchen, nur eingefärbt. Die Farbe steht für gängige Gewürze fest im Code,
   bei unbekannten aus „Zutaten & Gewürze“ fragt Shopping einmal Haiku. „Neu erzeugen“ von Hand lässt doch
