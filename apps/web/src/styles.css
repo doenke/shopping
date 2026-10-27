@@ -1650,3 +1650,20 @@ img.avatar {
     display: none;
   }
 }
+
+/* "Angebot": a % badge instead of the word */
+.tile__offer {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #d2544b;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+}

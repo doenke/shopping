@@ -43,11 +43,15 @@ interface TileProps {
   onLongPress?: () => void;
 }
 
+const isOffer = (p: string) => p.trim().toLowerCase() === 'angebot';
+
 /** Tile: tap to check (or add), long press / right click for details. */
 export function Tile({ item, variant = 'open', badge, badgeUser, fading = false, extra, onTap, onLongPress }: TileProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressed = useRef(false);
-  const spec = itemSpecification(item);
+  // "Angebot" is not written out but shown as a % badge.
+  const offer = item.properties.some(isOffer);
+  const spec = itemSpecification(offer ? { ...item, properties: item.properties.filter((p) => !isOffer(p)) } : item);
   const cat = getCategory(item.categoryId, useCustomCategories());
 
   const start = () => {
@@ -79,7 +83,7 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
         cancel();
         onLongPress();
       }}
-      aria-label={[item.name, spec, extra].filter(Boolean).join(', ')}
+      aria-label={[item.name, offer ? 'im Angebot' : null, spec, extra].filter(Boolean).join(', ')}
     >
       <ItemIcon
         name={item.name}
@@ -90,6 +94,11 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
       <span className="tile__name">{item.name}</span>
       {spec && <span className="tile__spec">{spec}</span>}
       {extra && <span className="tile__spec tile__extra">{extra}</span>}
+      {offer && (
+        <span className="tile__offer" title="Angebot" aria-hidden>
+          %
+        </span>
+      )}
       {badge && (
         <span className="tile__badge">
           {badgeUser && <Avatar user={badgeUser} size="xs" />}
