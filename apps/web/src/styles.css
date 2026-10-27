@@ -1739,3 +1739,73 @@ img.avatar {
   box-shadow: 0 0 0 2px var(--warn, #e3b505);
   font-size: 0.7rem;
 }
+
+/* Phones: smaller tiles, more on the screen (text stays the same size) */
+@media (max-width: 599px) {
+  .tiles {
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    gap: 6px;
+  }
+  .tile {
+    min-height: 84px;
+    padding: 8px 4px 6px;
+    gap: 3px;
+  }
+  .tile .item-icon--md {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+  }
+  .tile .item-icon--img.item-icon--md {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* List view (⋮ → Als Liste anzeigen): picture left, text next to it */
+.listview--rows .group .tiles {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 4px;
+}
+.listview--rows .group .tile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 1px;
+  align-items: center;
+  align-content: center;
+  justify-items: start;
+  min-height: 52px;
+  padding: 6px 12px;
+}
+.listview--rows .group .tile > .item-icon {
+  grid-row: 1 / span 2;
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+}
+.listview--rows .group .tile__name,
+.listview--rows .group .tile__spec {
+  grid-column: 2;
+  text-align: left;
+}
+.listview--rows .group .tile__spec + .tile__spec {
+  grid-row: auto;
+}
+.listview--rows .group .tile__offer {
+  top: 50%;
+  left: auto;
+  right: 10px;
+  transform: translateY(-50%);
+}
+.listview--rows .group .tile__unreviewed {
+  bottom: auto;
+  top: 50%;
+  right: 42px;
+  transform: translateY(-50%);
+}
+/* Only a name: one line next to the picture. */
+.listview--rows .group .tile:not(:has(.tile__spec)) > .item-icon {
+  grid-row: 1;
+}

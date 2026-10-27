@@ -1,3 +1,4 @@
+import { useTileView } from '../hooks';
 import { listDescription, packingInfo, type CatalogIndex, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { setChecked } from '../actions';
@@ -35,6 +36,7 @@ const noBoost = () => 0;
  * Ticked off means done (seen, read, visited) – it moves to "Erledigt", nothing is lost.
  */
 export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ list, items, index, users, remoteChecks }, addRef) {
+  const [tileView] = useTileView();
   const [editing, setEditing] = useState<string | null>(null);
   const [undo, setUndo] = useState<ItemRow | null>(null);
   const [showDone, setShowDone] = useState(false);
@@ -78,7 +80,7 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
   const editItem = items.find((i) => i.id === editing);
 
   return (
-    <section className="listview">
+    <section className={`listview${tileView === 'rows' ? ' listview--rows' : ''}`}>
       <AddBar ref={addRef} listId={list.id} listType={list.listType} index={index} boost={noBoost} placeholder="Was wollt ihr euch merken? z. B. Dune @Ben #Netflix" />
 
       {description && <p className="list-description">{description}</p>}

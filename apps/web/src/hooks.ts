@@ -144,3 +144,34 @@ export function useMediaQuery(query: string): boolean {
   }, [query]);
   return matches;
 }
+
+export type TileView = 'tiles' | 'rows';
+const TILE_VIEW_KEY = 'tile-view';
+
+function readTileView(): TileView {
+  try {
+    return localStorage.getItem(TILE_VIEW_KEY) === 'rows' ? 'rows' : 'tiles';
+  } catch {
+    return 'tiles';
+  }
+}
+
+/** Tiles (pictures in a grid) or rows (picture, text next to it); per device. */
+export function useTileView(): [TileView, (v: TileView) => void] {
+  const view = useSyncExternalStore(
+    (fn) => {
+      window.addEventListener(TILE_VIEW_KEY, fn);
+      return () => window.removeEventListener(TILE_VIEW_KEY, fn);
+    },
+    readTileView,
+  );
+  const set = (v: TileView) => {
+    try {
+      localStorage.setItem(TILE_VIEW_KEY, v);
+    } catch {
+      // Not stored: still switches for now.
+    }
+    window.dispatchEvent(new Event(TILE_VIEW_KEY));
+  };
+  return [view, set];
+}

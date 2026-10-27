@@ -2,7 +2,7 @@ import { useCustomCategories } from '../categories';
 import { categoriesInOrder, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { archiveList, setChecked } from '../actions';
-import { navigate, useMe } from '../hooks';
+import { navigate, useMe, useTileView } from '../hooks';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
@@ -78,6 +78,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
 
   const me = useMe();
   const custom = useCustomCategories();
+  const [tileView] = useTileView();
   const groups = useMemo(() => {
     const keyOf = (i: ItemRow): string => {
       const p = packingInfo(i);
@@ -113,7 +114,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
   const editItem = items.find((i) => i.id === editing);
 
   return (
-    <section className="listview">
+    <section className={`listview${tileView === 'rows' ? ' listview--rows' : ''}`}>
       <AddBar ref={addRef} listId={list.id} listType={list.listType} index={index} boost={boost} placeholder="Was kommt mit? z. B. 3 T-Shirts @Anna #Koffer" />
 
       {list.archivedAt && (

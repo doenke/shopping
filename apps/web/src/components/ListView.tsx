@@ -3,7 +3,7 @@ import { categoriesInOrder, categoryInList, packingInfo, type CatalogIndex, type
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { clearChecked, setChecked } from '../actions';
 import { shopModeKnown, shoppingActivity, startShopping, stopShopping, useShopping } from '../shopMode';
-import { useMe } from '../hooks';
+import { useMe, useTileView } from '../hooks';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
@@ -56,6 +56,7 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
     .slice(0, RECENT_LIMIT);
 
   const custom = useCustomCategories();
+  const [tileView] = useTileView();
   const groups = useMemo(() => {
     const byCat = new Map<string, ItemRow[]>();
     for (const i of open) {
@@ -77,7 +78,7 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
   const editItem = items.find((i) => i.id === editing);
 
   return (
-    <section className={`listview${shopping ? ' listview--shopping' : ''}`}>
+    <section className={`listview${shopping ? ' listview--shopping' : ''}${tileView === 'rows' ? ' listview--rows' : ''}`}>
       <AddBar
         ref={addRef}
         listId={list.id}
