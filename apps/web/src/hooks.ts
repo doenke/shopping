@@ -143,27 +143,3 @@ export function useMediaQuery(query: string): boolean {
   }, [query]);
   return matches;
 }
-
-const SORT_IN_MS = 60_000;
-
-/**
- * Free-text entries just added, still without a category: the server sorts them in a few seconds
- * later. Until then (at most a minute) they are shown on top, not out of sight under "Sonstiges".
- */
-export function useJustAdded(items: ItemRow[]): Set<string> {
-  const [now, setNow] = useState(() => Date.now());
-  const fresh = items.filter((i) => !i.catalogItemId && !i.categoryId && !i.checked && now - Date.parse(i.createdAt) < SORT_IN_MS);
-  const ids = fresh.map((i) => i.id).join(',');
-  useEffect(() => {
-    if (!fresh.length) return;
-    const due = Math.min(...fresh.map((i) => Date.parse(i.createdAt) + SORT_IN_MS)) - Date.now();
-    const t = setTimeout(() => setNow(Date.now()), Math.max(500, due));
-    return () => clearTimeout(t);
-  }, [ids, now]);
-  // A new entry arrives with a fresh time stamp: look again.
-  useEffect(() => setNow(Date.now()), [items.length]);
-  return useMemo(() => new Set(fresh.map((i) => i.id)), [ids]);
-}
-
-/** Heading of the group of entries that are being sorted in. */
-export const JUST_ADDED = { id: '__new', name: 'Neu · wird einsortiert …', color: '#8A8F98', order: 0 };
