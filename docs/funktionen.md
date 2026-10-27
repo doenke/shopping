@@ -27,8 +27,8 @@
   Editor über *Kategorie → + Neue Kategorie …* oder unter *Einstellungen → Eigene Kategorien* (umbenennen,
   Farbe, löschen). Sie gelten für den ganzen Haushalt, stehen vor „Sonstiges“ und bekommen ein eigenes Icon.
   Gelöschte Kategorien: ihre Einträge landen unter „Sonstiges“.
-- **Automatisch einsortiert**: Neue Einträge, die nicht im Katalog stehen, landen nach wenigen Sekunden in
-  der passenden Kategorie – wie beim letzten Mal bei gleichem Namen, sonst gewählt von Claude Haiku
+- **Automatisch einsortiert**: Neue Einträge, die nicht im Katalog stehen, erscheinen sofort ganz oben unter
+  „Neu · wird einsortiert …“ und landen nach wenigen Sekunden in der passenden Kategorie – wie beim letzten Mal bei gleichem Namen, sonst gewählt von Claude Haiku
   (mit Anthropic-Key; abschaltbar unter *Icons → Einrichtung*).
 - **Lernender Katalog**: Was du von Hand einträgst, landet danach im Katalog – mit Kategorie und Icon – und
   wird beim nächsten Tippen vorgeschlagen. Die Kategorie lässt sich im Editor „für alle“ ändern.

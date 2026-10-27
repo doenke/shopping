@@ -3,7 +3,7 @@ import { categoriesInOrder, categoryInList, packingInfo, type CatalogIndex, type
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { clearChecked, setChecked } from '../actions';
 import { shopModeKnown, shoppingActivity, startShopping, stopShopping, useShopping } from '../shopMode';
-import { useMe } from '../hooks';
+import { useMe, JUST_ADDED, useJustAdded } from '../hooks';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
@@ -56,17 +56,18 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
     .slice(0, RECENT_LIMIT);
 
   const custom = useCustomCategories();
+  const justAdded = useJustAdded(list.listType === 'memo' || list.listType === 'todo' ? [] : open);
   const groups = useMemo(() => {
     const byCat = new Map<string, ItemRow[]>();
     for (const i of open) {
-      const cat = categoryInList(i.categoryId, list.listType, custom).id;
+      const cat = justAdded.has(i.id) ? JUST_ADDED.id : categoryInList(i.categoryId, list.listType, custom).id;
       byCat.set(cat, [...(byCat.get(cat) ?? []), i]);
     }
-    return categoriesInOrder(list.listType, me?.categoryOrder, custom).filter((c) => byCat.has(c.id)).map((c) => ({
+    return [JUST_ADDED, ...categoriesInOrder(list.listType, me?.categoryOrder, custom)].filter((c) => byCat.has(c.id)).map((c) => ({
       category: c,
       items: byCat.get(c.id)!.sort((a, b) => a.position.localeCompare(b.position)),
     }));
-  }, [open, list.listType, me?.categoryOrder, custom]);
+  }, [open, list.listType, me?.categoryOrder, custom, justAdded]);
 
   const boost = useMemo(() => {
     const used = new Map<string, number>();
