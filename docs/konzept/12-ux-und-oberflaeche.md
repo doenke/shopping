@@ -77,7 +77,7 @@ Laptop-Ansicht.
 | 📋 Als Text teilen … | offene Einträge als Text in den Teilen-Dialog bzw. die Zwischenablage |
 | ↕ Kategorien sortieren … | Einkauf und Packliste |
 | Aus Mealie hinzufügen … | Rezept oder Wochenplan |
-| 🛒 Auf Einkaufsliste setzen … | Packliste: Dinge auswählen und auf eine wählbare Einkaufsliste setzen (auch aus dem Editor eines Eintrags) |
+| 🛒 Auf Einkaufsliste setzen … | Packliste: Dinge auswählen und auf eine wählbare Einkaufsliste setzen (auch aus dem Editor eines Eintrags; dort auch „◇ Auf Vorlage setzen …“) |
 | Mit Vorlage abgleichen … | in beide Richtungen; Richtung Vorlage anfangs nichts angehakt |
 | Als Vorlage speichern, Archivieren, Als Hauptliste festlegen | je nach Typ |
 | Liste verlassen / Liste löschen | Mitglied / Besitzer |

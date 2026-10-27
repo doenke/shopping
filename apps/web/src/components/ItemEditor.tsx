@@ -16,9 +16,9 @@ import {
   type UserInfo,
 } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { createCategory, deleteItem, updateItem } from '../actions';
+import { addItems, createCategory, deleteItem, itemToNew, updateItem } from '../actions';
 import { useCustomCategories } from '../categories';
-import { useMe } from '../hooks';
+import { useLists, useMe } from '../hooks';
 import { Avatar } from './Avatar';
 import { sync } from '../sync/engine';
 
@@ -87,6 +87,20 @@ export function ItemEditor({ item, list, items = [], users, onClose, onToShoppin
   const [reported, setReported] = useState<'idle' | 'done' | 'error'>('idle');
   const me = useMe();
   const guest = !me || me.isGuest;
+
+  // "Auf Vorlage setzen": the list's own template first (the one "Mit Vorlage abgleichen" remembers).
+  const templates = useLists().filter((l) => l.isTemplate && l.listType === list.listType);
+  const rememberedTemplate =
+    typeof list.settings.templateId === 'string' && templates.some((t) => t.id === list.settings.templateId) ? list.settings.templateId : (templates[0]?.id ?? '');
+  const [toTemplate, setToTemplate] = useState<string | null>(null);
+  const [templateDone, setTemplateDone] = useState<string | null>(null);
+  const putOnTemplate = async () => {
+    const template = templates.find((t) => t.id === toTemplate);
+    if (!template) return;
+    // As it is now in the editor (unsaved changes included), without amounts checked off etc.
+    await addItems(template.id, [{ ...itemToNew(item), name: name.trim() || item.name, properties: withCustom(properties), note: note.trim() || null, categoryId, person: person.trim() || null, container: container.trim() || null }]);
+    setTemplateDone(template.name);
+  };
 
   const addCategory = async () => {
     const name = newCategory?.trim();
@@ -345,6 +359,31 @@ export function ItemEditor({ item, list, items = [], users, onClose, onToShoppin
               🛒 Auf Einkaufsliste setzen …
             </button>
           </p>
+        )}
+
+        {!list.isTemplate && templates.length > 0 && me && !me.isGuest && (
+          <div className="sheet__meta">
+            {toTemplate === null ? (
+              <button type="button" className="link" onClick={() => setToTemplate(rememberedTemplate)}>
+                ◇ Auf Vorlage setzen …
+              </button>
+            ) : templateDone ? (
+              <span>✓ Steht jetzt auf „{templateDone}“.</span>
+            ) : (
+              <span className="row">
+                <select value={toTemplate} onChange={(e) => setToTemplate(e.target.value)} aria-label="Vorlage">
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      ◇ {t.name}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="btn" onClick={() => void putOnTemplate()}>
+                  Übernehmen
+                </button>
+              </span>
+            )}
+          </div>
         )}
 
         {/* Catalog items share their icon; Merkliste and free-text entries have one of their own. */}
