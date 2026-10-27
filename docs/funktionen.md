@@ -52,9 +52,9 @@
   bleibt durchgestrichen stehen (Schalter „Eingepackte ausblenden“, pro Liste gemerkt), Fortschritt „12 von 30 eingepackt“, gruppiert nach Kategorie, **Packstück**
   oder **Person**. Beim Tippen ordnen „@Anna“ und „#Koffer“ zu („3 T-Shirts @Anna #Koffer“). Neue Packlisten
   entstehen aus Packvorlagen, erledigte kommen ins Archiv.
-- **Von der Packliste auf die Einkaufsliste**: *⋮ → 🛒 Auf Einkaufsliste setzen …* (oder im Editor eines Eintrags):
-  Dinge auswählen, Einkaufsliste wählen – sie landen dort mit der passenden Lebensmittel-Kategorie und dem
-  Vermerk, für welche Packliste.
+- **Von der Packliste auf die Einkaufsliste** (oder auf eine Vorlage): im Editor eines Eintrags
+  *🛒 Auf Einkaufsliste setzen …* bzw. *◇ Auf Vorlage setzen …* – Liste wählen, übernehmen. Auf der
+  Einkaufsliste mit der passenden Lebensmittel-Kategorie und dem Vermerk, für welche Packliste.
 - **Merklisten** 📌 für Filme, Bücher, Restaurants …: mit **Tipp von** und **Wo** („Dune @Ben #Netflix“),
   gruppierbar nach Ort oder Tippgeber; Erledigtes (gesehen, gelesen, besucht) bleibt unter „Erledigt“. Die
   Beschreibung der Liste („Filme und Serien, die wir sehen wollen“) hilft beim Icon jedes Eintrags.

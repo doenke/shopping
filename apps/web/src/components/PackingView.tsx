@@ -7,7 +7,6 @@ import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
 import { Tile } from './Tile';
-import { ToShoppingDialog } from './ToShoppingDialog';
 
 type GroupBy = 'category' | 'container' | 'person';
 
@@ -54,14 +53,6 @@ function saveFlag(key: string, on: boolean): void {
  */
 export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingView({ list, items, index, users, remoteChecks }, addRef) {
   const [editing, setEditing] = useState<string | null>(null);
-  /** Item whose "Auf Einkaufsliste …" dialog is open. */
-  const [toShopping, setToShopping] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => setNotice(null), 2500);
-    return () => clearTimeout(t);
-  }, [notice]);
   const [undo, setUndo] = useState<ItemRow | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>(() => loadGroupBy(list.id));
   const [hidePacked, setHidePacked] = useState(() => loadFlag(`packing-hide:${list.id}`));
@@ -240,27 +231,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
           items={items}
           users={users}
           onClose={() => setEditing(null)}
-          onToShopping={() => {
-            setToShopping(editItem.id);
-            setEditing(null);
-          }}
         />
-      )}
-      {toShopping && me && (
-        <ToShoppingDialog
-          list={list}
-          me={me}
-          preselected={[toShopping]}
-          onClose={(message) => {
-            setToShopping(null);
-            if (message) setNotice(message);
-          }}
-        />
-      )}
-      {notice && !undo && (
-        <div className="snackbar" role="status">
-          <span>{notice}</span>
-        </div>
       )}
     </section>
   );

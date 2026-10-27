@@ -1,5 +1,6 @@
 import {
   attributeLabels,
+  inUserOrder,
   categoriesFor,
   categoryInList,
   dueOf,
@@ -18,7 +19,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { addItems, createCategory, deleteItem, itemToNew, updateItem } from '../actions';
 import { useCustomCategories } from '../categories';
-import { useLists, useMe } from '../hooks';
+import { useCatalog, useLists, useMe } from '../hooks';
 import { Avatar } from './Avatar';
 import { sync } from '../sync/engine';
 
@@ -29,8 +30,6 @@ interface Props {
   /** The other items of the list, for person/Packstück suggestions. */
   items?: ItemRow[];
   onClose: () => void;
-  /** Packing lists: "Auf Einkaufsliste …" (put it on a shopping list). */
-  onToShopping?: () => void;
 }
 
 /** Sets or removes the due date (undefined: leave as is). */
@@ -56,7 +55,7 @@ function parseQuantity(s: string): number | null {
 
 const NEW_CATEGORY = '__new__';
 
-export function ItemEditor({ item, list, items = [], users, onClose, onToShopping }: Props) {
+export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const isTemplate = list.isTemplate;
   const packing = list.listType === 'packing';
   const todo = list.listType === 'todo';
@@ -88,8 +87,37 @@ export function ItemEditor({ item, list, items = [], users, onClose, onToShoppin
   const me = useMe();
   const guest = !me || me.isGuest;
 
+  // Packing lists, "Auf Einkaufsliste setzen": as the grocery catalog item where there is one (with its category).
+  const allLists = useLists();
+  const shoppingLists = inUserOrder(
+    allLists.filter((l) => l.listType === 'shopping' && !l.isTemplate && !l.archivedAt),
+    me?.listOrder,
+    (l) => l.id,
+  );
+  const groceries = useCatalog().index;
+  const [toShopping, setToShopping] = useState<string | null>(null);
+  const [shoppingDone, setShoppingDone] = useState<string | null>(null);
+  const putOnShopping = async () => {
+    const target = shoppingLists.find((l) => l.id === toShopping);
+    if (!target) return;
+    const n = name.trim() || item.name;
+    const hit = groceries.match(n, false);
+    await addItems(target.id, [
+      {
+        name: hit?.name ?? n,
+        catalogItemId: hit?.id ?? null,
+        categoryId: hit?.categoryId ?? null,
+        amounts: item.amounts,
+        properties: [],
+        note: null,
+        sources: [{ type: 'list', label: list.name }],
+      },
+    ]);
+    setShoppingDone(target.name);
+  };
+
   // "Auf Vorlage setzen": the list's own template first (the one "Mit Vorlage abgleichen" remembers).
-  const templates = useLists().filter((l) => l.isTemplate && l.listType === list.listType);
+  const templates = allLists.filter((l) => l.isTemplate && l.listType === list.listType);
   const rememberedTemplate =
     typeof list.settings.templateId === 'string' && templates.some((t) => t.id === list.settings.templateId) ? list.settings.templateId : (templates[0]?.id ?? '');
   const [toTemplate, setToTemplate] = useState<string | null>(null);
@@ -353,12 +381,30 @@ export function ItemEditor({ item, list, items = [], users, onClose, onToShoppin
           )}
         </p>
 
-        {onToShopping && me && !me.isGuest && (
-          <p className="sheet__meta">
-            <button type="button" className="link" onClick={onToShopping}>
-              🛒 Auf Einkaufsliste setzen …
-            </button>
-          </p>
+        {packing && shoppingLists.length > 0 && me && !me.isGuest && (
+          <div className="sheet__meta">
+            {toShopping === null ? (
+              <button type="button" className="link" onClick={() => setToShopping(me.defaultListId && shoppingLists.some((l) => l.id === me.defaultListId) ? me.defaultListId : shoppingLists[0]!.id)}>
+                🛒 Auf Einkaufsliste setzen …
+              </button>
+            ) : shoppingDone ? (
+              <span>✓ Steht jetzt auf „{shoppingDone}“.</span>
+            ) : (
+              <span className="row">
+                <select value={toShopping} onChange={(e) => setToShopping(e.target.value)} aria-label="Einkaufsliste">
+                  {shoppingLists.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.id === me.defaultListId ? '⭐ ' : ''}
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="btn" onClick={() => void putOnShopping()}>
+                  Übernehmen
+                </button>
+              </span>
+            )}
+          </div>
         )}
 
         {!list.isTemplate && templates.length > 0 && me && !me.isGuest && (
