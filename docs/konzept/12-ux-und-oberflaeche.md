@@ -33,7 +33,8 @@ Laptop-Ansicht.
   („Angebot“ zeigt die Kachel als rotes %-Abzeichen statt als Text)
   (Vokabular je Listentyp), Notiz, Kategorie (auch „+ Neue Kategorie …“), Person/Packstück bzw. Tipp von/Wo bzw. Wer/Bereich,
   ToDo: „+ Fälligkeit“, Herkunft („für Lasagne“), „hinzugefügt von Anna über Claude“.
-  Unten „🛒 Auf Einkaufsliste setzen …“ (Packliste) und „◇ Auf Vorlage setzen …“: Liste wählen, übernehmen.
+  Unten „🛒 Auf Einkaufsliste setzen …“ (Packliste) und „◇ Auf Vorlage setzen …“: Liste wählen, übernehmen;
+  darunter „Steht auf: ◇ …“ mit allen Vorlagen, auf denen das Ding schon ist.
 - **Teilen-Ziel:** Text aus einer anderen App „teilen“ → landet auf der Hauptliste.
 - **Installieren:** Knopf in der Titelzeile, solange die App im Browser läuft (iPhone: Anleitung).
 

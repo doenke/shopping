@@ -19,6 +19,8 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { addItems, createCategory, deleteItem, itemToNew, updateItem } from '../actions';
 import { useCustomCategories } from '../categories';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../db';
 import { useCatalog, useLists, useMe } from '../hooks';
 import { Avatar } from './Avatar';
 import { IconCheck } from './IconCheck';
@@ -122,6 +124,15 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const rememberedTemplate =
     typeof list.settings.templateId === 'string' && templates.some((t) => t.id === list.settings.templateId) ? list.settings.templateId : (templates[0]?.id ?? '');
   const [toTemplate, setToTemplate] = useState<string | null>(null);
+  // The templates this thing is on already (same catalog item, or same name).
+  const templateIds = templates.map((t) => t.id).join(',');
+  const onTemplateIds = useLiveQuery(async () => {
+    if (!templateIds) return [] as string[];
+    const rows = await db.items.where('listId').anyOf(templateIds.split(',')).toArray();
+    const key = item.name.trim().toLowerCase();
+    return [...new Set(rows.filter((r) => !r.deleted && (item.catalogItemId ? r.catalogItemId === item.catalogItemId : r.name.trim().toLowerCase() === key)).map((r) => r.listId))];
+  }, [templateIds, item.catalogItemId, item.name]);
+  const onTemplates = templates.filter((t) => onTemplateIds?.includes(t.id));
   const [templateDone, setTemplateDone] = useState<string | null>(null);
   const putOnTemplate = async () => {
     const template = templates.find((t) => t.id === toTemplate);
@@ -429,6 +440,19 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
                   Übernehmen
                 </button>
               </span>
+            )}
+            {onTemplates.length > 0 && (
+              <p className="on-templates">
+                Steht auf:{' '}
+                {onTemplates.map((t, i) => (
+                  <span key={t.id}>
+                    {i > 0 && ', '}
+                    <a href={`#/list/${t.id}`} onClick={() => onClose()}>
+                      ◇ {t.name}
+                    </a>
+                  </span>
+                ))}
+              </p>
             )}
           </div>
         )}
