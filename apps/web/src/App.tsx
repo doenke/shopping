@@ -233,7 +233,20 @@ function Shell({ me }: { me: Me }) {
     <IconContext.Provider value={icons}>
     <CategoryContext.Provider value={customCategories}>
     <div className={`shell${wide ? ' shell--wide' : ''}${extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' ? ' shell--catalog' : ''}`}>
-      {wide ? sidebar : drawer && <div className="drawer" onClick={() => setDrawer(false)}>{sidebar}</div>}
+      {wide
+        ? sidebar
+        : drawer && (
+            <div
+              className="drawer"
+              onClick={(e) => {
+                // Closes on the backdrop or a link/button – not when a section like "Archiv" is unfolded.
+                const t = e.target as HTMLElement;
+                if (t === e.currentTarget || (t.closest('a, button') && !t.closest('summary'))) setDrawer(false);
+              }}
+            >
+              {sidebar}
+            </div>
+          )}
 
       <div className="main">
         <header className={`topbar${shopMode ? ' topbar--shopping' : ''}`}>
