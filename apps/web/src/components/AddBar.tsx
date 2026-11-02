@@ -130,7 +130,7 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
               />
             ))}
             {freeText && !hasAmount && <Tile item={single} variant="suggestion" badge="neu" onTap={() => void submit()} />}
-            {asTyped && <Tile item={asTyped} variant="suggestion" badge="so" onTap={() => void addAsTyped()} />}
+            {asTyped && <Tile item={asTyped} variant="suggestion" onTap={() => void addAsTyped()} />}
           </div>
           {single && hasAmount && <p className="addbar__hint">Enter fügt „{[single.name, itemSpecification(single)].filter(Boolean).join(' · ')}“ hinzu</p>}
         </div>
