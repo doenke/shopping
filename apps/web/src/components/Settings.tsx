@@ -256,8 +256,12 @@ export function Settings({ me, section, onSort }: { me: Me; section?: SettingsSe
           {mealie.inbox.enabled && mealie.inbox.appriseUrl && (
             <div className="hint">
               <p>
-                Damit Artikel sofort ankommen: In Mealie unter <em>Haushalt → Benachrichtigungen</em> einen Notifier anlegen, diese
-                Apprise-URL eintragen und das Ereignis <em>Einkaufsliste</em> aktivieren. Ohne Notifier wird alle 15 Minuten abgeglichen.
+                Damit Artikel sofort ankommen: In Mealie unter <em>Einstellungen → Haushalt → Benachrichtigungen</em> eine
+                Benachrichtigung mit dieser Apprise-URL anlegen und bei den Einkaufslisten-Ereignissen <em>Erstellt</em> und{' '}
+                <em>Aktualisiert</em> einschalten. Ohne Benachrichtigung wird alle 15 Minuten abgeglichen. Anleitung:{' '}
+                <a href="https://github.com/doenke/shopping/blob/main/docs/mealie.md" target="_blank" rel="noreferrer">
+                  docs/mealie.md
+                </a>
               </p>
               <Copy text={mealie.inbox.appriseUrl} />
               <p className="muted">Ein bisheriger n8n-Flow für Mealie-Einkaufslisten kann danach abgeschaltet werden.</p>
