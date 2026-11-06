@@ -8,6 +8,10 @@
   Menge, Einheit und Eigenschaften werden erkannt, mehrere Artikel mit Komma.
   Wird etwas nur über ein Synonym gefunden („Stirnlampe“ → Taschenlampe), gibt es neben dem Vorschlag eine
   Kachel mit genau dem Getippten.
+- **Rezept aus dem Web** (Chefkoch, Lecker, EAT SMARTER, BBC Good Food …): den Link des Rezepts in die
+  Eingabezeile einer Einkaufsliste einfügen oder in der Rezept-App/im Browser *Teilen → Shopping* wählen.
+  Shopping liest die Zutaten aus den Rezeptdaten der Seite (wie Bring es tut) und zeigt sie als Checkliste:
+  Portionen anpassen, Vorrat wie Salz und Öl ist vorab abgewählt, Einkaufsliste wählen.
 - **Spracheingabe**: 🎤 in der Eingabezeile, „zwei Liter Milch und Butter“ – auf Einkaufs- und Packlisten
   wird „und“ zum Trenner, das Gesagte steht zur Kontrolle im Feld (Chrome/Android, Safari; braucht Netz).
 - **Doppelte Artikel** werden zusammengeführt (1 l + 2 l Milch = 3 l); zuletzt gekaufte kommen zurück

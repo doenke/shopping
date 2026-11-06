@@ -13,6 +13,7 @@ import { MembersDialog } from './components/MembersDialog';
 import { LIST_TYPE_LABEL, NewListDialog } from './components/NewListDialog';
 import { SortDialog } from './components/SortDialog';
 import { SyncTemplateDialog } from './components/SyncTemplateDialog';
+import { RecipeUrlDialog, findUrl } from './components/RecipeUrlDialog';
 import { ListView } from './components/ListView';
 import { Login } from './components/Login';
 import { SECTION_TITLE, Settings } from './components/Settings';
@@ -132,14 +133,17 @@ function Shell({ me }: { me: Me }) {
   useWakeLock(shopMode);
   const items = useItems(list?.id);
 
-  // Shared text from another app ("Teilen → Shopping") lands on the main list.
+  // Shared text from another app ("Teilen → Shopping") lands on the main list; a recipe link opens its ingredients.
+  const [sharedRecipe, setSharedRecipe] = useState<string | null>(null);
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const text = params.get('share_text') ?? params.get('share_title');
+    const text = [params.get('share_title'), params.get('share_text'), params.get('share_url')].filter(Boolean).join(' ');
     const target = mainList?.id;
     if (!text || !target) return;
     history.replaceState(null, '', '/');
-    void addItems(target, parseInput(text, catalog.index));
+    const link = findUrl(text);
+    if (link) setSharedRecipe(link);
+    else void addItems(target, parseInput(text, catalog.index));
   }, [mainList?.id, catalog.index]);
 
   useEffect(() => {
@@ -341,6 +345,7 @@ function Shell({ me }: { me: Me }) {
       {syncDialog && list && (
         <SyncTemplateDialog list={list} templates={templates.filter((t) => t.listType === list.listType)} onClose={() => setSyncDialog(false)} />
       )}
+      {sharedRecipe && <RecipeUrlDialog url={sharedRecipe} listId={mainList?.id} onClose={() => setSharedRecipe(null)} />}
       {notice && (
         <div className="snackbar" role="status">
           <span>{notice}</span>

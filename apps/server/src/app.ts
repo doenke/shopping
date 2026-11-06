@@ -24,6 +24,7 @@ import { iconRoutes } from './icons/routes.js';
 import { IconService } from './icons/service.js';
 import { mcpRoutes } from './mcp/server.js';
 import { mealieRoutes } from './mealie/routes.js';
+import { fetchWebRecipe, RecipeError, webRecipeCandidates } from './recipes/web-recipe.js';
 import { oauthRoutes } from './oauth/routes.js';
 import { MealieService } from './mealie/service.js';
 import { sharingRoutes } from './sharing/routes.js';
@@ -160,6 +161,19 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
           .where(since ? gt(catalogItems.seq, since) : undefined);
         return { items: rows.map(toCatalogItem), categories: CATEGORIES, categoryIcons: await icons.categoryIcons(), pendingIcons: await icons.pendingTargets(), seq };
       });
+    });
+
+    // "Rezept aus dem Web": a recipe page (Chefkoch & co.) read like Bring does – from its schema.org data.
+    api.get('/api/v1/recipes/from-url', { preHandler: requireAccount }, async (request, reply) => {
+      const q = z.object({ url: z.string().url().max(2000), servings: z.coerce.number().positive().max(100).optional() }).parse(request.query);
+      try {
+        const recipe = await fetchWebRecipe(q.url, fetchImpl);
+        const catalog = (await db.select().from(catalogItems).where(eq(catalogItems.kind, 'shopping'))).map(toCatalogItem);
+        return await webRecipeCandidates(recipe, catalog, q.servings);
+      } catch (err) {
+        if (err instanceof RecipeError) return reply.code(422).send({ error: 'recipe', detail: err.message });
+        throw err;
+      }
     });
 
     api.patch('/api/v1/catalog/:id', { preHandler: requireAccount }, async (request, reply) => {

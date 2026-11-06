@@ -1,6 +1,7 @@
 import { CatalogIndex, extractPackingTokens, isOwnName, itemSpecification, parseInput, type CatalogItem, type ListType } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, catalogToParsed } from '../actions';
+import { RecipeUrlDialog, findUrl } from './RecipeUrlDialog';
 import { Tile } from './Tile';
 
 interface Props {
@@ -26,8 +27,17 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
     [text, packing, index, boost, hasAmount],
   );
 
+  // A recipe link (Chefkoch & co.) on a shopping list: its ingredients, not the link as an item.
+  const recipeLink = listType === 'shopping' ? findUrl(text) : null;
+  const [recipeUrl, setRecipeUrl] = useState<string | null>(null);
+
   // Clear the field first, so fast typing never loses the next entry.
   const submit = async () => {
+    if (recipeLink) {
+      setRecipeUrl(recipeLink);
+      setText('');
+      return;
+    }
     if (parsed.length === 0) return;
     setText('');
     await addItems(listId, parsed);
@@ -112,7 +122,15 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
           </button>
         )}
       </form>
-      {text.trim() && (
+      {recipeUrl && <RecipeUrlDialog url={recipeUrl} listId={listId} onClose={() => setRecipeUrl(null)} />}
+      {text.trim() && recipeLink && (
+        <div className="addbar__results">
+          <button type="button" className="addbar__multi" onClick={() => void submit()}>
+            🍲 Rezept übernehmen: Zutaten von {new URL(recipeLink).hostname.replace(/^www\./, '')} auswählen …
+          </button>
+        </div>
+      )}
+      {text.trim() && !recipeLink && (
         <div className="addbar__results">
           {parsed.length > 1 && (
             <button type="button" className="addbar__multi" onClick={() => void submit()}>

@@ -35,7 +35,7 @@ export default defineConfig({
         share_target: {
           action: '/',
           method: 'GET',
-          params: { text: 'share_text', title: 'share_title' },
+          params: { text: 'share_text', title: 'share_title', url: 'share_url' },
         },
       },
       devOptions: { enabled: false },

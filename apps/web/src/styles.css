@@ -1818,3 +1818,27 @@ img.avatar {
   color: var(--primary);
   text-decoration: none;
 }
+
+/* "Rezept übernehmen" */
+.recipe-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.recipe-head img {
+  border-radius: 10px;
+  object-fit: cover;
+}
+.recipe-head a {
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.sheet__actions select {
+  min-height: 44px;
+  max-width: 50%;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
