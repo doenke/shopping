@@ -172,10 +172,19 @@ function Shell({ me }: { me: Me }) {
 
   const sidebar = (
     <nav className="sidebar" aria-label="Listen">
-      <div className="sidebar__head">
+      <a
+        href={mainList ? `#/list/${mainList.id}` : '#/'}
+        className="sidebar__head"
+        title="Zur Hauptliste"
+        onClick={(e) => {
+          e.preventDefault();
+          setDrawer(false);
+          navigate(mainList ? { page: 'list', listId: mainList.id } : { page: 'list' });
+        }}
+      >
         <img src="/icon.svg" alt="" width={28} height={28} />
         <strong>Shopping</strong>
-      </div>
+      </a>
       {!guest && (
         <button type="button" className="btn btn--primary sidebar__new" onClick={() => newList()}>
           + Neu
