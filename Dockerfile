@@ -10,6 +10,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
+COPY apps/e2e/package.json apps/e2e/
 RUN pnpm install --frozen-lockfile
 COPY . .
 # x.yy.zzz, computed by CI (scripts/version.mjs); declared late so it does not invalidate the install layer.

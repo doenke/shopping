@@ -1,0 +1,14 @@
+{
+  "name": "@shopping/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e": "playwright test --trace off",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "postgres": "^3.4.5",
+    "@types/node": "^22.20.5"
+  }
+}

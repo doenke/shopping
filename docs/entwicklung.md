@@ -20,6 +20,8 @@ Mit `DEV_LOGIN=true` kann man sich lokal nur mit einem Namen anmelden – **niem
 ```bash
 pnpm typecheck
 pnpm test     # Server-Tests brauchen TEST_DATABASE_URL (Standard: postgres://postgres@127.0.0.1:54329/postgres)
+pnpm build && pnpm e2e   # Rauchtests der echten App im Browser (Handy + Laptop, Playwright, eigene DB shopping_e2e)
+pnpm format   # Prettier (die CI prüft mit pnpm format:check)
 pnpm build
 ```
 

@@ -25,4 +25,5 @@ einem Push die Versionen aus der CI-Zusammenfassung dem Nutzer nennen.
 
 - Antworten an den Nutzer auf Deutsch; direkt auf `main` arbeiten.
 - Keine persönlichen Domains in Repo-Dateien, keine Benachrichtigungen einbauen.
-- Tests: `pnpm test` (braucht PostgreSQL, `TEST_DATABASE_URL`), HA: `ha-tests/` mit pytest.
+- Tests: `pnpm test` (braucht PostgreSQL, `TEST_DATABASE_URL`), App im Browser: `pnpm build && pnpm e2e`
+  (Playwright, `apps/e2e`), HA: `ha-tests/` mit pytest. Formatierung: `pnpm format` (CI prüft `format:check`).

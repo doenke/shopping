@@ -12,9 +12,10 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "e2e": "pnpm --filter @shopping/e2e e2e",
     "db:generate": "pnpm --filter @shopping/server db:generate",
-    "format": "prettier --write \"apps/*/src/**/*.{ts,tsx,css}\" \"apps/*/test/**/*.ts\" \"packages/*/src/**/*.ts\"",
-    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx,css}\" \"apps/*/test/**/*.ts\" \"packages/*/src/**/*.ts\""
+    "format": "prettier --write \"apps/*/src/**/*.{ts,tsx,css}\" \"apps/*/test/**/*.ts\" \"apps/e2e/**/*.ts\" \"packages/*/src/**/*.ts\"",
+    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx,css}\" \"apps/*/test/**/*.ts\" \"apps/e2e/**/*.ts\" \"packages/*/src/**/*.ts\""
   },
   "devDependencies": {
     "prettier": "^3.9.10"
