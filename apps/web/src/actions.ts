@@ -163,6 +163,13 @@ export async function setListOrder(ids: string[]): Promise<void> {
   await sync.mutateMe({ listOrder: ids });
 }
 
+/** "Alle als erledigt markieren": checks every open item of a list; returns how many. */
+export async function checkAll(listId: string): Promise<number> {
+  const open = (await db.items.where('listId').equals(listId).toArray()).filter((i) => !i.checked && !i.deleted);
+  await sync.mutateItems(open.map((i) => ({ id: i.id, patch: { checked: true } })));
+  return open.length;
+}
+
 /** Removes bought items from "Zuletzt verwendet". */
 export async function clearChecked(listId: string): Promise<void> {
   const checked = (await db.items.where('listId').equals(listId).toArray()).filter((i) => i.checked && !i.deleted);

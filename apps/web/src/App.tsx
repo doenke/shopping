@@ -1,6 +1,6 @@
 import { categoriesInOrder, groupLists, inUserOrder, listGroup, parseInput, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, archiveList, createList, deleteList, leaveList, saveAsTemplate, setCategoryOrder, setListOrder, setSectionOrder, setMainList, shareListAsText } from './actions';
+import { addItems, checkAll, archiveList, createList, deleteList, leaveList, saveAsTemplate, setCategoryOrder, setListOrder, setSectionOrder, setMainList, shareListAsText } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
@@ -18,8 +18,8 @@ import { ListView } from './components/ListView';
 import { Login } from './components/Login';
 import { SECTION_TITLE, Settings } from './components/Settings';
 import { SyncBadge, SyncDot, useSyncInfo } from './components/SyncBadge';
-import { setMeta } from './db';
 import { CategoryContext } from './categories';
+import { db, setMeta } from './db';
 import { IconContext } from './icons';
 import { navigate, useTileView, useCatalog, useCategoryRows, useIcons, useItems, useLists, useMe, useMediaQuery, useRemoteChecks, useRoute, useUsers } from './hooks';
 import { sync } from './sync/engine';
@@ -296,6 +296,7 @@ function Shell({ me }: { me: Me }) {
                   onSortCategories={() => setSorting(list.listType)}
                   onEdit={() => setEditing(true)}
                   onCopied={() => setNotice('Liste als Text kopiert')}
+                  onNotice={setNotice}
                 />
               )}
             </div>
@@ -423,9 +424,10 @@ interface ListMenuProps {
   onSortCategories: () => void;
   onEdit: () => void;
   onCopied: () => void;
+  onNotice: (text: string) => void;
 }
 
-function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories, onEdit, onCopied }: ListMenuProps) {
+function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories, onEdit, onCopied, onNotice }: ListMenuProps) {
   const guest = me.isGuest;
   const isOwner = list.ownerId === me.id;
   const [tileView, setTileView] = useTileView();
@@ -560,6 +562,26 @@ function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImp
           }}
         >
           ⭐ Als Hauptliste festlegen
+        </button>
+      )}
+      {!list.isTemplate && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onClose();
+            void db.items
+              .where('listId')
+              .equals(list.id)
+              .filter((i) => !i.checked && !i.deleted)
+              .count()
+              .then((n) => {
+                if (n === 0) return onNotice('Es ist schon alles erledigt.');
+                if (confirm(`Alle ${n} offenen Einträge als erledigt markieren?`)) void checkAll(list.id).then((c) => onNotice(`${c} Einträge als erledigt markiert.`));
+              });
+          }}
+        >
+          ✓ Alle als erledigt markieren
         </button>
       )}
       {!isOwner && !guest && (

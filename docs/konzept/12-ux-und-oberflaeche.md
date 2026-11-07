@@ -82,6 +82,7 @@ Laptop-Ansicht.
 | Aus Mealie hinzufügen … | Rezept oder Wochenplan |
 | Mit Vorlage abgleichen … | in beide Richtungen; Richtung Vorlage anfangs nichts angehakt |
 | Als Vorlage speichern, Archivieren, Als Hauptliste festlegen | je nach Typ |
+| ✓ Alle als erledigt markieren | mit Sicherheitsabfrage (nicht in Vorlagen) |
 | Liste verlassen / Liste löschen | Mitglied / Besitzer |
 
 ## Einstellungen
