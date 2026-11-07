@@ -437,25 +437,29 @@ function useTokenCount(): number | null {
   return n;
 }
 
-/** Who is in the own household (from the server; hidden offline). */
+/** "Wer ist in meinem Haushalt?" – only with more than one member; the people show on a tap (from the server; hidden offline). */
 function HouseholdMembers({ name }: { name: string | null }) {
   const [all] = useHouseholds([name]);
+  const [open, setOpen] = useState(false);
   const own = all?.find((h) => h.own);
-  if (!own) return null;
+  if (!own || own.members.length < 2) return null;
   return (
-    <div className="settings-row household-members" aria-label="Wer ist im Haushalt?">
-      <span className="settings-row__icon" aria-hidden>
-        👥
-      </span>
-      <ul>
-        {own.members.map((m) => (
-          <li key={m.id}>
-            <Avatar user={m} size="xs" /> {m.displayName}
-            {m.isAdmin && <span className="owner-badge admin-badge">🛠 Admin</span>}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <>
+      <SettingsRow icon="👥" title="Wer ist in meinem Haushalt?" text={open ? undefined : `${own.members.length} Personen`} onClick={() => setOpen((o) => !o)} />
+      {open && (
+        <div className="settings-row household-members" aria-label="Wer ist im Haushalt?">
+          <span className="settings-row__icon" aria-hidden />
+          <ul>
+            {own.members.map((m) => (
+              <li key={m.id}>
+                <Avatar user={m} size="xs" /> {m.displayName}
+                {m.isAdmin && <span className="owner-badge admin-badge">🛠 Admin</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -2023,3 +2023,6 @@ img.avatar {
   background: color-mix(in srgb, var(--muted, #69716c) 16%, transparent);
   color: var(--text);
 }
+.household-members .settings-row__icon {
+  background: none;
+}

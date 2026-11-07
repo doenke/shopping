@@ -27,7 +27,7 @@ wechselt (andere Gruppe, anderer Claim), nimmt seine eigenen Listen mit – das 
 | `DEFAULT_HOUSEHOLD_NAME` | leer | Name des gemeinsamen Haushalts beim ersten Anlegen (sonst Nachname) |
 
 Nur Pocket-ID-Benutzer gehören zu einem Haushalt, Gäste nie. Wer alles im eigenen Haushalt ist, zeigt
-*Einstellungen → Haushalt*; der Owner-Haushalt trägt dort und beim Teilen das Abzeichen „👑 Owner“.
+*Einstellungen → Haushalt → Wer ist in meinem Haushalt?* (ab zwei Mitgliedern); der Owner-Haushalt trägt dort und beim Teilen das Abzeichen „👑 Owner“.
 
 ## Mit anderen Haushalten oder Personen teilen
 
