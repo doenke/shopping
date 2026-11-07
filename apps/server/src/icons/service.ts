@@ -27,69 +27,24 @@ import { processIcon, referenceImage } from './image.js';
 import { buildPrompt, DEFAULT_STYLE } from './prompt.js';
 import { ANCHOR_ITEMS, CATEGORY_SUBJECTS, PACKING_SUBJECTS, SEED_SUBJECTS } from './subjects.js';
 import { knownSpiceColor, spicePileSvg } from './spices.js';
+import {
+  MIN_ANCHORS,
+  TICK_MS,
+  CHANGE_DELAY_MS,
+  FREE_LIST,
+  type IconSettings,
+  DEFAULTS,
+  type SettingsUpdate,
+  PROVIDER_NAMES,
+  type RunResult,
+  today,
+  passesChecks,
+  iconToken,
+} from './settings.js';
+import { IconQueries } from './queries.js';
+export { MIN_ANCHORS, iconToken, passesChecks, type IconSettings, type SettingsUpdate } from './settings.js';
 
-/** Below this many anchors the style is still being found: only the anchor items are generated. */
-export const MIN_ANCHORS = 4;
-const TICK_MS = 5 * 60_000;
-const CHANGE_DELAY_MS = 3_000;
-/** Lists whose free-text entries get their own picture (Merklisten always do). */
-const FREE_LIST = sql`l.list_type IN ('shopping', 'packing')`;
-
-export interface IconSettings {
-  /** Works through the queue on its own (daily budget permitting). */
-  enabled: boolean;
-  /** Approve the first candidate that passes all checks right away, no manual review. */
-  autoApprove: boolean;
-  provider: ProviderId;
-  candidates: number;
-  style: string;
-  cloudflare: { accountId: string | null; token: string | null; model: string; dailyLimit: number; size: number };
-  /** monthlyCap in € (or $) – stops paid generation for the rest of the month. */
-  openai: { apiKey: string | null; model: string; quality: string; monthlyCap: number };
-  /** Claude: draws SVG icons, pre-reviews pictures, describes items. One cap for all three. */
-  anthropic: { apiKey: string | null; svgModel: string; review: boolean; categorize: boolean; fallback: boolean; reviewModel: string; monthlyCap: number };
-  pausedUntil: string | null;
-  pauseReason: string | null;
-}
-
-const DEFAULTS: IconSettings = {
-  enabled: false,
-  autoApprove: true,
-  provider: 'cloudflare',
-  candidates: 2,
-  style: DEFAULT_STYLE,
-  cloudflare: { accountId: null, token: null, model: 'flux-2-klein-4b', dailyLimit: 150, size: 512 },
-  openai: { apiKey: null, model: 'gpt-image-1-mini', quality: 'medium', monthlyCap: 10 },
-  anthropic: { apiKey: null, svgModel: 'claude-sonnet-5-5', review: true, categorize: true, fallback: true, reviewModel: 'claude-haiku-5-5', monthlyCap: 10 },
-  pausedUntil: null,
-  pauseReason: null,
-};
-
-export type SettingsUpdate = Partial<Omit<IconSettings, 'cloudflare' | 'openai' | 'anthropic' | 'pausedUntil' | 'pauseReason'>> & {
-  cloudflare?: Partial<IconSettings['cloudflare']>;
-  openai?: Partial<IconSettings['openai']>;
-  anthropic?: Partial<IconSettings['anthropic']>;
-};
-
-const PROVIDER_NAMES: Record<ProviderId, string> = { cloudflare: 'Cloudflare', openai: 'OpenAI', claude: 'Claude' };
-
-type RunResult = 'idle' | 'done' | 'paused' | 'budget' | 'failed' | 'unconfigured';
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/** Good enough to go live without a person: all technical checks, and the AI pre-review if there was one. */
-export function passesChecks(checks: Record<string, boolean>, aiReview: ReviewVerdict | null): boolean {
-  return Object.values(checks).every(Boolean) && (aiReview === null || aiReview.ok);
-}
-
-/** Version token in icon URLs: a new approved icon gets a new URL, so caches never serve an old one. */
-export function iconToken(iconId: string): string {
-  return iconId.replace(/-/g, '').slice(0, 10);
-}
-
-export class IconService {
+export class IconService extends IconQueries {
   private timer: NodeJS.Timeout | undefined;
   private draining: Promise<void> | null = null;
   /** Something changed since the queue was last planned (e.g. a new entry). */
@@ -99,13 +54,15 @@ export class IconService {
   delayMs = 3000;
 
   constructor(
-    private readonly db: Db,
+    db: Db,
     private readonly secrets: SecretBox,
     private readonly sync: SyncService,
     private readonly hub: SyncHub,
     private readonly log: FastifyBaseLogger,
     private readonly fetchImpl?: typeof fetch,
-  ) {}
+  ) {
+    super(db);
+  }
 
   // ---- settings --------------------------------------------------------------
 
@@ -1302,154 +1259,6 @@ export class IconService {
     return row!.id;
   }
 
-  private async names(targets: { targetType: IconTarget; targetId: string }[]) {
-    const ids = targets.filter((t) => t.targetType === 'item').map((t) => t.targetId);
-    const rows = ids.length
-      ? await this.db
-          .select({ id: catalogItems.id, name: catalogItems.name, categoryId: catalogItems.categoryId, subject: catalogItems.iconSubject })
-          .from(catalogItems)
-          .where(inArray(catalogItems.id, ids))
-      : [];
-    const byId = new Map(rows.map((r) => [r.id, r]));
-    const entryIds = targets.filter((t) => t.targetType === 'entry').map((t) => t.targetId);
-    const entries = entryIds.length
-      ? await this.db
-          .select({ id: listItems.id, name: listItems.name, list: lists.name, listType: lists.listType, categoryId: listItems.categoryId })
-          .from(listItems)
-          .innerJoin(lists, eq(lists.id, listItems.listId))
-          .where(inArray(listItems.id, entryIds))
-      : [];
-    const entryById = new Map(entries.map((e) => [e.id, e]));
-    const listIds = targets.filter((t) => t.targetType === 'list').map((t) => t.targetId);
-    const listRows = listIds.length ? await this.db.select({ id: lists.id, name: lists.name }).from(lists).where(inArray(lists.id, listIds)) : [];
-    const listById = new Map(listRows.map((l) => [l.id, l.name]));
-    const catIds = targets.filter((t) => t.targetType === 'category' && /^[0-9a-f-]{36}$/.test(t.targetId)).map((t) => t.targetId);
-    const ownCats = catIds.length
-      ? await this.db
-          .select({ id: customCategories.id, name: customCategories.name, subject: customCategories.iconSubject })
-          .from(customCategories)
-          .where(inArray(customCategories.id, catIds))
-      : [];
-    const ownCatById = new Map(ownCats.map((c) => [c.id, c]));
-    return (t: { targetType: IconTarget; targetId: string }) => {
-      if (t.targetType === 'list') return { name: `${listById.get(t.targetId) ?? '?'} (Liste)`, categoryId: 'eigene', subject: null };
-      if (t.targetType === 'entry') {
-        const e = entryById.get(t.targetId);
-        return { name: e ? `${e.name} (${e.list})` : '?', categoryId: e && e.listType !== 'memo' ? (e.categoryId ?? 'eigene') : 'merkliste', subject: null };
-      }
-      if (t.targetType === 'category') {
-        const own = ownCatById.get(t.targetId);
-        if (own) return { name: `${own.name} (eigene Kategorie)`, categoryId: t.targetId, subject: own.subject };
-        return { name: getCategory(t.targetId).name, categoryId: t.targetId, subject: CATEGORY_SUBJECTS[t.targetId] ?? null };
-      }
-      const r = byId.get(t.targetId);
-      return {
-        name: r?.name ?? '?',
-        categoryId: r?.categoryId ?? 'eigene',
-        subject: r?.subject ?? (r ? (SEED_SUBJECTS[r.name] ?? PACKING_SUBJECTS[r.name] ?? null) : null),
-      };
-    };
-  }
-
-  /** Catalog items and entries with drafts waiting for review (the app marks their tiles). */
-  async pendingTargets(): Promise<string[]> {
-    const rows = await this.db.execute<{ target_id: string }>(sql`
-      SELECT DISTINCT target_id FROM ${icons} WHERE status = 'candidate' AND target_type IN ('item', 'entry')`);
-    return rows.map((r) => r.target_id);
-  }
-
-  /** Drafts of one target waiting for review, and its current picture (for the item editor). */
-  async pendingFor(targetType: IconTarget, targetId: string) {
-    // Free-text entries share one picture per name: the drafts may hang on another entry of that name.
-    if (targetType === 'entry' && /^[0-9a-f-]{36}$/.test(targetId)) {
-      const [shared] = await this.db.execute<{ target_id: string }>(sql`
-        SELECT i.target_id FROM ${icons} i
-        JOIN ${listItems} o ON i.target_id = o.id::text JOIN ${lists} ol ON ol.id = o.list_id
-        JOIN ${listItems} e ON e.id = ${targetId}::uuid
-        WHERE i.target_type = 'entry' AND i.status = 'candidate' AND o.id <> e.id
-          AND ol.list_type IN ('shopping', 'packing') AND o.catalog_item_id IS NULL
-          AND lower(trim(o.name)) = lower(trim(e.name))
-          AND NOT EXISTS (SELECT 1 FROM ${icons} x WHERE x.target_type = 'entry' AND x.target_id = e.id::text AND x.status = 'candidate')
-        ORDER BY i.created_at DESC LIMIT 1`);
-      if (shared) targetId = shared.target_id;
-    }
-    const rows = await this.db
-      .select({ id: icons.id, status: icons.status, aiReview: icons.aiReview, checks: icons.checks, provider: icons.provider })
-      .from(icons)
-      .where(and(eq(icons.targetType, targetType), eq(icons.targetId, targetId), inArray(icons.status, ['candidate', 'approved'])))
-      .orderBy(asc(icons.createdAt));
-    return {
-      targetType,
-      targetId,
-      approved: rows.find((r) => r.status === 'approved')?.id ?? null,
-      candidates: rows
-        .filter((r) => r.status === 'candidate')
-        .map((r) => ({ id: r.id, aiReview: r.aiReview, checks: r.checks, provider: r.provider }))
-        .sort((a, b) => Number(a.aiReview?.ok === false) - Number(b.aiReview?.ok === false)),
-    };
-  }
-
-  /** Targets with candidates waiting for review, oldest first. */
-  async reviewQueue(limit = 20) {
-    const rows = await this.db
-      .select({
-        id: icons.id,
-        targetType: icons.targetType,
-        targetId: icons.targetId,
-        status: icons.status,
-        checks: icons.checks,
-        aiReview: icons.aiReview,
-        provider: icons.provider,
-        model: icons.model,
-        createdAt: icons.createdAt,
-      })
-      .from(icons)
-      .where(
-        and(
-          inArray(icons.status, ['candidate', 'approved']),
-          sql`(${icons.targetType}, ${icons.targetId}) IN (
-            SELECT target_type, target_id FROM ${icons} WHERE status = 'candidate'
-            GROUP BY target_type, target_id ORDER BY min(created_at) LIMIT ${limit})`,
-        ),
-      )
-      .orderBy(asc(icons.createdAt));
-    const name = await this.names(rows);
-    const targets = new Map<
-      string,
-      ReturnType<typeof name> & { targetType: IconTarget; targetId: string; approved: string | null; candidates: typeof rows; since: Date }
-    >();
-    for (const r of rows) {
-      const key = `${r.targetType}:${r.targetId}`;
-      let t = targets.get(key);
-      if (!t) {
-        t = { targetType: r.targetType, targetId: r.targetId, ...name(r), approved: null, candidates: [], since: r.createdAt };
-        targets.set(key, t);
-      }
-      if (r.status === 'approved') t.approved = r.id;
-      else t.candidates.push(r);
-    }
-    return [...targets.values()]
-      .filter((t) => t.candidates.length)
-      .map((t) => ({
-        ...t,
-        // What the AI pre-review sorted out comes last – still visible, a person has the last word.
-        candidates: t.candidates
-          .map((c) => ({ id: c.id, checks: c.checks, aiReview: c.aiReview, provider: c.provider, model: c.model, createdAt: c.createdAt }))
-          .sort((a, b) => Number(a.aiReview?.ok === false) - Number(b.aiReview?.ok === false)),
-      }));
-  }
-
-  /** All approved icons, for the overview and to pick style references. */
-  async gallery() {
-    const rows = await this.db
-      .select({ id: icons.id, targetType: icons.targetType, targetId: icons.targetId, isAnchor: icons.isAnchor, reviewedAt: icons.reviewedAt })
-      .from(icons)
-      .where(eq(icons.status, 'approved'))
-      .orderBy(desc(icons.isAnchor), desc(icons.reviewedAt));
-    const name = await this.names(rows);
-    return rows.map((r) => ({ ...r, ...name(r) }));
-  }
-
   async status() {
     const s = await this.publicSettings();
     const [counts] = await this.db.execute<{ items: number; with_icon: number; candidates: number; queued: number; failed: number }>(sql`
@@ -1490,37 +1299,5 @@ export class IconService {
   async retryFailed(): Promise<void> {
     await this.db.delete(iconJobs).where(eq(iconJobs.status, 'failed'));
     this.kick();
-  }
-
-  // ---- delivery ----------------------------------------------------------------------
-
-  async categoryIcons(): Promise<Record<string, string>> {
-    const rows = await this.db
-      .select({ id: icons.id, targetId: icons.targetId })
-      .from(icons)
-      .where(and(eq(icons.targetType, 'category'), eq(icons.status, 'approved')));
-    return Object.fromEntries(rows.map((r) => [r.targetId, iconToken(r.id)]));
-  }
-
-  async approvedImage(targetType: IconTarget, targetId: string): Promise<{ token: string; thumb: Buffer } | null> {
-    const [row] = await this.db
-      .select({ id: icons.id, thumb: icons.thumb })
-      .from(icons)
-      .where(and(eq(icons.targetType, targetType), eq(icons.targetId, targetId), eq(icons.status, 'approved')))
-      .limit(1);
-    if (row?.thumb) return { token: iconToken(row.id), thumb: row.thumb };
-    if (targetType !== 'entry' || !/^[0-9a-f-]{36}$/.test(targetId)) return null;
-    // A free-text entry may show the picture drawn for another entry of the same name.
-    const [shared] = await this.db.execute<{ id: string; thumb: Buffer | null }>(sql`
-      SELECT i.id, i.thumb FROM ${listItems} li JOIN ${icons} i
-        ON i.target_type = 'entry' AND i.status = 'approved' AND replace(i.id::text, '-', '') LIKE li.icon || '%'
-      WHERE li.id = ${targetId}::uuid AND li.icon IS NOT NULL
-      LIMIT 1`);
-    return shared?.thumb ? { token: iconToken(shared.id), thumb: shared.thumb } : null;
-  }
-
-  async image(iconId: string, size: 'master' | 'thumb'): Promise<Buffer | null> {
-    const [row] = await this.db.select({ image: icons.image, thumb: icons.thumb }).from(icons).where(eq(icons.id, iconId));
-    return (size === 'master' ? row?.image : row?.thumb) ?? null;
   }
 }
