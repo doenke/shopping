@@ -22,6 +22,8 @@ export interface ListRow {
   deleted: boolean;
   /** household: the whole household sees it; private: only the owner (and people with the link). */
   visibility: ListVisibility;
+  /** Shared beyond the own household (set by the server): 🔗 via the link, 👥 with people/households, or both. */
+  sharing?: 'link' | 'people' | 'both' | null;
   createdAt: string;
   hlc: FieldClock;
   seq: number;

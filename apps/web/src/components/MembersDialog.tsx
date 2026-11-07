@@ -1,6 +1,7 @@
 import type { ListRow, Me } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { setVisibility, shareList } from '../actions';
+import { useHouseholds } from '../households';
 import { Avatar } from './Avatar';
 
 interface Member {
@@ -9,21 +10,47 @@ interface Member {
   avatarUrl: string | null;
   isGuest: boolean;
   isOwner: boolean;
-  via: 'owner' | 'link' | 'household';
+  via: 'owner' | 'link' | 'household' | 'shared' | 'invite';
 }
 
-/** Berechtigungen: who sees the list (household or private), who is on it, the share link. */
+async function send(url: string, method: 'POST' | 'DELETE', body?: unknown): Promise<boolean> {
+  const res = await fetch(url, { method, ...(body ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}) }).catch(() => null);
+  return !!res?.ok;
+}
+
+/** Berechtigungen: who sees the list (household or private), other households and people it is shared with, who is on it, the share link. */
 export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [members, setMembers] = useState<Member[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isOwner = list.ownerId === me.id;
 
-  const load = () =>
-    fetch(`/api/v1/lists/${list.id}/members`)
+  const [shared, setShared] = useState<{ id: string; name: string }[]>([]);
+  const [households, reloadHouseholds] = useHouseholds();
+  const [picking, setPicking] = useState(false);
+
+  const load = () => {
+    void fetch(`/api/v1/lists/${list.id}/households`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setShared)
+      .catch(() => undefined);
+    return fetch(`/api/v1/lists/${list.id}/members`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
       .then(setMembers)
       .catch(() => setError('Mitglieder brauchen eine Verbindung zum Server.'));
+  };
+  const act = async (url: string, method: 'POST' | 'DELETE', body?: unknown) => {
+    if (!(await send(url, method, body))) return setError('Dafür wird eine Verbindung zum Server gebraucht.');
+    setError(null);
+    await load();
+    reloadHouseholds();
+  };
+  const memberIds = new Set(members?.map((m) => m.id) ?? []);
+  // Own household: only single people (the whole household sees the list unless it is private).
+  const candidates = (households ?? [])
+    .filter((h) => !shared.some((s) => s.id === h.id))
+    .map((h) => ({ ...h, people: h.members.filter((p) => !memberIds.has(p.id)) }))
+    .filter((h) => (h.own ? h.people.length > 0 && list.visibility === 'private' : true));
 
   useEffect(() => {
     ref.current?.showModal();
@@ -74,6 +101,73 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
           </div>
         )}
 
+        {!me.isGuest && (
+          <div className="field">
+            <span>Mit anderen Haushalten und Personen teilen</span>
+            {shared.length > 0 && (
+              <div className="chips">
+                {shared.map((h) => (
+                  <span key={h.id} className="chip chip--on">
+                    🏠 {h.name}
+                    {isOwner && (
+                      <button
+                        type="button"
+                        className="chip__remove"
+                        aria-label={`Nicht mehr mit ${h.name} teilen`}
+                        onClick={() => {
+                          if (confirm(`Nicht mehr mit Haushalt „${h.name}“ teilen? Wer nur darüber dabei ist, verliert die Liste.`))
+                            void act(`/api/v1/lists/${list.id}/households/${h.id}`, 'DELETE');
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
+            {!picking ? (
+              <div>
+                <button type="button" className="btn" onClick={() => setPicking(true)}>
+                  + Haushalt oder Person …
+                </button>
+              </div>
+            ) : (
+              <div className="share-picker">
+                {households === null && <p className="muted">Lade …</p>}
+                {households && candidates.length === 0 && <p className="muted">Es gibt niemanden mehr, mit dem du sie teilen könntest.</p>}
+                {candidates.map((h) => (
+                  <div key={h.id} className="share-picker__household">
+                    <div className="row row--center">
+                      <strong className="spacer">🏠 {h.name}</strong>
+                      {!h.own && (
+                        <button type="button" className="btn" onClick={() => void act(`/api/v1/lists/${list.id}/households`, 'POST', { householdId: h.id })}>
+                          Ganzen Haushalt
+                        </button>
+                      )}
+                    </div>
+                    <ul>
+                      {h.people.map((p) => (
+                        <li key={p.id} className="row row--center">
+                          <Avatar user={p} size="xs" />
+                          <span className="spacer">{p.displayName}</span>
+                          <button type="button" className="link" onClick={() => void act(`/api/v1/lists/${list.id}/members`, 'POST', { userId: p.id })}>
+                            Einladen
+                          </button>
+                        </li>
+                      ))}
+                      {h.people.length === 0 && <li className="muted">alle schon dabei</li>}
+                    </ul>
+                  </div>
+                ))}
+                <button type="button" className="link" onClick={() => setPicking(false)}>
+                  Fertig
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <h3>Wer ist dabei?</h3>
         {error && <p className="error">{error}</p>}
         <ul className="checklist">
@@ -87,6 +181,8 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
                   {m.isOwner && <small className="muted"> · Besitzer</small>}
                   {m.isGuest && <small className="muted"> · Gast</small>}
                   {m.via === 'household' && <small className="muted"> · Haushalt</small>}
+                  {m.via === 'shared' && <small className="muted"> · geteilter Haushalt</small>}
+                  {m.via === 'invite' && <small className="muted"> · eingeladen</small>}
                   {m.via === 'link' && !m.isGuest && <small className="muted"> · über Link</small>}
                 </span>
                 {isOwner && !m.isOwner && (

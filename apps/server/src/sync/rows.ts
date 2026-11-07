@@ -25,6 +25,7 @@ export function toListRow(r: ListRecord): ListRow {
     archivedAt: r.archivedAt,
     deleted: r.deleted,
     visibility: r.visibility,
+    sharing: r.sharing ?? null,
     createdAt: iso(r.createdAt),
     hlc: r.hlc,
     seq: r.seq,

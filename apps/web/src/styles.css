@@ -1909,3 +1909,52 @@ img.avatar {
 .household-rename__error {
   flex-basis: 100%;
 }
+.household-members {
+  cursor: default;
+  align-items: flex-start;
+}
+.household-members:hover {
+  background: none;
+}
+.household-members ul {
+  flex: 1;
+  margin: 0;
+  padding: 4px 0 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.household-members li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Berechtigungen: share with other households and people */
+.chip__remove {
+  margin-left: 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.share-picker {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.share-picker__household ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0 0 0 4px;
+  display: grid;
+  gap: 6px;
+}
+.share-picker__household li {
+  gap: 8px;
+}

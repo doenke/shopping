@@ -26,7 +26,20 @@ wechselt (andere Gruppe, anderer Claim), nimmt seine eigenen Listen mit – das 
 | `OIDC_HOUSEHOLD_CLAIM` | `household` | Name des Claims für einen ausdrücklichen Haushalt |
 | `DEFAULT_HOUSEHOLD_NAME` | leer | Name des gemeinsamen Haushalts beim ersten Anlegen (sonst Nachname) |
 
-Nur Pocket-ID-Benutzer gehören zu einem Haushalt, Gäste nie.
+Nur Pocket-ID-Benutzer gehören zu einem Haushalt, Gäste nie. Wer alles im eigenen Haushalt ist, zeigt
+*Einstellungen → Haushalt*.
+
+## Mit anderen Haushalten oder Personen teilen
+
+*⋮ → Berechtigungen … → + Haushalt oder Person …* zeigt alle anderen Haushalte mit ihren Leuten:
+
+- **Ganzen Haushalt**: Alle aus diesem Haushalt sind dabei – auch wer später dazukommt; wer auszieht, verliert
+  die Liste. Der Besitzer kann das Teilen wieder beenden (✕ am Haushalt).
+- **Einladen**: eine einzelne Person, egal aus welchem Haushalt (bei privaten Listen auch aus dem eigenen).
+
+Teilen darf jeder mit Konto, der die Liste hat – wie beim Link; entfernen darf nur der Besitzer. In der
+Seitenleiste zeigt 🔗, dass eine Liste per Link geteilt ist, 👥, dass sie mit anderen Haushalten oder Personen
+geteilt ist (🔒 = privat).
 
 ## Teilen per Link
 

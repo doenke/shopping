@@ -23,7 +23,7 @@ import { MutationSchema } from '@shopping/shared/schemas';
 import { and, eq, gt, inArray, ne, sql } from 'drizzle-orm';
 import type { Db, Tx } from '../db/index.js';
 import { currentSeq } from '../db/seed.js';
-import { customCategories, households, listItems, listMembers, lists, users } from '../db/schema.js';
+import { customCategories, households, listHouseholds, listItems, listMembers, lists, users } from '../db/schema.js';
 import { Mutex } from './mutex.js';
 import { toCategoryRow, toItemRow, toListRow, toMe, toUserInfo } from './rows.js';
 
@@ -283,43 +283,130 @@ export class SyncService {
   private async reconcileList(tx: Tx, listId: string, opts: { only?: string; revive?: boolean } = {}): Promise<string[]> {
     const [list] = await tx.select().from(lists).where(eq(lists.id, listId));
     if (!list) return [];
-    const wanted =
-      list.visibility === 'household' && list.householdId && !list.deleted
-        ? (
-            await tx
-              .select({ id: users.id })
-              .from(users)
-              .where(and(eq(users.householdId, list.householdId), eq(users.isGuest, false)))
-          )
-            .map((u) => u.id)
-            .filter((id) => id !== list.ownerId && (!opts.only || id === opts.only))
-        : [];
+    // Who should be on the list automatically: the own household (unless private) and households it was shared with.
+    const wanted = new Map<string, 'household' | 'shared'>();
+    if (!list.deleted) {
+      const shared = await tx.select({ householdId: listHouseholds.householdId }).from(listHouseholds).where(eq(listHouseholds.listId, listId));
+      const sharedIds = shared.map((h) => h.householdId).filter((id) => id !== list.householdId);
+      if (sharedIds.length) {
+        const rows = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(and(inArray(users.householdId, sharedIds), eq(users.isGuest, false)));
+        for (const u of rows) wanted.set(u.id, 'shared');
+      }
+      if (list.visibility === 'household' && list.householdId) {
+        const rows = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(and(eq(users.householdId, list.householdId), eq(users.isGuest, false)));
+        for (const u of rows) wanted.set(u.id, 'household');
+      }
+    }
+    wanted.delete(list.ownerId);
+    if (opts.only) for (const id of [...wanted.keys()]) if (id !== opts.only) wanted.delete(id);
+
     const changed: string[] = [];
     const current = await tx.select().from(listMembers).where(eq(listMembers.listId, listId));
     for (const m of current) {
       if (opts.only && m.userId !== opts.only) continue;
-      if (m.via === 'household' && !m.removed && !wanted.includes(m.userId)) {
+      if ((m.via === 'household' || m.via === 'shared') && !m.removed && !wanted.has(m.userId)) {
         await tx
           .update(listMembers)
           .set({ removed: true, seq: nextSeq })
           .where(and(eq(listMembers.listId, listId), eq(listMembers.userId, m.userId)));
         changed.push(m.userId);
-      }
-    }
-    for (const userId of wanted) {
-      const m = current.find((c) => c.userId === userId);
-      if (!m) {
-        await tx.insert(listMembers).values({ listId, userId, via: 'household' });
-        changed.push(userId);
-      } else if (m.removed && m.via === 'household' && opts.revive) {
+      } else if ((m.via === 'household' || m.via === 'shared') && !m.removed && wanted.get(m.userId) !== m.via) {
+        // Moved between the own and a shared household: still on the list, only the reason changes.
         await tx
           .update(listMembers)
-          .set({ removed: false, seq: nextSeq })
+          .set({ via: wanted.get(m.userId)!, seq: nextSeq })
+          .where(and(eq(listMembers.listId, listId), eq(listMembers.userId, m.userId)));
+      }
+    }
+    for (const [userId, via] of wanted) {
+      const m = current.find((c) => c.userId === userId);
+      if (!m) {
+        await tx.insert(listMembers).values({ listId, userId, via });
+        changed.push(userId);
+      } else if (m.removed && (m.via === 'household' || m.via === 'shared') && opts.revive) {
+        await tx
+          .update(listMembers)
+          .set({ removed: false, via, seq: nextSeq })
           .where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId)));
         changed.push(userId);
       }
     }
+    await this.refreshSharing(tx, listId);
     return changed;
+  }
+
+  /** Keeps `lists.sharing` (the 🔗/👥 badge) in line with the members; a change reaches the devices as a list update. */
+  private async refreshSharing(tx: Tx | Db, listId: string): Promise<void> {
+    const [row] = await tx.execute<{ link: boolean; people: boolean; current: string | null }>(sql`
+      SELECT
+        EXISTS (SELECT 1 FROM list_members m WHERE m.list_id = l.id AND NOT m.removed AND m.via = 'link') AS link,
+        (EXISTS (SELECT 1 FROM list_members m WHERE m.list_id = l.id AND NOT m.removed AND m.via IN ('shared', 'invite'))
+          OR EXISTS (SELECT 1 FROM list_households h WHERE h.list_id = l.id AND h.household_id IS DISTINCT FROM l.household_id)) AS people,
+        l.sharing AS current
+      FROM lists l WHERE l.id = ${listId}`);
+    if (!row) return;
+    const sharing = row.link && row.people ? 'both' : row.link ? 'link' : row.people ? 'people' : null;
+    if (sharing !== row.current) await tx.update(lists).set({ sharing, seq: nextSeq }).where(eq(lists.id, listId));
+  }
+
+  /** Shares a list with another household: its members (also future ones) are on it. Returns who changed. */
+  shareWithHousehold(byUserId: string, listId: string, householdId: string): Promise<string[] | null> {
+    return this.mutex.run(() =>
+      this.db.transaction(async (tx) => {
+        if (!(await this.hasAccess(tx, byUserId, listId))) return null;
+        const [h] = await tx.select({ id: households.id }).from(households).where(eq(households.id, householdId));
+        if (!h) return null;
+        await tx.insert(listHouseholds).values({ listId, householdId, addedBy: byUserId }).onConflictDoNothing();
+        return this.reconcileList(tx, listId, { revive: true });
+      }),
+    );
+  }
+
+  /** Ends sharing with a household; its members leave the list (unless invited by name or via the link). */
+  unshareHousehold(listId: string, householdId: string): Promise<string[]> {
+    return this.mutex.run(() =>
+      this.db.transaction(async (tx) => {
+        await tx.delete(listHouseholds).where(and(eq(listHouseholds.listId, listId), eq(listHouseholds.householdId, householdId)));
+        return this.reconcileList(tx, listId);
+      }),
+    );
+  }
+
+  /** Puts one person (with an account, from any household) on a list. False if not allowed. */
+  invite(byUserId: string, listId: string, userId: string): Promise<boolean> {
+    return this.mutex.run(() =>
+      this.db.transaction(async (tx) => {
+        if (!(await this.hasAccess(tx, byUserId, listId))) return false;
+        const [u] = await tx.select({ isGuest: users.isGuest }).from(users).where(eq(users.id, userId));
+        if (!u || u.isGuest) return false;
+        await tx
+          .insert(listMembers)
+          .values({ listId, userId, via: 'invite' })
+          .onConflictDoUpdate({
+            target: [listMembers.listId, listMembers.userId],
+            set: { removed: false, via: 'invite', seq: nextSeq },
+            setWhere: sql`${listMembers.removed} = true`,
+          });
+        await this.refreshSharing(tx, listId);
+        return true;
+      }),
+    );
+  }
+
+  /** The households a list is shared with. */
+  async sharedHouseholds(listId: string): Promise<{ id: string; name: string }[]> {
+    return this.db
+      .select({ id: households.id, name: households.name })
+      .from(listHouseholds)
+      .innerJoin(households, eq(households.id, listHouseholds.householdId))
+      .where(eq(listHouseholds.listId, listId))
+      .orderBy(households.name);
   }
 
   /**
@@ -347,7 +434,8 @@ export class SyncService {
             and(
               eq(lists.deleted, false),
               sql`(${lists.householdId} = ${householdId} OR ${lists.ownerId} = ${userId} OR ${lists.id} IN (
-                SELECT list_id FROM list_members WHERE user_id = ${userId} AND via = 'household'))`,
+                SELECT list_id FROM list_households WHERE household_id = ${householdId}) OR ${lists.id} IN (
+                SELECT list_id FROM list_members WHERE user_id = ${userId} AND via IN ('household', 'shared')))`,
             ),
           );
         for (const l of touched) {
@@ -598,6 +686,7 @@ export class SyncService {
           set: { removed: false, seq: nextSeq },
           setWhere: sql`${listMembers.removed} = true`,
         });
+      await this.refreshSharing(this.db, listId);
       return true;
     });
   }
@@ -620,6 +709,7 @@ export class SyncService {
           .set({ defaultListId: null, seq: nextSeq })
           .where(and(eq(users.id, userId), eq(users.defaultListId, listId)));
       }
+      if (updated.length) await this.refreshSharing(this.db, listId);
       return updated.length ? 'ok' : 'not_member';
     });
   }

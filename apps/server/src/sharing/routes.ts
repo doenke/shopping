@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { avatarPath } from '../auth/avatar.js';
@@ -7,7 +7,7 @@ import { createSession, destroyUserSessions, sessionUser } from '../auth/session
 import type { Config } from '../config.js';
 import type { SecretBox } from '../crypto.js';
 import type { Db } from '../db/index.js';
-import { listMembers, lists, shareLinks, users } from '../db/schema.js';
+import { households, listMembers, lists, shareLinks, users } from '../db/schema.js';
 import type { SyncHub } from '../sync/hub.js';
 import type { SyncService } from '../sync/service.js';
 
@@ -99,6 +99,59 @@ export async function sharingRoutes(app: FastifyInstance, opts: Options): Promis
       .where(and(eq(listMembers.listId, id), eq(listMembers.removed, false)))
       .orderBy(listMembers.joinedAt);
     return rows.map(({ avatarVersion, ...r }) => ({ ...r, avatarUrl: avatarPath(r.id, avatarVersion), isOwner: r.id === list?.ownerId }));
+  });
+
+  /** All households with their people (accounts only) – for "Haushalt" in the settings and for sharing a list. */
+  app.get('/api/v1/households', { preHandler: requireAccount }, async (request) => {
+    const [me] = await db.select({ householdId: users.householdId }).from(users).where(eq(users.id, request.userId));
+    const rows = await db
+      .select({ id: users.id, displayName: users.displayName, avatarVersion: users.avatarVersion, householdId: users.householdId })
+      .from(users)
+      .where(eq(users.isGuest, false))
+      .orderBy(asc(users.displayName));
+    const all = await db.select({ id: households.id, name: households.name }).from(households).orderBy(asc(households.name));
+    return all
+      .map((h) => ({
+        id: h.id,
+        name: h.name,
+        own: h.id === me?.householdId,
+        members: rows.filter((u) => u.householdId === h.id).map((u) => ({ id: u.id, displayName: u.displayName, avatarUrl: avatarPath(u.id, u.avatarVersion) })),
+      }))
+      .filter((h) => h.members.length > 0)
+      .sort((a, b) => Number(b.own) - Number(a.own));
+  });
+
+  /** Households a list is shared with. */
+  app.get('/api/v1/lists/:id/households', { preHandler: requireUser }, async (request, reply) => {
+    const { id } = listParams.parse(request.params);
+    if (!(await sync.isMember(request.userId, id))) return reply.code(404).send({ error: 'not_found' });
+    return sync.sharedHouseholds(id);
+  });
+
+  /** Share with another household (any member with an account may, like sharing the link). */
+  app.post('/api/v1/lists/:id/households', { preHandler: requireAccount }, async (request, reply) => {
+    const { id } = listParams.parse(request.params);
+    const { householdId } = z.object({ householdId: z.string().uuid() }).parse(request.body);
+    const changed = await sync.shareWithHousehold(request.userId, id, householdId);
+    if (!changed) return reply.code(404).send({ error: 'not_found' });
+    hub.notify(changed);
+    return { ok: true };
+  });
+
+  app.delete('/api/v1/lists/:id/households/:householdId', { preHandler: requireAccount }, async (request, reply) => {
+    const { id, householdId } = z.object({ id: z.string().uuid(), householdId: z.string().uuid() }).parse(request.params);
+    if (!(await isOwner(id, request.userId))) return reply.code(403).send({ error: 'owner_only' });
+    hub.notify(await sync.unshareHousehold(id, householdId));
+    return { ok: true };
+  });
+
+  /** Invite one person with an account (from any household). */
+  app.post('/api/v1/lists/:id/members', { preHandler: requireAccount }, async (request, reply) => {
+    const { id } = listParams.parse(request.params);
+    const { userId } = z.object({ userId: z.string().uuid() }).parse(request.body);
+    if (!(await sync.invite(request.userId, id, userId))) return reply.code(404).send({ error: 'not_found' });
+    hub.notify([userId]);
+    return { ok: true };
   });
 
   app.delete('/api/v1/lists/:id/members/:userId', { preHandler: requireAccount }, async (request, reply) => {

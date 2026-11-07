@@ -127,6 +127,20 @@
       "when": 1793100000000,
       "tag": "0017_household_names",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794054119074,
+      "tag": "0018_list_households",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794054337372,
+      "tag": "0019_list_sharing",
+      "breakpoints": true
     }
   ]
 }

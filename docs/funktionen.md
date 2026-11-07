@@ -85,8 +85,10 @@
   *↕ Listen sortieren*, je Benutzer. Sortiert wird per Ziehen am Griff ⠿, mit der Tastatur über die
   Pfeiltasten.
 - **⋮ → Bearbeiten …**: Name, Beschreibung, Kategorie (ToDo-Listen) und Icon an einem Ort.
-- **⋮ → Berechtigungen …**: sichtbar für den Haushalt oder nur für dich, wer dabei ist (der Besitzer kann
-  Leute entfernen), Link teilen und erneuern. Die Avatare in der Titelzeile zeigen alle mit Zugriff; ein Tipp
+- **⋮ → Berechtigungen …**: sichtbar für den Haushalt oder nur für dich, **mit anderen Haushalten oder einzelnen
+  Personen teilen** („+ Haushalt oder Person …“), wer dabei ist (der Besitzer kann Leute und Haushalte
+  entfernen), Link teilen und erneuern. In der Seitenleiste: 🔒 privat, 🔗 per Link geteilt, 👥 mit anderen
+  Haushalten oder Personen geteilt. Die Avatare in der Titelzeile zeigen alle mit Zugriff; ein Tipp
   darauf öffnet denselben Dialog.
 
 ## Zusammenarbeiten

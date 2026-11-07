@@ -90,6 +90,8 @@ export const lists = pgTable(
     iconName: text('icon_name'),
     color: text('color'),
     settings: jsonb('settings').$type<Record<string, unknown>>().notNull().default({}),
+    /** Shared beyond the own household (maintained by the server): via the link, with people/households, or both. */
+    sharing: text('sharing').$type<'link' | 'people' | 'both'>(),
     archivedAt: text('archived_at'),
     deleted: boolean('deleted').notNull().default(false),
     /** household: everyone in the owner's household sees it; private: owner (and link guests) only. */
@@ -136,12 +138,28 @@ export const listMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     removed: boolean('removed').notNull().default(false),
-    /** How the user got in: owner, list link, or the household. */
-    via: text('via').$type<'owner' | 'link' | 'household'>().notNull().default('link'),
+    /** How the user got in: owner, list link, the own household, a household it was shared with, or invited by name. */
+    via: text('via').$type<'owner' | 'link' | 'household' | 'shared' | 'invite'>().notNull().default('link'),
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
     seq: seq(),
   },
   (t) => [primaryKey({ columns: [t.listId, t.userId] }), index('list_members_user_idx').on(t.userId)],
+);
+
+/** Other households a list is shared with: their members (also future ones) are on the list. */
+export const listHouseholds = pgTable(
+  'list_households',
+  {
+    listId: uuid('list_id')
+      .notNull()
+      .references(() => lists.id, { onDelete: 'cascade' }),
+    householdId: uuid('household_id')
+      .notNull()
+      .references(() => households.id, { onDelete: 'cascade' }),
+    addedBy: uuid('added_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.listId, t.householdId] }), index('list_households_household_idx').on(t.householdId)],
 );
 
 /** One active link per list; whoever opens it (logged in) becomes a member. */

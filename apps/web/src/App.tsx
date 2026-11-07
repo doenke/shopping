@@ -112,7 +112,7 @@ function Shell({ me }: { me: Me }) {
               {l.isTemplate && '◇ '}
               <ListIcon list={l} fallback={prefix(l)} />
               {l.name}
-              {l.visibility === 'private' && <span title="Privat"> 🔒</span>}
+              <ListBadges list={l} />
             </span>
             {!l.isTemplate && <OpenCount listId={l.id} />}
           </a>
@@ -613,5 +613,16 @@ function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImp
         </button>
       )}
     </div>
+  );
+}
+
+/** 🔒 private, 🔗 shared via the link, 👥 shared with other households or people. */
+export function ListBadges({ list }: { list: ListRow }) {
+  return (
+    <>
+      {list.visibility === 'private' && <span title="Privat"> 🔒</span>}
+      {(list.sharing === 'link' || list.sharing === 'both') && <span title="Per Link geteilt"> 🔗</span>}
+      {(list.sharing === 'people' || list.sharing === 'both') && <span title="Mit anderen Haushalten oder Personen geteilt"> 👥</span>}
+    </>
   );
 }

@@ -4,6 +4,7 @@ import { logout } from '../actions';
 import { useLists, type SettingsSection } from '../hooks';
 import { useCustomCategories } from '../categories';
 import { Avatar } from './Avatar';
+import { useHouseholds } from '../households';
 import { CategoriesCard } from './CategoriesCard';
 import { TokensCard } from './TokensCard';
 import { WebhooksCard } from './WebhooksCard';
@@ -349,6 +350,7 @@ export function Settings({ me, section, onSort }: { me: Me; section?: SettingsSe
           <h2 className="settings-heading">Haushalt</h2>
           <div className="settings-group">
             {me.household && <HouseholdRow name={me.household} />}
+            <HouseholdMembers name={me.household} />
             <SettingsRow
               icon="🏷"
               title="Eigene Kategorien"
@@ -415,6 +417,27 @@ function useTokenCount(): number | null {
   return n;
 }
 
+/** Who is in the own household (from the server; hidden offline). */
+function HouseholdMembers({ name }: { name: string | null }) {
+  const [all] = useHouseholds([name]);
+  const own = all?.find((h) => h.own);
+  if (!own) return null;
+  return (
+    <div className="settings-row household-members" aria-label="Wer ist im Haushalt?">
+      <span className="settings-row__icon" aria-hidden>
+        👥
+      </span>
+      <ul>
+        {own.members.map((m) => (
+          <li key={m.id}>
+            <Avatar user={m} size="xs" /> {m.displayName}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** Name of the household – anyone in it may rename it (needs a connection). */
 function HouseholdRow({ name }: { name: string }) {
   const [editing, setEditing] = useState(false);
@@ -425,7 +448,7 @@ function HouseholdRow({ name }: { name: string }) {
       <SettingsRow
         icon="🏠"
         title={name}
-        text="Name des Haushalts – tippen zum Umbenennen"
+        text="Tippen zum Umbenennen"
         onClick={() => {
           setValue(name);
           setError(null);

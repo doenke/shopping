@@ -34,10 +34,13 @@
 | Neue Liste | sichtbar für den **ganzen Haushalt** des Besitzers; ToDo-Listen sind standardmäßig **privat** |
 | Privat | nur der Besitzer und wer über den Link dazukommt |
 | Link | wer ihn öffnet, ist dabei – auch aus einem anderen Haushalt, ohne Konto als Gast |
+| Andere Haushalte | `list_households`: alle Mitglieder des Haushalts, auch künftige (Abgleich wie beim eigenen Haushalt) |
+| Personen | einzeln eingeladen, aus jedem Haushalt |
 | Abstufungen | keine: Wer drin ist, darf hinzufügen, ändern, abhaken |
 
-Technisch sind das Mitgliedschaften mit Herkunft (`owner`, `household`, `link`, siehe
-[03](03-datenmodell.md#zugriff)). Gemeinsam für alle sind nur Katalog, Kategorien, Einheiten und Icons.
+Technisch sind das Mitgliedschaften mit Herkunft (`owner`, `household`, `shared`, `invite`, `link`, siehe
+[03](03-datenmodell.md#zugriff)). `lists.sharing` (`link` | `people` | `both`) pflegt der Server bei jeder
+Änderung der Mitglieder; daraus zeigt die App 🔗 und 👥. Gemeinsam für alle sind nur Katalog, Kategorien, Einheiten und Icons.
 
 ## Der Link
 

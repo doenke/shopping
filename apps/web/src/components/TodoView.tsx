@@ -135,6 +135,8 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
           <span className="muted">
             {open.length} offen{done.length ? ` · ${done.length} erledigt` : ''}
             {list.visibility === 'private' ? ' · 🔒 privat' : ''}
+            {list.sharing === 'link' || list.sharing === 'both' ? ' · 🔗 per Link geteilt' : ''}
+            {list.sharing === 'people' || list.sharing === 'both' ? ' · 👥 geteilt' : ''}
             {listReset(list) ? ` · ↺ ${RESET_LABEL[listReset(list)!]}` : ''}
           </span>
           {hasMeta && (
