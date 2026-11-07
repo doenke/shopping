@@ -77,6 +77,18 @@ export function listGroup(list: { settings: Record<string, unknown> }): string |
   return typeof g === 'string' && g.trim() ? g.trim() : null;
 }
 
+/** The templates a list was created from (or last synced with), first one first. */
+export function listTemplateIds(list: { settings: Record<string, unknown> }): string[] {
+  const ids = Array.isArray(list.settings.templateIds) ? list.settings.templateIds.filter((x): x is string => typeof x === 'string') : [];
+  const first = typeof list.settings.templateId === 'string' ? list.settings.templateId : null;
+  return first && !ids.includes(first) ? [first, ...ids] : ids;
+}
+
+/** Ask after adding something whether it belongs into the templates too (off: "Nicht mehr fragen"). */
+export function asksForTemplates(list: { settings: Record<string, unknown> }): boolean {
+  return list.settings.askTemplates !== false;
+}
+
 export const SUGGESTED_LIST_GROUPS = ['Allgemein', 'Arbeit', 'Haushalt', 'Hobby', 'Urlaub', 'Garten', 'Finanzen'];
 
 /**

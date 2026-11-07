@@ -89,7 +89,7 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
       type,
       description || listDescriptionOf(template),
       isPrivate ? 'private' : 'household',
-      template?.id,
+      templateIds.filter((id) => chosenTemplates.some((t) => t.id === id)),
       type === 'todo' ? group : undefined,
       resettable ? reset : null,
     );

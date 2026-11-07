@@ -1,4 +1,4 @@
-import { formatAmounts, itemSpecification, packingInfo, type ItemRow, type ListRow } from '@shopping/shared';
+import { formatAmounts, itemSpecification, listTemplateIds, packingInfo, type ItemRow, type ListRow } from '@shopping/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, itemToNew, updateItem } from '../actions';
 import { useItems } from '../hooks';
@@ -87,7 +87,9 @@ export function SyncTemplateDialog({ list, templates, onClose }: Props) {
       if (choice === 'toTemplate') await updateItem(t.id, { amounts: l.amounts });
     }
     // Remember the template for next time.
-    if (list.settings.templateId !== template.id) await sync.mutateList(list.id, { settings: { ...list.settings, templateId: template.id } });
+    const known = listTemplateIds(list);
+    if (list.settings.templateId !== template.id || !known.includes(template.id))
+      await sync.mutateList(list.id, { settings: { ...list.settings, templateId: template.id, templateIds: known.includes(template.id) ? known : [...known, template.id] } });
     ref.current?.close();
   };
 

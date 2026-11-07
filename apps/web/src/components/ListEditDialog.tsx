@@ -1,6 +1,7 @@
-import { canAutoReset, listDescription, listGroup, listReset, RESET_EVERY, RESET_LABEL, SUGGESTED_LIST_GROUPS, type ListRow, type Me, type ResetEvery } from '@shopping/shared';
+import { asksForTemplates, canAutoReset, listDescription, listTemplateIds, listGroup, listReset, RESET_EVERY, RESET_LABEL, SUGGESTED_LIST_GROUPS, type ListRow, type Me, type ResetEvery } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { editList, newListIcon } from '../actions';
+import { useLists } from '../hooks';
 import { ListIcon } from './ListIcon';
 
 interface Props {
@@ -19,6 +20,11 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
   const [name, setName] = useState(list.name);
   const [description, setDescription] = useState(listDescription(list) ?? '');
   const [group, setGroup] = useState(listGroup(list) ?? '');
+  const allLists = useLists();
+  const templates = listTemplateIds(list)
+    .map((id) => allLists.find((l) => l.id === id))
+    .filter((t): t is ListRow => !!t && t.isTemplate);
+  const [askTemplates, setAskTemplates] = useState(asksForTemplates(list));
   const [reset, setReset] = useState<ResetEvery | null>(listReset(list));
   const [icon, setIcon] = useState<'idle' | 'queued' | 'error'>('idle');
   const todo = list.listType === 'todo';
@@ -32,7 +38,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
         onSubmit={async (e) => {
           e.preventDefault();
           if (!name.trim()) return;
-          await editList(list, { name, description, ...(todo ? { group } : {}), ...(canAutoReset(list) ? { reset } : {}) });
+          await editList(list, { name, description, ...(todo ? { group } : {}), ...(canAutoReset(list) ? { reset } : {}), ...(templates.length ? { askTemplates } : {}) });
           ref.current?.close();
         }}
       >
@@ -67,6 +73,25 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
                 <option key={g} value={g} />
               ))}
             </datalist>
+          </label>
+        )}
+
+        {templates.length > 0 && (
+          <div className="field">
+            <span>Erstellt aus {templates.length === 1 ? 'der Vorlage' : 'den Vorlagen'}</span>
+            <div className="chips">
+              {templates.map((t) => (
+                <span key={t.id} className="chip">
+                  ◇ {t.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {templates.length > 0 && (
+          <label className="check field">
+            <input type="checkbox" checked={askTemplates} onChange={(e) => setAskTemplates(e.target.checked)} /> Bei neuen Einträgen fragen, ob sie auch in die
+            Vorlage sollen
           </label>
         )}
 

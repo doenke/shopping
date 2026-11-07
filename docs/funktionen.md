@@ -59,6 +59,10 @@
   optionale Artikel. **Mit Vorlage abgleichen** in beide Richtungen: was der Liste fehlt, was der Vorlage
   fehlt und abweichende Mengen – einzeln auswählbar (Richtung Vorlage ist anfangs nichts angehakt); die Liste
   merkt sich ihre Vorlage.
+- **Neues auch in die Vorlage?** In einer Liste, die aus Vorlagen entstand, fragt die Eingabezeile nach dem
+  Hinzufügen, ob das Ding auch in eine der Vorlagen soll (nur Vorlagen, denen es noch fehlt; schnell
+  hintereinander Eingegebenes kommt in eine Frage). „Nicht mehr fragen“ schaltet das für die Liste ab;
+  *⋮ → Bearbeiten …* zeigt die Vorlagen der Liste und den Haken zum Wiedereinschalten.
 - **Packlisten** 🧳 mit eigenem Katalog (Kleidung, Dokumente, Technik …): Abgehakt heißt „eingepackt“ und
   bleibt durchgestrichen stehen (Schalter „Eingepackte ausblenden“, pro Liste gemerkt), Fortschritt „12 von 30 eingepackt“, gruppiert nach Kategorie, **Packstück**
   oder **Person**. Beim Tippen ordnen „@Anna“ und „#Koffer“ zu („3 T-Shirts @Anna #Koffer“). Neue Packlisten

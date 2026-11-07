@@ -1885,3 +1885,11 @@ img.avatar {
   gap: 8px;
   margin: 8px 0 4px;
 }
+
+/* "auch in die Vorlage?" after adding to a list made from templates */
+.template-offer p {
+  margin: 0 0 8px;
+}
+.template-offer .row {
+  margin-top: 8px;
+}

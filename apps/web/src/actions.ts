@@ -1,4 +1,4 @@
-import { categoriesFor, defaultVisibility, listAsText, nextCategoryColor, type CategoryPatch, type CustomCategoryType, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem, type ResetEvery, type SectionKey } from '@shopping/shared';
+import { categoriesFor, defaultVisibility, listTemplateIds, listAsText, nextCategoryColor, type CategoryPatch, type CustomCategoryType, packingInfo, planAdd, samePacking, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem, type ResetEvery, type SectionKey } from '@shopping/shared';
 import { db } from './db';
 import { sync } from './sync/engine';
 
@@ -36,8 +36,8 @@ export async function createList(
   listType: ListType = 'shopping',
   description?: string | null,
   visibility: 'household' | 'private' = defaultVisibility(listType),
-  /** The template it came from – preselected later in "Mit Vorlage abgleichen". */
-  templateId?: string,
+  /** The templates it came from – the first one is preselected later in "Mit Vorlage abgleichen". */
+  templateIds: string[] = [],
   /** ToDo lists: Kategorie (Arbeit, Hobby …). */
   group?: string,
   /** Recurring checklist: open again every day/week/month. */
@@ -46,7 +46,10 @@ export async function createList(
   const id = crypto.randomUUID();
   const settings: Record<string, unknown> = {};
   if (description?.trim()) settings.description = description.trim();
-  if (templateId) settings.templateId = templateId;
+  if (templateIds.length) {
+    settings.templateId = templateIds[0];
+    settings.templateIds = templateIds;
+  }
   if (group?.trim()) settings.group = group.trim();
   if (reset) settings.reset = reset;
   await sync.mutateList(id, { name, listType, isTemplate, visibility, ...(Object.keys(settings).length ? { settings } : {}) });
@@ -80,6 +83,34 @@ export async function archiveList(id: string, archived: boolean): Promise<void> 
 }
 
 /** A list or template item as new item (keeps person and Packstück). */
+/** "Nicht mehr fragen": no question about the templates after adding something to this list. */
+export async function stopAskingForTemplates(list: ListRow): Promise<void> {
+  await sync.mutateList(list.id, { settings: { ...list.settings, askTemplates: false } });
+}
+
+/**
+ * Templates of the list that do not have these things yet (same catalog item or name, and for packing
+ * lists the same person and container) – the candidates for "auch in die Vorlage?".
+ */
+export async function templatesMissing(list: ListRow, items: NewItem[]): Promise<{ template: ListRow; items: NewItem[] }[]> {
+  const ids = listTemplateIds(list);
+  if (!ids.length || !items.length) return [];
+  const templates = (await db.lists.bulkGet(ids)).filter((t): t is ListRow => !!t && !t.deleted && t.isTemplate);
+  const out: { template: ListRow; items: NewItem[] }[] = [];
+  for (const template of templates) {
+    const have = (await db.items.where('listId').equals(template.id).toArray()).filter((i) => !i.deleted);
+    const missing = items.filter(
+      (n) =>
+        !have.some((h) => {
+          const same = n.catalogItemId ? h.catalogItemId === n.catalogItemId : h.name.trim().toLowerCase() === n.name.trim().toLowerCase();
+          return same && samePacking(packingInfo(h), { person: n.person ?? null, container: n.container ?? null });
+        }),
+    );
+    if (missing.length) out.push({ template, items: missing });
+  }
+  return out;
+}
+
 export function itemToNew(i: ItemRow): NewItem {
   return {
     name: i.name,
@@ -102,13 +133,17 @@ export async function saveAsTemplate(list: ListRow, name: string): Promise<strin
 }
 
 /** Name, description and (ToDo lists) Kategorie in one change – one settings patch, nothing overwrites the other. */
-export async function editList(list: ListRow, edit: { name: string; description: string; group?: string; reset?: ResetEvery | null }): Promise<void> {
+export async function editList(list: ListRow, edit: { name: string; description: string; group?: string; reset?: ResetEvery | null; askTemplates?: boolean }): Promise<void> {
   const settings = { ...list.settings };
   if (edit.description.trim()) settings.description = edit.description.trim();
   else delete settings.description;
   if (edit.group !== undefined) {
     if (edit.group.trim()) settings.group = edit.group.trim();
     else delete settings.group;
+  }
+  if (edit.askTemplates !== undefined) {
+    if (edit.askTemplates) delete settings.askTemplates;
+    else settings.askTemplates = false;
   }
   if (edit.reset !== undefined) {
     if (edit.reset) settings.reset = edit.reset;

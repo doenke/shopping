@@ -75,7 +75,7 @@ Laptop-Ansicht.
 
 | Eintrag | |
 |---------|-|
-| ✏️ Bearbeiten … | Name, Beschreibung, Kategorie (ToDo), Kategorien sortieren (Einkauf, Packliste), automatisch zurücksetzen (ToDo), Icon mit „Neues Icon erzeugen“ |
+| ✏️ Bearbeiten … | Name, Beschreibung, Kategorie (ToDo), Kategorien sortieren (Einkauf, Packliste), automatisch zurücksetzen (ToDo), Vorlagen der Liste + „bei Neuem fragen“, Icon mit „Neues Icon erzeugen“ |
 | 👥 Berechtigungen … | sichtbar für Haushalt oder nur mich, wer dabei ist (entfernen), Link teilen und erneuern |
 | 📋 Als Text teilen … | offene Einträge als Text in den Teilen-Dialog bzw. die Zwischenablage |
 | Aus Mealie hinzufügen … | Rezept oder Wochenplan |
