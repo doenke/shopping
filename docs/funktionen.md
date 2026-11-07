@@ -8,6 +8,9 @@
   Menge, Einheit und Eigenschaften werden erkannt, mehrere Artikel mit Komma.
   Wird etwas nur über ein Synonym gefunden („Stirnlampe“ → Taschenlampe), gibt es neben dem Vorschlag eine
   Kachel mit genau dem Getippten.
+- **Liste einfügen**: Eine kopierte Zutaten- oder Einkaufsliste (mehrere Zeilen, z. B. von einer Rezeptseite)
+  in die Eingabezeile einfügen – jede Zeile wird ein Artikel mit Menge, Einheit und Notiz („1 Zehe(n) Knoblauch“,
+  „30 g Petersilie (glatt)“, „200 g Bergkäse, gerieben“). Vorher lässt sich die Liste noch bearbeiten.
 - **Rezept aus dem Web** (Chefkoch, Lecker, EAT SMARTER, BBC Good Food …): den Link des Rezepts in die
   Eingabezeile einer Einkaufsliste einfügen oder in der Rezept-App/im Browser *Teilen → Shopping* wählen.
   Shopping liest die Zutaten aus den Rezeptdaten der Seite (wie Bring es tut) und zeigt sie als Checkliste:

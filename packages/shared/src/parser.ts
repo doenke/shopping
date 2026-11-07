@@ -53,6 +53,20 @@ function parseNumber(s: string): number | undefined {
 
 /** Splits "a, b; c" into items, but keeps decimal commas like "1,5 kg". */
 export function splitInput(text: string): string[] {
+  // A pasted ingredient list (several lines, e.g. from a recipe page): one item per line; a comma
+  // within a line is a note ("200 g Bergkäse, gerieben"), bullets and tabs are dropped.
+  if (/\n/.test(text.trim())) {
+    return text
+      .split(/\r?\n/)
+      .map((line) =>
+        line
+          .replace(/^\s*(?:[-–•*·▪◦]|\d+[.)])\s+/, '')
+          .replace(/\t+/g, ' ')
+          .replace(/(?<!\d),(?!\d)\s*(.+)$/, ' ($1)')
+          .trim(),
+      )
+      .filter(Boolean);
+  }
   return text
     .split(/[;\n]|,(?!\d)|(?<!\d),/)
     .map((s) => s.trim())
@@ -70,6 +84,8 @@ export function parseItem(text: string, catalog?: CatalogIndex, listType: ListTy
   if (!rest) return null;
 
   const notes: string[] = [];
+  // Plural markers of recipe sites are no notes: "Zehe(n)", "Ei(er)", "Zwiebel(n)".
+  rest = rest.replace(/(\p{L})\((?:n|e|s|en|er|nen)\)/gu, '$1');
   rest = rest.replace(/\(([^)]*)\)/g, (_, inner: string) => {
     if (inner.trim()) notes.push(inner.trim());
     return ' ';

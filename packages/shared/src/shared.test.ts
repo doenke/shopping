@@ -219,6 +219,23 @@ describe('packing lists', () => {
   });
 });
 
+describe('a pasted ingredient list', () => {
+  it('becomes one item per line, with amounts, units and notes', () => {
+    const block = '1 Zehe(n)\tKnoblauch\n30 g\tPetersilie (glatt)\n100 g\tButter (Zimmertemperatur)\n200 g Bergkäse, gerieben\n1,5 kg Kartoffeln\nSalz\n\n• 2 EL\tButterschmalz\n';
+    const items = parseInput(block, index);
+    expect(items.map((i) => i.name)).toEqual(['Knoblauch', 'Petersilie', 'Butter', 'Bergkäse', 'Kartoffeln', 'Salz', 'Butterschmalz']);
+    expect(items[0]).toMatchObject({ amounts: [{ q: 1, u: 'zehe' }], note: null });
+    expect(items[1]).toMatchObject({ amounts: [{ q: 30, u: 'g' }], note: 'glatt' });
+    expect(items[3]).toMatchObject({ amounts: [{ q: 200, u: 'g' }], note: 'gerieben' });
+    expect(items[4]!.amounts).toEqual([{ q: 1.5, u: 'kg' }]);
+    expect(items[6]!.amounts).toEqual([{ q: 2, u: 'el' }]);
+  });
+
+  it('still splits a single line at commas', () => {
+    expect(parseInput('Milch, Butter, 6 Eier', index).map((i) => i.name)).toEqual(['Milch', 'Butter', 'Eier']);
+  });
+});
+
 describe('due dates (ToDo lists)', () => {
   // Wednesday, 2026-11-11
   const now = new Date(2026, 10, 11, 9, 0);

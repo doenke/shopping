@@ -1842,3 +1842,21 @@ img.avatar {
   border: 1px solid var(--border);
   background: var(--surface);
 }
+
+/* A pasted list in the add bar */
+.addbar__block textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+.addbar__block .row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 4px;
+}

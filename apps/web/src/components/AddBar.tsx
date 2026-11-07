@@ -27,12 +27,22 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
     [text, packing, index, boost, hasAmount],
   );
 
+  // A pasted list (several lines, e.g. ingredients copied from a recipe page): one item per line.
+  const [block, setBlock] = useState<string | null>(null);
+  const blockItems = useMemo(() => (block ? parseInput(block, index, listType) : []), [block, index, listType]);
+  const addBlock = async () => {
+    if (!blockItems.length) return;
+    setBlock(null);
+    await addItems(listId, blockItems);
+  };
+
   // A recipe link (Chefkoch & co.) on a shopping list: its ingredients, not the link as an item.
   const recipeLink = listType === 'shopping' ? findUrl(text) : null;
   const [recipeUrl, setRecipeUrl] = useState<string | null>(null);
 
   // Clear the field first, so fast typing never loses the next entry.
   const submit = async () => {
+    if (block && !text.trim()) return addBlock();
     if (recipeLink) {
       setRecipeUrl(recipeLink);
       setText('');
@@ -105,8 +115,15 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
           placeholder={placeholder ?? 'Was brauchst du? z. B. 2 kg Kartoffeln'}
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onPaste={(e) => {
+            // A single-line field would turn line breaks into spaces: keep the lines as a block.
+            const pasted = e.clipboardData.getData('text');
+            if (!/\n/.test(pasted.trim())) return;
+            e.preventDefault();
+            setBlock((b) => (b ? `${b}\n${pasted}` : pasted));
+          }}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') setText('');
+            if (e.key === 'Escape') (text ? setText('') : setBlock(null));
           }}
           aria-label="Artikel hinzufügen"
         />
@@ -122,6 +139,20 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
           </button>
         )}
       </form>
+      {block && (
+        <div className="addbar__results addbar__block">
+          <textarea value={block} onChange={(e) => setBlock(e.target.value || null)} rows={Math.min(10, block.split('\n').length)} aria-label="Eingefügte Liste" />
+          <div className="row">
+            <button type="button" className="btn btn--primary" disabled={!blockItems.length} onClick={() => void addBlock()}>
+              {blockItems.length} Artikel hinzufügen
+            </button>
+            <button type="button" className="btn" onClick={() => setBlock(null)}>
+              Verwerfen
+            </button>
+          </div>
+          <p className="addbar__hint">{blockItems.map((p) => (itemSpecification(p) ? `${p.name} (${itemSpecification(p)})` : p.name)).join(', ')}</p>
+        </div>
+      )}
       {recipeUrl && <RecipeUrlDialog url={recipeUrl} listId={listId} onClose={() => setRecipeUrl(null)} />}
       {text.trim() && recipeLink && (
         <div className="addbar__results">

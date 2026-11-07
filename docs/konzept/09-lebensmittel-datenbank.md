@@ -90,7 +90,8 @@ Ein Feld für alles, am Laptop wie am Handy:
 
 Vorgehen (deterministisch, offline im Client, Code in `packages/shared`):
 
-1. Aufteilen an Komma und Zeilenumbruch.
+1. Aufteilen an Komma und Zeilenumbruch – bei einer eingefügten Liste (mehrere Zeilen) nur an Zeilenumbrüchen;
+   ein Komma in der Zeile wird zur Notiz, Aufzählungszeichen, Tabs und Pluralendungen wie „Zehe(n)“ fallen weg.
 2. `@…`, `#…` und (ToDo) `!…` als Person/Ort/Fälligkeit herausziehen.
 3. Menge erkennen (Zahlen, Dezimalkomma, Brüche, „ein/eine/zwei“), dann die Einheit.
 4. Bekannte Eigenschaften und Klammerinhalte abtrennen – das Vokabular hängt am Listentyp
