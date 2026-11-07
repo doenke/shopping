@@ -7,15 +7,24 @@
 Listen gehören automatisch dem ganzen Haushalt, können aber **privat** 🔒 sein: „Privat – nur für mich“ beim
 Anlegen oder unter *⋮ → Berechtigungen …*. ToDo-Listen sind standardmäßig privat.
 
-Wer zu welchem Haushalt gehört, steht in Pocket ID: Leg einen **Custom Claim** `household` an – am Benutzer
-oder an einer Gruppe (dann gilt er für alle Mitglieder), z. B. `household = Müller`. Alle mit demselben Tag
-sehen gegenseitig ihre Listen; wer keinen Tag hat, ist im Standard-Haushalt. Der Tag wird bei jeder Anmeldung
-gelesen, ein Umzug in einen anderen Haushalt nimmt die eigenen Listen mit.
+Wer zu welchem Haushalt gehört, entscheidet die App bei jeder Anmeldung aus Pocket ID:
+
+1. **Ausdrücklicher Haushalt** (nur für Sonderfälle): Ein **Custom Claim** `household` am Benutzer oder an einer
+   Gruppe, z. B. `household = Müller WG`. Alle mit demselben Wert teilen sich einen Haushalt.
+2. **Owner-Gruppe** (der Normalfall): Wer in der Gruppe `OIDC_OWNER_GROUP` ist (z. B. `familie`), ist im Haushalt
+   des Betreibers. **Alle anderen** bekommen einen **eigenen Haushalt** und sehen nur ihre Listen und was man mit
+   ihnen per Link teilt.
+3. **Keine Owner-Gruppe eingestellt:** Alle Benutzer sind in einem gemeinsamen Haushalt.
+
+Ein neuer Haushalt heißt nach dem **Nachnamen seines ersten Mitglieds** (bei einem Claim nach dessen Wert).
+**Umbenennen** darf jedes Mitglied: *Einstellungen → Haushalt*, erste Zeile antippen. Wer den Haushalt
+wechselt (andere Gruppe, anderer Claim), nimmt seine eigenen Listen mit – das passiert bei der nächsten Anmeldung.
 
 | Variable | Standard | Bedeutung |
 | --- | --- | --- |
-| `OIDC_HOUSEHOLD_CLAIM` | `household` | Name des Claims mit dem Haushalts-Tag |
-| `DEFAULT_HOUSEHOLD_NAME` | `Haushalt` | Name des Haushalts für alle ohne Tag |
+| `OIDC_OWNER_GROUP` | leer | Gruppe für den Haushalt des Betreibers; leer = alle in einem Haushalt |
+| `OIDC_HOUSEHOLD_CLAIM` | `household` | Name des Claims für einen ausdrücklichen Haushalt |
+| `DEFAULT_HOUSEHOLD_NAME` | leer | Name des gemeinsamen Haushalts beim ersten Anlegen (sonst Nachname) |
 
 Nur Pocket-ID-Benutzer gehören zu einem Haushalt, Gäste nie.
 

@@ -348,6 +348,7 @@ export function Settings({ me, section, onSort }: { me: Me; section?: SettingsSe
 
           <h2 className="settings-heading">Haushalt</h2>
           <div className="settings-group">
+            {me.household && <HouseholdRow name={me.household} />}
             <SettingsRow
               icon="🏷"
               title="Eigene Kategorien"
@@ -412,4 +413,55 @@ function useTokenCount(): number | null {
       .catch(() => setN(null));
   }, []);
   return n;
+}
+
+/** Name of the household – anyone in it may rename it (needs a connection). */
+function HouseholdRow({ name }: { name: string }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+  const [error, setError] = useState<string | null>(null);
+  if (!editing)
+    return (
+      <SettingsRow
+        icon="🏠"
+        title={name}
+        text="Name des Haushalts – tippen zum Umbenennen"
+        onClick={() => {
+          setValue(name);
+          setError(null);
+          setEditing(true);
+        }}
+      />
+    );
+  const save = async () => {
+    if (!value.trim() || value.trim() === name) return setEditing(false);
+    const res = await fetch('/api/v1/me/household', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: value.trim() }),
+    }).catch(() => null);
+    if (!res?.ok) return setError('Zum Umbenennen wird eine Verbindung gebraucht.');
+    setEditing(false);
+  };
+  return (
+    <form
+      className="settings-row household-rename"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void save();
+      }}
+    >
+      <span className="settings-row__icon" aria-hidden>
+        🏠
+      </span>
+      <input value={value} onChange={(e) => setValue(e.target.value)} maxLength={60} autoFocus aria-label="Name des Haushalts" />
+      <button type="submit" className="btn btn--primary">
+        OK
+      </button>
+      <button type="button" className="icon-btn" aria-label="Abbrechen" onClick={() => setEditing(false)}>
+        ✕
+      </button>
+      {error && <small className="error household-rename__error">{error}</small>}
+    </form>
+  );
 }

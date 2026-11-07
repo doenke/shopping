@@ -1893,3 +1893,19 @@ img.avatar {
 .template-offer .row {
   margin-top: 8px;
 }
+
+/* Settings: rename the household */
+.household-rename {
+  flex-wrap: wrap;
+  cursor: default;
+}
+.household-rename:hover {
+  background: none;
+}
+.household-rename input {
+  flex: 1;
+  min-width: 0;
+}
+.household-rename__error {
+  flex-basis: 100%;
+}

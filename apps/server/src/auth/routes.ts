@@ -49,12 +49,28 @@ export function householdTag(claims: Record<string, unknown>, claim: string): st
   return typeof v === 'string' || typeof v === 'number' ? String(v).trim().slice(0, 80) : '';
 }
 
-/** The household for a tag, created on first use (the tag is its name). */
-export async function householdFor(db: Db, key: string, defaultName: string): Promise<string> {
-  await db
-    .insert(households)
-    .values({ key, name: key || defaultName })
-    .onConflictDoNothing({ target: households.key });
+/**
+ * Which household a user belongs to (its key):
+ * - an explicit household claim wins (its value is the key, and the name of a new household);
+ * - no owner group configured: everyone shares one household ('');
+ * - members of the owner group share the owner household (''), everyone else gets their own.
+ */
+export function householdKey(p: { tag: string; groups: string[]; ownerGroup: string | undefined; userId: string }): string {
+  if (p.tag) return p.tag;
+  if (!p.ownerGroup || p.groups.includes(p.ownerGroup)) return '';
+  return `private:${p.userId}`;
+}
+
+/** "Sönke Jacobs" → "Jacobs"; "anna@example.org" → "anna". */
+export function lastName(displayName: string): string {
+  const name = displayName.includes('@') && !displayName.includes(' ') ? displayName.split('@')[0]! : displayName;
+  return name.trim().split(/\s+/).pop() || 'Haushalt';
+}
+
+/** The household for a key, created on first use: named after the claim, or the first member's last name. */
+export async function householdFor(db: Db, key: string, firstMember: string, sharedName?: string): Promise<string> {
+  const name = key && !key.startsWith('private:') ? key : (key === '' && sharedName) || lastName(firstMember);
+  await db.insert(households).values({ key, name }).onConflictDoNothing({ target: households.key });
   const [row] = await db.select({ id: households.id }).from(households).where(eq(households.key, key));
   return row!.id;
 }
@@ -65,9 +81,10 @@ export async function authRoutes(
 ): Promise<void> {
   const { config, db, avatars, sync, hub } = opts;
 
-  /** Puts the user into the household of their tag; their devices and list mates get the changes. */
-  const joinHousehold = async (userId: string, tag: string) => {
-    const affected = await sync.setHousehold(userId, await householdFor(db, tag, config.DEFAULT_HOUSEHOLD_NAME));
+  /** Puts the user into their household (see householdKey); their devices and list mates get the changes. */
+  const joinHousehold = async (userId: string, displayName: string, tag: string, groups: string[]) => {
+    const key = householdKey({ tag, groups, ownerGroup: config.OIDC_OWNER_GROUP, userId });
+    const affected = await sync.setHousehold(userId, await householdFor(db, key, displayName, config.DEFAULT_HOUSEHOLD_NAME));
     hub.notify(affected);
   };
   const secure = config.PUBLIC_URL.startsWith('https://');
@@ -145,14 +162,15 @@ export async function authRoutes(
     }
     const groups = Array.isArray(claims.groups) ? claims.groups.map(String) : [];
     const picture = typeof claims.picture === 'string' ? claims.picture : null;
+    const displayName = String(claims.name ?? claims.preferred_username ?? claims.email ?? 'Unbekannt');
     const userId = await upsertUser(db, {
       subject: String(claims.sub),
       email: typeof claims.email === 'string' ? claims.email : null,
-      displayName: String(claims.name ?? claims.preferred_username ?? claims.email ?? 'Unbekannt'),
+      displayName,
       avatarUrl: picture,
       isAdmin: groups.includes(config.OIDC_ADMIN_GROUP),
     });
-    await joinHousehold(userId, householdTag(claims, config.OIDC_HOUSEHOLD_CLAIM));
+    await joinHousehold(userId, displayName, householdTag(claims, config.OIDC_HOUSEHOLD_CLAIM), groups);
     // In the background: the login does not wait for the picture.
     void avatars.refresh(userId, picture, tokens.access_token);
     await createSession(db, userId, reply, secure);
@@ -162,7 +180,9 @@ export async function authRoutes(
   if (config.DEV_LOGIN) {
     app.log.warn('DEV_LOGIN ist aktiv – Anmeldung ohne Passwort möglich. Nur für die lokale Entwicklung!');
     app.post('/auth/dev', async (request, reply) => {
-      const { name, household } = z.object({ name: z.string().trim().min(1).max(40), household: z.string().trim().max(80).default('') }).parse(request.body);
+      const { name, household, groups } = z
+        .object({ name: z.string().trim().min(1).max(40), household: z.string().trim().max(80).default(''), groups: z.array(z.string()).default([]) })
+        .parse(request.body);
       const userId = await upsertUser(db, {
         subject: `dev:${name.toLowerCase()}`,
         email: null,
@@ -170,7 +190,7 @@ export async function authRoutes(
         avatarUrl: null,
         isAdmin: false,
       });
-      await joinHousehold(userId, household);
+      await joinHousehold(userId, name, household, groups);
       await createSession(db, userId, reply, secure);
       return { ok: true };
     });

@@ -643,6 +643,18 @@ export class SyncService {
     return this.mutex.run(() => this.pullUnlocked(userId, since));
   }
 
+  /** Renames the user's household; returns its members (to notify), or null for guests. */
+  renameHousehold(userId: string, name: string): Promise<Set<string> | null> {
+    return this.mutex.run(async () => {
+      const [user] = await this.db.select({ householdId: users.householdId, isGuest: users.isGuest }).from(users).where(eq(users.id, userId));
+      if (!user?.householdId || user.isGuest) return null;
+      await this.db.update(households).set({ name }).where(eq(households.id, user.householdId));
+      // The name travels with "me": a new sequence makes every member's devices fetch it.
+      const members = await this.db.update(users).set({ seq: nextSeq }).where(eq(users.householdId, user.householdId)).returning({ id: users.id });
+      return new Set(members.map((m) => m.id));
+    });
+  }
+
   private async householdName(id: string | null): Promise<string | null> {
     if (!id) return null;
     const [h] = await this.db.select({ name: households.name }).from(households).where(eq(households.id, id));

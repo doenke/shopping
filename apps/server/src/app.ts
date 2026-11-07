@@ -69,11 +69,6 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   const avatars = new AvatarService(db, sync, hub, app.log, fetchImpl, config.OIDC_ISSUER);
   app.addHook('onClose', async () => avatars.stop());
   await app.register(authRoutes, { config, db, avatars, sync, hub });
-  // The default household's name comes from the configuration.
-  await db
-    .insert(households)
-    .values({ key: '', name: config.DEFAULT_HOUSEHOLD_NAME })
-    .onConflictDoUpdate({ target: households.key, set: { name: config.DEFAULT_HOUSEHOLD_NAME } });
 
   // Used by the Docker/Compose health check: healthy only if the database answers.
   app.get('/healthz', async (_request, reply) => {
@@ -134,6 +129,15 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
       const [u] = await db.select().from(users).where(eq(users.id, request.userId));
       const [h] = u?.householdId ? await db.select({ name: households.name }).from(households).where(eq(households.id, u.householdId)) : [];
       return toMe(u!, h?.name ?? null);
+    });
+
+    /** Anyone in a household may rename it; all members get the new name. */
+    api.patch('/api/v1/me/household', async (request) => {
+      const { name } = z.object({ name: z.string().trim().min(1).max(60) }).parse(request.body);
+      const members = await sync.renameHousehold(request.userId, name);
+      if (!members) throw new ApiError(404, 'no_household', 'Gäste gehören zu keinem Haushalt');
+      hub.notify(members);
+      return { name };
     });
 
     api.get('/api/v1/sync/pull', async (request) => {

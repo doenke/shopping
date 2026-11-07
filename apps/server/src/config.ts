@@ -16,10 +16,23 @@ const EnvSchema = z.object({
   OIDC_CLIENT_ID: z.string().optional(),
   OIDC_CLIENT_SECRET: z.string().optional(),
   OIDC_ADMIN_GROUP: z.string().default('admins'),
-  /** Claim with the household tag (Pocket ID: custom claim on the user or a group). */
+  /**
+   * Members of this group share the owner household; everyone else gets a household of their own.
+   * Not set: all users share one household.
+   */
+  OIDC_OWNER_GROUP: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => v || undefined),
+  /** Claim with an explicit household (Pocket ID: custom claim on the user or a group); overrides the rules above. */
   OIDC_HOUSEHOLD_CLAIM: z.string().default('household'),
-  /** Name of the household for users without a tag. */
-  DEFAULT_HOUSEHOLD_NAME: z.string().trim().min(1).default('Haushalt'),
+  /** Name of the shared (owner) household when it is created; default: last name of its first member. */
+  DEFAULT_HOUSEHOLD_NAME: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => v || undefined),
   /** Text of the login button, e.g. "Mit Firmenkonto anmelden". */
   OIDC_LOGIN_LABEL: z.string().trim().min(1).max(60).default('Mit Pocket ID anmelden'),
   /** Local development only: allows logging in with just a name, without OIDC. */

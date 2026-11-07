@@ -17,10 +17,13 @@
 
 ## Haushalte
 
-- Der Haushalt steht in Pocket ID als **Custom Claim** (Name per `OIDC_HOUSEHOLD_CLAIM`, Standard
-  `household`), am Benutzer oder an einer Gruppe. Ohne Claim gilt der Standard-Haushalt
-  (Name per `DEFAULT_HOUSEHOLD_NAME`).
-- Der Claim wird bei jeder Anmeldung gelesen; ein Umzug nimmt die eigenen Listen mit.
+- Reihenfolge bei jeder Anmeldung (`householdKey`): ein **Custom Claim** (`OIDC_HOUSEHOLD_CLAIM`, Standard
+  `household`) gewinnt, sein Wert ist der Schlüssel. Sonst: ohne `OIDC_OWNER_GROUP` alle im gemeinsamen
+  Haushalt (Schlüssel `''`); mit Owner-Gruppe deren Mitglieder dort, alle anderen in einem eigenen
+  (`private:<user-id>`).
+- Name bei der Anlage: Claim-Wert bzw. Nachname des ersten Mitglieds (`DEFAULT_HOUSEHOLD_NAME` nur für den
+  gemeinsamen). Jedes Mitglied kann umbenennen (`PATCH /api/v1/me/household`); der Name reist über `me`.
+- Ein Umzug nimmt die eigenen Listen mit.
 - Nur Pocket-ID-Nutzer gehören zu einem Haushalt, Gäste nie.
 
 ## Wer sieht eine Liste?

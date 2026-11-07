@@ -30,8 +30,9 @@ Datenbank-Migrationen und der Grundkatalog laufen beim Start automatisch.
 | `OIDC_CLIENT_SECRET` | leer | Leer lassen bei einem öffentlichen Client (PKCE). |
 | `OIDC_ADMIN_GROUP` | `admins` | Mitglieder dieser Gruppe sind Admins. |
 | `OIDC_LOGIN_LABEL` | `Mit Pocket ID anmelden` | Beschriftung des Anmeldeknopfs. |
-| `OIDC_HOUSEHOLD_CLAIM` | `household` | Claim mit dem Haushalts-Tag, siehe [haushalte-und-teilen.md](haushalte-und-teilen.md). |
-| `DEFAULT_HOUSEHOLD_NAME` | `Haushalt` | Name des Haushalts für alle ohne Tag. |
+| `OIDC_OWNER_GROUP` | leer | Mitglieder teilen sich den Haushalt des Betreibers, alle anderen bekommen einen eigenen. Leer: alle in einem Haushalt. Siehe [haushalte-und-teilen.md](haushalte-und-teilen.md). |
+| `OIDC_HOUSEHOLD_CLAIM` | `household` | Claim mit einem ausdrücklichen Haushalt (geht vor die Gruppe). |
+| `DEFAULT_HOUSEHOLD_NAME` | leer | Name des gemeinsamen Haushalts beim ersten Anlegen; sonst der Nachname des ersten Mitglieds. |
 | `PORT` / `HOST` | `3000` / `0.0.0.0` | Wo die App im Container lauscht. |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`. |
 | `SHOPPING_IMAGE` | `ghcr.io/doenke/shopping:latest` | In der Compose-Vorlage: feste Version statt `latest`, z. B. `ghcr.io/doenke/shopping:1.5.36`. |

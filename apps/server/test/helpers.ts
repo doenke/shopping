@@ -9,7 +9,7 @@ import { seedBaseCatalog } from '../src/db/seed.js';
 
 const ADMIN_URL = process.env.TEST_DATABASE_URL ?? 'postgres://postgres@127.0.0.1:54329/postgres';
 
-export async function createTestApp(extra: { fetchImpl?: typeof fetch } = {}) {
+export async function createTestApp({ env = {}, ...extra }: { fetchImpl?: typeof fetch; env?: Record<string, string> } = {}) {
   const name = `shopping_test_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const admin = postgres(ADMIN_URL, { max: 1, onnotice: () => {} });
   await admin.unsafe(`CREATE DATABASE ${name}`);
@@ -25,6 +25,7 @@ export async function createTestApp(extra: { fetchImpl?: typeof fetch } = {}) {
     DEV_LOGIN: 'true',
     LOG_LEVEL: 'error',
     WEB_DIST: '/nonexistent',
+    ...env,
   });
   const { app, sync, icons, avatars, webhooks } = await buildApp({ config, db, ...extra });
   await app.ready();
@@ -36,9 +37,9 @@ export async function createTestApp(extra: { fetchImpl?: typeof fetch } = {}) {
     icons,
     avatars,
     webhooks,
-    /** Dev login; `household` is the household tag (default: the default household). */
-    async login(userName: string, household = '') {
-      const res = await app.inject({ method: 'POST', url: '/auth/dev', payload: { name: userName, household } });
+    /** Dev login; `household` is the household claim (default: none), `groups` the OIDC groups. */
+    async login(userName: string, household = '', groups: string[] = []) {
+      const res = await app.inject({ method: 'POST', url: '/auth/dev', payload: { name: userName, household, groups } });
       const cookie = res.cookies.find((c) => c.name === 'sid')!;
       const me = await app.inject({ method: 'GET', url: '/api/v1/me', cookies: { sid: cookie.value } });
       return { cookie: `sid=${cookie.value}`, sid: cookie.value, id: me.json().id as string };

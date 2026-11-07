@@ -20,8 +20,8 @@ beforeAll(async () => {
 afterAll(async () => t?.close());
 
 describe('households', () => {
-  it('know their name: the tag, or the configured default', async () => {
-    expect((await as(anna, 'GET', '/api/v1/me')).json().household).toBe('Haushalt');
+  it('know their name: the claim, or the last name of the first member', async () => {
+    expect((await as(anna, 'GET', '/api/v1/me')).json().household).toBe('Anna');
     expect((await as(carla, 'GET', '/api/v1/me')).json().household).toBe('Müller');
   });
 
@@ -76,5 +76,55 @@ describe('households', () => {
     const { url } = (await as(anna, 'GET', `/api/v1/lists/${einkauf.id}/share-link`)).json();
     await as(carla, 'GET', new URL(url).pathname);
     expect(await listNames(carla)).toContain('Einkauf');
+  });
+});
+
+describe('owner group', () => {
+  let o: Awaited<ReturnType<typeof createTestApp>>;
+  beforeAll(async () => {
+    o = await createTestApp({ env: { OIDC_OWNER_GROUP: 'familie' } });
+  });
+  afterAll(async () => o?.close());
+  const me = async (u: User) => (await o.app.inject({ method: 'GET', url: '/api/v1/me', headers: { cookie: u.cookie } })).json();
+  const lists = async (u: User) =>
+    ((await o.app.inject({ method: 'GET', url: '/api/v1/lists', headers: { cookie: u.cookie } })).json() as { name: string }[]).map((l) => l.name).sort();
+
+  it('puts the group into the owner household and everyone else into their own', async () => {
+    const soenke = await o.login('Sönke Jacobs', '', ['familie']);
+    const ina = await o.login('Ina Jacobs', '', ['familie', 'admins']);
+    const gast = await o.login('Paul Meier', '', ['admins']);
+    const tom = await o.login('Tom Schulz');
+    expect((await me(soenke)).household).toBe('Jacobs');
+    expect((await me(ina)).household).toBe('Jacobs');
+    expect((await me(gast)).household).toBe('Meier');
+    expect((await me(tom)).household).toBe('Schulz');
+
+    await o.app.inject({ method: 'POST', url: '/api/v1/lists', headers: { cookie: soenke.cookie }, payload: { name: 'Wocheneinkauf' } });
+    await o.app.inject({ method: 'POST', url: '/api/v1/lists', headers: { cookie: gast.cookie }, payload: { name: 'Pauls Liste' } });
+    expect(await lists(ina)).toEqual(['Wocheneinkauf']);
+    expect(await lists(gast)).toEqual(['Pauls Liste']);
+    expect(await lists(tom)).toEqual([]);
+  });
+
+  it('lets an explicit household claim win', async () => {
+    const lea = await o.login('Lea Schulz', 'Schulz WG');
+    const max = await o.login('Max Becker', 'Schulz WG');
+    expect((await me(max)).household).toBe('Schulz WG');
+    await o.app.inject({ method: 'POST', url: '/api/v1/lists', headers: { cookie: lea.cookie }, payload: { name: 'WG-Einkauf' } });
+    expect(await lists(max)).toEqual(['WG-Einkauf']);
+  });
+
+  it('can be renamed by any member', async () => {
+    const ina = await o.login('Ina Jacobs', '', ['familie']);
+    const soenke = await o.login('Sönke Jacobs', '', ['familie']);
+    const before = (await o.sync.pull(soenke.id, 0)).seq;
+    const res = await o.app.inject({ method: 'PATCH', url: '/api/v1/me/household', headers: { cookie: ina.cookie }, payload: { name: 'Familie Jacobs' } });
+    expect(res.statusCode).toBe(200);
+    expect((await me(soenke)).household).toBe('Familie Jacobs');
+    // Devices learn it through the sync.
+    expect((await o.sync.pull(soenke.id, before)).me?.household).toBe('Familie Jacobs');
+    // A new login keeps the name.
+    await o.login('Sönke Jacobs', '', ['familie']);
+    expect((await me(soenke)).household).toBe('Familie Jacobs');
   });
 });

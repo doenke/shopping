@@ -109,8 +109,9 @@ Shopping meldet über OIDC an (Authorization Code + PKCE), zum Beispiel gegen
 - öffentlicher Client mit PKCE – dann bleibt `OIDC_CLIENT_SECRET` leer
 - wer rein darf, regelst du über „Allowed User Groups“
 
-Das Profilbild aus Pocket ID erscheint in der App. Wer zu welchem Haushalt gehört, sagt ein
-Custom Claim `household` – Details in [docs/haushalte-und-teilen.md](docs/haushalte-und-teilen.md).
+Das Profilbild aus Pocket ID erscheint in der App. Für die Haushalte reicht meist eine Gruppe: Wer in
+`OIDC_OWNER_GROUP` ist, teilt sich deinen Haushalt, alle anderen bekommen einen eigenen – Details in
+[docs/haushalte-und-teilen.md](docs/haushalte-und-teilen.md).
 
 ## Kleine Konfiguration, große Wirkung
 
@@ -123,7 +124,7 @@ Für den normalen Betrieb brauchst du nur wenige Werte:
 | `POSTGRES_PASSWORD` | Pflicht. Passwort der mitgelieferten Datenbank. |
 | `OIDC_ISSUER` / `OIDC_CLIENT_ID` | Pflicht. Dein Identity Provider. |
 | `OIDC_ADMIN_GROUP` | Gruppe mit Admin-Rechten. Standard: `admins`. |
-| `DEFAULT_HOUSEHOLD_NAME` | Name des Haushalts für alle ohne Haushalts-Tag. Standard: `Haushalt`. |
+| `OIDC_OWNER_GROUP` | Gruppe für deinen Haushalt (z. B. `familie`); alle anderen bekommen einen eigenen. Leer: alle in einem Haushalt. |
 
 Alle Werte stehen kommentiert in [.env.example](.env.example) und in
 [docs/betrieb.md](docs/betrieb.md).
