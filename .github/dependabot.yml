@@ -1,0 +1,44 @@
+# Weekly update PRs; the CI (tests, browser smoke tests, HA tests) shows whether an update breaks something.
+version: 2
+updates:
+  # JavaScript (pnpm workspace: server, web, shared, e2e)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+    groups:
+      # Everything that should not break anything in one PR; major versions come one by one.
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  # Base image of the Docker build (node:22-alpine): stay on the LTS line, new majors by hand.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Berlin
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+
+  # Actions in .github/workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
+
+  # Test dependencies of the Home Assistant integration
+  - package-ecosystem: pip
+    directory: /ha-tests
+    schedule:
+      interval: monthly
+    groups:
+      ha-tests:
+        patterns: ['*']

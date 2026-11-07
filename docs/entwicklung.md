@@ -25,6 +25,10 @@ pnpm format   # Prettier (die CI prüft mit pnpm format:check)
 pnpm build
 ```
 
+**Updates:** Dependabot (`.github/dependabot.yml`) öffnet montags gesammelte PRs für Kleinupdates der
+JavaScript-Pakete, einzeln für neue Hauptversionen, dazu für das Docker-Basisimage (nur innerhalb von Node 22)
+und monatlich für GitHub Actions und die HA-Testabhängigkeiten. Grün in der CI → mergen.
+
 Die Home-Assistant-Integration wird gegen einen echten Server getestet:
 
 ```bash
