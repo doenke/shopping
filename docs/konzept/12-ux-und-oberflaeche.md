@@ -25,6 +25,7 @@ Laptop-Ansicht.
 
 - **Eingabe:** Tippen zeigt Katalogtreffer als Kacheln mit ihren Icons; Enter übernimmt den
   geparsten Text („2 kg Kartoffeln“), auch mehrere mit Komma.
+  Rechts neben dem Feld schaltet ein runder Knopf zwischen Kacheln und Liste um (Handy startet mit Liste, Laptop mit Kacheln).
 - **Zuhause / Einkaufen:** Zu Hause öffnet ein Tipp den Artikel (Editor), damit nichts versehentlich
   abgehakt wird. Im Laden 🛒: grüner Kopf, ein Tipp hakt ab („Rückgängig“ in der Leiste unten),
   Bildschirm bleibt an. Zurück auf Zuhause, wenn alles gekauft ist oder eine Stunde nichts abgehakt
@@ -76,7 +77,6 @@ Laptop-Ansicht.
 |---------|-|
 | ✏️ Bearbeiten … | Name, Beschreibung, Kategorie (ToDo), Icon mit „Neues Icon erzeugen“ |
 | 👥 Berechtigungen … | sichtbar für Haushalt oder nur mich, wer dabei ist (entfernen), Link teilen und erneuern |
-| ☰ Als Liste anzeigen / ▦ Als Kacheln anzeigen | Bild links, Text daneben – pro Gerät gemerkt |
 | 📋 Als Text teilen … | offene Einträge als Text in den Teilen-Dialog bzw. die Zwischenablage |
 | ↕ Kategorien sortieren … | Einkauf und Packliste |
 | Aus Mealie hinzufügen … | Rezept oder Wochenplan |

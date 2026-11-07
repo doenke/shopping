@@ -21,7 +21,7 @@ import { SyncBadge, SyncDot, useSyncInfo } from './components/SyncBadge';
 import { CategoryContext } from './categories';
 import { db, setMeta } from './db';
 import { IconContext } from './icons';
-import { navigate, useTileView, useCatalog, useCategoryRows, useIcons, useItems, useLists, useMe, useMediaQuery, useRemoteChecks, useRoute, useUsers } from './hooks';
+import { navigate, useCatalog, useCategoryRows, useIcons, useItems, useLists, useMe, useMediaQuery, useRemoteChecks, useRoute, useUsers } from './hooks';
 import { sync } from './sync/engine';
 
 export function App() {
@@ -430,7 +430,6 @@ interface ListMenuProps {
 function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories, onEdit, onCopied, onNotice }: ListMenuProps) {
   const guest = me.isGuest;
   const isOwner = list.ownerId === me.id;
-  const [tileView, setTileView] = useTileView();
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -478,18 +477,6 @@ function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImp
       >
         📋 Als Text teilen …
       </button>
-      {list.listType !== 'todo' && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            setTileView(tileView === 'rows' ? 'tiles' : 'rows');
-            onClose();
-          }}
-        >
-          {tileView === 'rows' ? '▦ Als Kacheln anzeigen' : '☰ Als Liste anzeigen'}
-        </button>
-      )}
       {(list.listType === 'shopping' || list.listType === 'packing') && (
         <button
           type="button"

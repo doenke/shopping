@@ -146,14 +146,18 @@ export function useMediaQuery(query: string): boolean {
 }
 
 export type TileView = 'tiles' | 'rows';
-const TILE_VIEW_KEY = 'tile-view';
+const TILE_VIEW_KEY = 'view-mode';
 
+/** Until switched on this device: rows on phones, tiles on larger screens. */
 function readTileView(): TileView {
+  let stored: string | null = null;
   try {
-    return localStorage.getItem(TILE_VIEW_KEY) === 'rows' ? 'rows' : 'tiles';
+    stored = localStorage.getItem(TILE_VIEW_KEY);
   } catch {
-    return 'tiles';
+    // Not available: fall back to the device default.
   }
+  if (stored === 'rows' || stored === 'tiles') return stored;
+  return window.matchMedia('(min-width: 900px)').matches ? 'tiles' : 'rows';
 }
 
 /** Tiles (pictures in a grid) or rows (picture, text next to it); per device. */
