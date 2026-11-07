@@ -346,3 +346,26 @@ describe('list as text', () => {
     expect(listAsText(list('shopping'), [item({ name: 'Milch', checked: true })])).toBe('Wocheneinkauf\n\nAlles erledigt.');
   });
 });
+
+describe('recurring checklists', () => {
+  it('start each period at midnight in Berlin', async () => {
+    const { resetPeriodStart } = await import('./recurring.js');
+    // Thu 2026-11-12 10:00 Berlin (CET, UTC+1)
+    const now = new Date('2026-11-12T09:00:00Z');
+    expect(resetPeriodStart('daily', now).toISOString()).toBe('2026-11-11T23:00:00.000Z');
+    expect(resetPeriodStart('weekly', now).toISOString()).toBe('2026-11-08T23:00:00.000Z'); // Mon 9.11.
+    expect(resetPeriodStart('monthly', now).toISOString()).toBe('2026-10-31T23:00:00.000Z');
+    // Summer time (UTC+2), shortly after midnight Berlin on a Monday
+    const summer = new Date('2026-06-14T22:30:00Z'); // Mon 15.6. 00:30
+    expect(resetPeriodStart('daily', summer).toISOString()).toBe('2026-06-14T22:00:00.000Z');
+    expect(resetPeriodStart('weekly', summer).toISOString()).toBe('2026-06-14T22:00:00.000Z');
+  });
+
+  it('only for ToDo and packing lists', async () => {
+    const { listReset } = await import('./recurring.js');
+    expect(listReset({ listType: 'todo', isTemplate: false, settings: { reset: 'weekly' } })).toBe('weekly');
+    expect(listReset({ listType: 'shopping', isTemplate: false, settings: { reset: 'weekly' } })).toBeNull();
+    expect(listReset({ listType: 'packing', isTemplate: true, settings: { reset: 'daily' } })).toBeNull();
+    expect(listReset({ listType: 'packing', isTemplate: false, settings: { reset: 'yearly' } })).toBeNull();
+  });
+});

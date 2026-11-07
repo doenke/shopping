@@ -1,9 +1,10 @@
-import { defaultVisibility, itemSpecification, SUGGESTED_LIST_GROUPS, packingInfo, type ItemRow, type ListRow, type ListType } from '@shopping/shared';
+import { canReset, defaultVisibility, type ResetEvery, itemSpecification, SUGGESTED_LIST_GROUPS, packingInfo, type ItemRow, type ListRow, type ListType } from '@shopping/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, createList, itemToNew } from '../actions';
 import { db } from '../db';
 import { navigate } from '../hooks';
+import { ResetSelect } from './ListEditDialog';
 import { ItemIcon } from './Tile';
 
 export const LIST_TYPE_LABEL: Record<ListType, string> = {
@@ -34,6 +35,8 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
   const [isPrivate, setIsPrivate] = useState(defaultVisibility(initialType) === 'private');
   const [description, setDescription] = useState('');
   const [group, setGroup] = useState('');
+  const [reset, setReset] = useState<ResetEvery | null>(null);
+  const resettable = canReset({ listType: type, isTemplate: asTemplate });
   const templates = allTemplates.filter((t) => t.listType === type);
   // Several templates at once, e.g. "Basis" + "Ski" + "Kinder" – in the order they were picked.
   const [templateIds, setTemplateIds] = useState<string[]>([]);
@@ -88,6 +91,7 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
       isPrivate ? 'private' : 'household',
       template?.id,
       type === 'todo' ? group : undefined,
+      resettable ? reset : null,
     );
     const chosen = sorted.filter((e) => selected.has(e.item.id));
     if (chosen.length) {
@@ -171,6 +175,8 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
             </datalist>
           </label>
         )}
+
+        {resettable && <ResetSelect value={reset} onChange={setReset} />}
 
         {templates.length > 0 && (
           <div className="field">

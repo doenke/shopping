@@ -65,3 +65,33 @@ describe('cleaning up checked entries', () => {
     expect((await as(anna, 'GET', `/api/v1/lists/${open}`)).json().items).toHaveLength(4);
   });
 });
+
+describe('recurring checklists', () => {
+  it('open again what was checked before the current period', async () => {
+    const list = (await as(anna, 'POST', '/api/v1/lists', { name: 'Haus verlassen', type: 'todo' })).json();
+    await as(anna, 'POST', `/api/v1/lists/${list.id}/items`, { text: 'Fenster zu, Herd aus, Licht aus' });
+    const items = (await as(anna, 'GET', `/api/v1/lists/${list.id}`)).json().items as { id: string; name: string }[];
+    for (const i of items) await as(anna, 'PATCH', `/api/v1/items/${i.id}`, { checked: true });
+    // "Fenster zu" was checked last week, the others today.
+    const fenster = items.find((i) => i.name === 'Fenster zu')!;
+    await t.db.execute(sql`UPDATE list_items SET checked_at = '2026-11-01T10:00:00.000Z' WHERE id = ${fenster.id}`);
+    const now = new Date('2026-11-12T09:00:00Z');
+
+    // Without the setting nothing happens.
+    expect((await t.sync.resetRecurring(now)).size).toBe(0);
+
+    await t.db.execute(sql`UPDATE lists SET settings = settings || '{"reset":"weekly"}'::jsonb WHERE id = ${list.id}`);
+    await t.db.execute(sql`UPDATE list_items SET checked_at = '2026-11-12T08:00:00.000Z' WHERE list_id = ${list.id} AND id <> ${fenster.id}`);
+    const before = await t.sync.pull(anna.id, 0);
+    expect([...(await t.sync.resetRecurring(now))]).toEqual([anna.id]);
+    expect((await done(list.id)).sort()).toEqual(['Herd aus', 'Licht aus']);
+    const delta = await t.sync.pull(anna.id, before.seq);
+    expect(delta.items.map((i) => [i.name, i.checked])).toEqual([['Fenster zu', false]]);
+
+    // Daily: today's checks stay until midnight.
+    await t.db.execute(sql`UPDATE lists SET settings = settings || '{"reset":"daily"}'::jsonb WHERE id = ${list.id}`);
+    expect((await t.sync.resetRecurring(now)).size).toBe(0);
+    expect((await t.sync.resetRecurring(new Date('2026-11-13T00:30:00Z'))).size).toBe(1);
+    expect(await done(list.id)).toEqual([]);
+  });
+});

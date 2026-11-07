@@ -1,5 +1,5 @@
 import { useCustomCategories } from '../categories';
-import { categoriesInOrder, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
+import { categoriesInOrder, categoryInList, listReset, RESET_LABEL, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { archiveList, setChecked } from '../actions';
 import { navigate, useMe, useTileView } from '../hooks';
@@ -132,6 +132,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
             <progress max={items.length} value={packed} />
             <span>
               {packed} von {items.length} eingepackt
+              {listReset(list) ? ` · ↺ ${RESET_LABEL[listReset(list)!]}` : ''}
             </span>
           </div>
           {packed > 0 && (

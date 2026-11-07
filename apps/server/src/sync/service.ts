@@ -4,7 +4,9 @@ import {
   defaultVisibility,
   nextCategoryColor,
   mergeAmounts,
+  listReset,
   packingInfo,
+  resetPeriodStart,
   samePacking,
   type CategoryPatch,
   type CategoryRow,
@@ -532,6 +534,53 @@ export class SyncService {
         .select({ userId: listMembers.userId })
         .from(listMembers)
         .where(and(inArray(listMembers.listId, listIds), eq(listMembers.removed, false)));
+      return new Set(members.map((m) => m.userId));
+    });
+  }
+
+  /**
+   * Recurring checklists: entries checked before the start of the list's current period (day, week from
+   * Monday, month – Berlin time) are open again. Stateless, so a missed run catches up. Returns the members to notify.
+   */
+  resetRecurring(now = new Date()): Promise<Set<string>> {
+    return this.mutex.run(async () => {
+      const due = await this.db
+        .select()
+        .from(lists)
+        .where(
+          and(
+            eq(lists.deleted, false),
+            eq(lists.isTemplate, false),
+            sql`${lists.archivedAt} IS NULL`,
+            inArray(lists.listType, ['todo', 'packing']),
+            sql`${lists.settings} ->> 'reset' IN ('daily', 'weekly', 'monthly')`,
+          ),
+        );
+      const touched: string[] = [];
+      for (const list of due) {
+        const every = listReset(toListRow(list));
+        if (!every) continue;
+        const ts = this.clock.tick();
+        const stamp = { checked: ts, checkedAt: ts, checkedBy: ts };
+        const rows = await this.db
+          .update(listItems)
+          .set({ checked: false, checkedAt: null, checkedBy: null, hlc: sql`${listItems.hlc} || ${JSON.stringify(stamp)}::jsonb`, seq: nextSeq })
+          .where(
+            and(
+              eq(listItems.listId, list.id),
+              eq(listItems.checked, true),
+              eq(listItems.deleted, false),
+              sql`${listItems.checkedAt} < ${resetPeriodStart(every, now).toISOString()}`,
+            ),
+          )
+          .returning({ id: listItems.id });
+        if (rows.length) touched.push(list.id);
+      }
+      if (!touched.length) return new Set<string>();
+      const members = await this.db
+        .select({ userId: listMembers.userId })
+        .from(listMembers)
+        .where(and(inArray(listMembers.listId, touched), eq(listMembers.removed, false)));
       return new Set(members.map((m) => m.userId));
     });
   }

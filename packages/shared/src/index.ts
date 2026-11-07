@@ -13,3 +13,4 @@ export * from './units.js';
 export { generateKeyBetween } from 'fractional-indexing';
 export * from './plan-add.js';
 export * from './list-text.js';
+export * from './recurring.js';

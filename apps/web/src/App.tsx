@@ -1,6 +1,6 @@
-import { categoriesInOrder, groupLists, inUserOrder, listGroup, parseInput, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
+import { canReset, categoriesInOrder, groupLists, inUserOrder, listGroup, parseInput, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, checkAll, archiveList, createList, deleteList, leaveList, saveAsTemplate, setCategoryOrder, setListOrder, setSectionOrder, setMainList, shareListAsText } from './actions';
+import { addItems, checkAll, resetList, archiveList, createList, deleteList, leaveList, saveAsTemplate, setCategoryOrder, setListOrder, setSectionOrder, setMainList, shareListAsText } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
@@ -564,11 +564,31 @@ function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImp
               .count()
               .then((n) => {
                 if (n === 0) return onNotice('Es ist schon alles erledigt.');
-                if (confirm(`Alle ${n} offenen Einträge als erledigt markieren?`)) void checkAll(list.id).then((c) => onNotice(`${c} Einträge als erledigt markiert.`));
+                if (confirm(`Alle ${n} offenen Einträge als erledigt markieren?`)) void checkAll(list.id).then((c) => onNotice(c === 1 ? '1 Eintrag als erledigt markiert.' : `${c} Einträge als erledigt markiert.`));
               });
           }}
         >
           ✓ Alle als erledigt markieren
+        </button>
+      )}
+      {canReset(list) && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            onClose();
+            void db.items
+              .where('listId')
+              .equals(list.id)
+              .filter((i) => i.checked && !i.deleted)
+              .count()
+              .then((n) => {
+                if (n === 0) return onNotice('Es ist noch nichts abgehakt.');
+                if (confirm(n === 1 ? 'Den abgehakten Eintrag wieder öffnen?' : `Alle ${n} abgehakten Einträge wieder öffnen?`)) void resetList(list.id).then((c) => onNotice(c === 1 ? '1 Eintrag wieder offen.' : `${c} Einträge wieder offen.`));
+              });
+          }}
+        >
+          ↺ Alles zurücksetzen
         </button>
       )}
       {!isOwner && !guest && (

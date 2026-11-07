@@ -1,4 +1,4 @@
-import { listDescription, listGroup, SUGGESTED_LIST_GROUPS, type ListRow, type Me } from '@shopping/shared';
+import { canReset, listDescription, listGroup, listReset, RESET_EVERY, RESET_LABEL, SUGGESTED_LIST_GROUPS, type ListRow, type Me, type ResetEvery } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { editList, newListIcon } from '../actions';
 import { ListIcon } from './ListIcon';
@@ -17,6 +17,7 @@ export function ListEditDialog({ list, me, groups, onClose }: Props) {
   const [name, setName] = useState(list.name);
   const [description, setDescription] = useState(listDescription(list) ?? '');
   const [group, setGroup] = useState(listGroup(list) ?? '');
+  const [reset, setReset] = useState<ResetEvery | null>(listReset(list));
   const [icon, setIcon] = useState<'idle' | 'queued' | 'error'>('idle');
   const todo = list.listType === 'todo';
 
@@ -29,7 +30,7 @@ export function ListEditDialog({ list, me, groups, onClose }: Props) {
         onSubmit={async (e) => {
           e.preventDefault();
           if (!name.trim()) return;
-          await editList(list, { name, description, ...(todo ? { group } : {}) });
+          await editList(list, { name, description, ...(todo ? { group } : {}), ...(canReset(list) ? { reset } : {}) });
           ref.current?.close();
         }}
       >
@@ -67,6 +68,8 @@ export function ListEditDialog({ list, me, groups, onClose }: Props) {
           </label>
         )}
 
+        {canReset(list) && <ResetSelect value={reset} onChange={setReset} />}
+
         <div className="field">
           <span>Icon</span>
           <div className="row row--center">
@@ -97,5 +100,23 @@ export function ListEditDialog({ list, me, groups, onClose }: Props) {
         </footer>
       </form>
     </dialog>
+  );
+}
+
+/** Recurring checklist: when everything is open again (Berlin time, done by the server). */
+export function ResetSelect({ value, onChange }: { value: ResetEvery | null; onChange: (v: ResetEvery | null) => void }) {
+  return (
+    <label className="field">
+      <span>↺ Automatisch zurücksetzen</span>
+      <select value={value ?? ''} onChange={(e) => onChange((e.target.value || null) as ResetEvery | null)}>
+        <option value="">nie – nur per Menü „Alles zurücksetzen“</option>
+        {RESET_EVERY.map((r) => (
+          <option key={r} value={r}>
+            {RESET_LABEL[r]}
+          </option>
+        ))}
+      </select>
+      <small className="muted">Für wiederkehrende Checklisten, z. B. „Haus verlassen“ oder „Wochenputz“: Abgehaktes ist dann wieder offen.</small>
+    </label>
   );
 }

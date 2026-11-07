@@ -1,4 +1,4 @@
-import { categoriesFor, defaultVisibility, listAsText, nextCategoryColor, type CategoryPatch, type CustomCategoryType, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem, type SectionKey } from '@shopping/shared';
+import { categoriesFor, defaultVisibility, listAsText, nextCategoryColor, type CategoryPatch, type CustomCategoryType, packingInfo, planAdd, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem, type ResetEvery, type SectionKey } from '@shopping/shared';
 import { db } from './db';
 import { sync } from './sync/engine';
 
@@ -40,12 +40,15 @@ export async function createList(
   templateId?: string,
   /** ToDo lists: Kategorie (Arbeit, Hobby …). */
   group?: string,
+  /** Recurring checklist: open again every day/week/month. */
+  reset?: ResetEvery | null,
 ): Promise<string> {
   const id = crypto.randomUUID();
   const settings: Record<string, unknown> = {};
   if (description?.trim()) settings.description = description.trim();
   if (templateId) settings.templateId = templateId;
   if (group?.trim()) settings.group = group.trim();
+  if (reset) settings.reset = reset;
   await sync.mutateList(id, { name, listType, isTemplate, visibility, ...(Object.keys(settings).length ? { settings } : {}) });
   return id;
 }
@@ -99,13 +102,17 @@ export async function saveAsTemplate(list: ListRow, name: string): Promise<strin
 }
 
 /** Name, description and (ToDo lists) Kategorie in one change – one settings patch, nothing overwrites the other. */
-export async function editList(list: ListRow, edit: { name: string; description: string; group?: string }): Promise<void> {
+export async function editList(list: ListRow, edit: { name: string; description: string; group?: string; reset?: ResetEvery | null }): Promise<void> {
   const settings = { ...list.settings };
   if (edit.description.trim()) settings.description = edit.description.trim();
   else delete settings.description;
   if (edit.group !== undefined) {
     if (edit.group.trim()) settings.group = edit.group.trim();
     else delete settings.group;
+  }
+  if (edit.reset !== undefined) {
+    if (edit.reset) settings.reset = edit.reset;
+    else delete settings.reset;
   }
   const patch: { name?: string; settings?: Record<string, unknown> } = {};
   if (edit.name.trim() && edit.name.trim() !== list.name) patch.name = edit.name.trim();
@@ -164,6 +171,13 @@ export async function setListOrder(ids: string[]): Promise<void> {
 }
 
 /** "Alle als erledigt markieren": checks every open item of a list; returns how many. */
+/** Recurring checklists: everything open again (also done by the server at the start of each period). */
+export async function resetList(listId: string): Promise<number> {
+  const checked = (await db.items.where('listId').equals(listId).toArray()).filter((i) => i.checked && !i.deleted);
+  await sync.mutateItems(checked.map((i) => ({ id: i.id, patch: { checked: false } })));
+  return checked.length;
+}
+
 export async function checkAll(listId: string): Promise<number> {
   const open = (await db.items.where('listId').equals(listId).toArray()).filter((i) => !i.checked && !i.deleted);
   await sync.mutateItems(open.map((i) => ({ id: i.id, patch: { checked: true } })));

@@ -21,6 +21,14 @@ const pruneDone = () =>
     .catch((err: unknown) => app.log.error({ err }, 'Erledigte Einträge aufräumen'));
 setTimeout(pruneDone, 60_000).unref();
 setInterval(pruneDone, 24 * 3_600_000).unref();
+// Recurring checklists: open again at the start of the day/week/month (checked every few minutes, catches up after downtime).
+const resetRecurring = () =>
+  sync
+    .resetRecurring()
+    .then((users) => users.size && hub.notify(users))
+    .catch((err: unknown) => app.log.error({ err }, 'Checklisten zurücksetzen'));
+setTimeout(resetRecurring, 20_000).unref();
+setInterval(resetRecurring, 10 * 60_000).unref();
 if (seeded) app.log.info(`${seeded} Artikel in den Grundkatalog übernommen`);
 await purgeExpiredSessions(db);
 

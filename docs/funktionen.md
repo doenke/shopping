@@ -73,6 +73,10 @@
   **Wer** („@Ben“) und **Bereich** („#Garten“), gruppiert nach Fälligkeit (Überfällig, Heute, Diese Woche …),
   Bereich oder Person. Die Listen selbst lassen sich in **Kategorien** ordnen (Arbeit, Hobby, Urlaub …; beim
   Anlegen oder unter *⋮ → Bearbeiten …*) und stehen in der Seitenleiste darunter gruppiert.
+- **Wiederkehrende Checklisten** ↺ (ToDo- und Packlisten, z. B. „Haus verlassen“, „Wochenputz“):
+  *⋮ → ↺ Alles zurücksetzen* öffnet alles Abgehakte wieder. Optional automatisch – täglich, wöchentlich
+  (montags) oder monatlich (am 1.), einstellbar beim Anlegen oder unter *⋮ → Bearbeiten …*. Der Server setzt
+  um Mitternacht (deutsche Zeit) zurück, was vor Beginn des Zeitraums abgehakt wurde.
 - **Reihenfolge der Listen und Abschnitte** in der Seitenleiste (z. B. Merklisten ganz nach unten):
   *↕ Listen sortieren*, je Benutzer. Sortiert wird per Ziehen am Griff ⠿, mit der Tastatur über die
   Pfeiltasten.

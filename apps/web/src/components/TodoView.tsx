@@ -1,4 +1,4 @@
-import { dueOf, formatDue, isoDate, listDescription, packingInfo, type CatalogIndex, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
+import { dueOf, listReset, RESET_LABEL, formatDue, isoDate, listDescription, packingInfo, type CatalogIndex, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { setChecked } from '../actions';
 import type { RemoteCheck } from '../sync/engine';
@@ -135,6 +135,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
           <span className="muted">
             {open.length} offen{done.length ? ` · ${done.length} erledigt` : ''}
             {list.visibility === 'private' ? ' · 🔒 privat' : ''}
+            {listReset(list) ? ` · ↺ ${RESET_LABEL[listReset(list)!]}` : ''}
           </span>
           {hasMeta && (
             <div className="segmented" role="group" aria-label="Gruppieren nach">

@@ -121,3 +121,9 @@ abgehakten Einträge (`DONE_KEEP`, nach `checked_at`). Ältere werden kurz nach 
 weich gelöscht (`deleted=true`, neue `seq`, HLC-Stempel des Servers) – Clients entfernen sie beim nächsten
 Sync wie jede andere Löschung. Packlisten und Vorlagen bleiben unberührt; die Zeilen selbst bleiben stehen
 (Eintrags-Icons verweisen darauf).
+
+**Wiederkehrende Checklisten:** `settings.reset` (`daily` | `weekly` | `monthly`) an ToDo- und Packlisten.
+Der Server prüft alle zehn Minuten und öffnet Einträge, deren `checked_at` vor dem Beginn des aktuellen
+Zeitraums liegt (Mitternacht Europe/Berlin; Woche ab Montag, Monat ab dem 1.), mit eigenem HLC-Stempel.
+Das ist zustandslos: ein verpasster Lauf holt sich beim nächsten nach, heute Abgehaktes bleibt bis zum Ende
+des Zeitraums.
