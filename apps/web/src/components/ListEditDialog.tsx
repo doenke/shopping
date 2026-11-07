@@ -9,10 +9,12 @@ interface Props {
   /** Kategorien already used by ToDo lists (suggestions). */
   groups: string[];
   onClose: () => void;
+  /** Shopping and packing lists: opens "Kategorien sortieren" (this dialog closes). */
+  onSortCategories: () => void;
 }
 
 /** Name, description, Kategorie (ToDo lists) and icon of a list, in one place. */
-export function ListEditDialog({ list, me, groups, onClose }: Props) {
+export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [name, setName] = useState(list.name);
   const [description, setDescription] = useState(listDescription(list) ?? '');
@@ -66,6 +68,18 @@ export function ListEditDialog({ list, me, groups, onClose }: Props) {
               ))}
             </datalist>
           </label>
+        )}
+
+        {(list.listType === 'shopping' || list.listType === 'packing') && (
+          <div className="field">
+            <span>Kategorien</span>
+            <div className="row row--center">
+              <button type="button" className="btn" onClick={onSortCategories}>
+                ↕ Kategorien sortieren …
+              </button>
+            </div>
+            <small className="muted">Reihenfolge wie dein Weg durch den Laden – gilt nur für dich, für alle {list.listType === 'packing' ? 'Packlisten' : 'Einkaufslisten'}.</small>
+          </div>
         )}
 
         {canReset(list) && <ResetSelect value={reset} onChange={setReset} />}

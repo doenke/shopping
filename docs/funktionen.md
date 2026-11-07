@@ -28,7 +28,7 @@
 ## Einkaufen
 
 - **Kategorien** nach Supermarkt-Bereichen; die Reihenfolge stellt sich jeder selbst ein (z. B. nach dem
-  Weg durch den Laden, per Ziehen): *⋮ → Kategorien sortieren …* oder *Einstellungen → Reihenfolge*. Sie gilt auf allen
+  Weg durch den Laden, per Ziehen): *⋮ → Bearbeiten … → Kategorien sortieren …* oder *Einstellungen → Reihenfolge*. Sie gilt auf allen
   eigenen Geräten und auch in API und Home Assistant.
 - **Eigene Kategorien** für Einkaufs- und Packlisten (z. B. „Angeln“, „Camping“, „Asia-Laden“): direkt im
   Editor über *Kategorie → + Neue Kategorie …* oder unter *Einstellungen → Eigene Kategorien* (umbenennen,

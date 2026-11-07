@@ -75,10 +75,9 @@ Laptop-Ansicht.
 
 | Eintrag | |
 |---------|-|
-| ✏️ Bearbeiten … | Name, Beschreibung, Kategorie (ToDo), Icon mit „Neues Icon erzeugen“ |
+| ✏️ Bearbeiten … | Name, Beschreibung, Kategorie (ToDo), Kategorien sortieren (Einkauf, Packliste), automatisch zurücksetzen (ToDo, Packliste), Icon mit „Neues Icon erzeugen“ |
 | 👥 Berechtigungen … | sichtbar für Haushalt oder nur mich, wer dabei ist (entfernen), Link teilen und erneuern |
 | 📋 Als Text teilen … | offene Einträge als Text in den Teilen-Dialog bzw. die Zwischenablage |
-| ↕ Kategorien sortieren … | Einkauf und Packliste |
 | Aus Mealie hinzufügen … | Rezept oder Wochenplan |
 | Mit Vorlage abgleichen … | in beide Richtungen; Richtung Vorlage anfangs nichts angehakt |
 | Als Vorlage speichern, Archivieren, Als Hauptliste festlegen | je nach Typ |

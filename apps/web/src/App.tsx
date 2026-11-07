@@ -293,7 +293,6 @@ function Shell({ me }: { me: Me }) {
                   onImport={() => setImporting(true)}
                   onApplyTemplate={() => setSyncDialog(true)}
                   onMembers={() => setShowMembers(true)}
-                  onSortCategories={() => setSorting(list.listType)}
                   onEdit={() => setEditing(true)}
                   onCopied={() => setNotice('Liste als Text kopiert')}
                   onNotice={setNotice}
@@ -358,6 +357,10 @@ function Shell({ me }: { me: Me }) {
           me={me}
           groups={[...new Set(todoLists.map(listGroup).filter((g): g is string => !!g))]}
           onClose={() => setEditing(false)}
+          onSortCategories={() => {
+            setEditing(false);
+            setSorting(list.listType);
+          }}
         />
       )}
       {sorting === 'lists' && (
@@ -421,13 +424,12 @@ interface ListMenuProps {
   onImport: () => void;
   onApplyTemplate: () => void;
   onMembers: () => void;
-  onSortCategories: () => void;
   onEdit: () => void;
   onCopied: () => void;
   onNotice: (text: string) => void;
 }
 
-function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onSortCategories, onEdit, onCopied, onNotice }: ListMenuProps) {
+function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImport, onApplyTemplate, onMembers, onEdit, onCopied, onNotice }: ListMenuProps) {
   const guest = me.isGuest;
   const isOwner = list.ownerId === me.id;
 
@@ -477,18 +479,6 @@ function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImp
       >
         📋 Als Text teilen …
       </button>
-      {(list.listType === 'shopping' || list.listType === 'packing') && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            onSortCategories();
-            onClose();
-          }}
-        >
-          ↕ Kategorien sortieren …
-        </button>
-      )}
       {!list.isTemplate && list.listType === 'shopping' && !guest && (
         <button
           type="button"
