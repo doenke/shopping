@@ -132,3 +132,21 @@ describe('owner group', () => {
     expect((await me(soenke)).household).toBe('Familie Jacobs');
   });
 });
+
+describe('Mealie per household', () => {
+  it('is shared by the household and separate from other households', async () => {
+    const m = await createTestApp();
+    const a = await m.login('Anna Berg', 'Berg');
+    const b = await m.login('Ben Berg', 'Berg');
+    const c = await m.login('Carla Müller', 'Müller');
+    const call = (u: User, method: 'GET' | 'PUT', payload?: object) =>
+      m.app.inject({ method, url: '/api/v1/integrations/mealie', headers: { cookie: u.cookie }, ...(payload ? { payload } : {}) });
+    expect((await call(a, 'PUT', { url: 'https://mealie.berg.example', token: 'secret-token' })).statusCode).toBe(200);
+    expect((await call(b, 'GET')).json()).toMatchObject({ url: 'https://mealie.berg.example', hasToken: true });
+    expect((await call(c, 'GET')).json()).toMatchObject({ url: null, hasToken: false });
+    // Ben changes it for both of them.
+    await call(b, 'PUT', { url: 'https://kochen.berg.example' });
+    expect((await call(a, 'GET')).json()).toMatchObject({ url: 'https://kochen.berg.example', hasToken: true });
+    await m.close();
+  });
+});

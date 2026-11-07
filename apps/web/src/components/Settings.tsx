@@ -188,6 +188,10 @@ export function Settings({ me, section, onSort }: { me: Me; section?: SettingsSe
         void save();
       }}
     >
+      <p className="muted">
+        Gilt für den ganzen Haushalt{me.household ? ` „${me.household}“` : ''}: Jeder darin sieht und ändert dieselbe Anbindung. Andere Haushalte richten ihr
+        eigenes Mealie ein.
+      </p>
       <label className="field">
         <span>Adresse</span>
         <input type="url" placeholder="https://mealie.example.org" value={url} onChange={(e) => setUrl(e.target.value)} required />
@@ -364,12 +368,12 @@ export function Settings({ me, section, onSort }: { me: Me; section?: SettingsSe
               text={custom.length ? `${custom.length} eigene` : 'z. B. Angeln, Camping, Asia-Laden'}
               href="#/settings/categories"
             />
+            <SettingsRow icon="🍲" title="Mealie" text={mealieStatus} href="#/settings/mealie" />
             <SettingsRow icon="🖼" title="Icons" text="Bild-KI, Prüfung, Budget" href="#/icons" />
           </div>
 
           <h2 className="settings-heading">Verbindungen</h2>
           <div className="settings-group">
-            <SettingsRow icon="🍲" title="Mealie" text={mealieStatus} href="#/settings/mealie" />
             <SettingsRow
               icon="🔑"
               title="API & Integrationen"

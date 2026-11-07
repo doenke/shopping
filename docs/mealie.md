@@ -2,6 +2,9 @@
 
 [← zurück zur README](../README.md)
 
+Die Mealie-Anbindung gehört zum **Haushalt**: Wer sie einrichtet, richtet sie für alle darin ein, und jeder im
+Haushalt kann sie ändern. Andere Haushalte verbinden ihr eigenes Mealie (oder keins). Gäste haben keins.
+
 ## Eingangskorb
 
 Was in Mealie auf einer Einkaufsliste landet (von Hand, aus einem Rezept, aus dem Wochenplan), kommt

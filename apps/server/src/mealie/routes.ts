@@ -91,13 +91,18 @@ export async function mealieRoutes(app: FastifyInstance, opts: Options): Promise
       if (body.inbox?.targetListId && !(await sync.isMember(request.userId, body.inbox.targetListId))) {
         return reply.code(400).send({ error: 'Zielliste nicht gefunden' });
       }
-      await mealie.save(request.userId, (prev) => ({
-        ...prev,
-        url: body.url.replace(/\/$/, ''),
-        token: body.token ? secrets.seal(body.token) : prev.token,
-        labelMapping: body.labelMapping ?? prev.labelMapping ?? {},
-        inbox: body.inbox ? { ...prev.inbox, ...body.inbox } : prev.inbox,
-      }));
+      try {
+        await mealie.save(request.userId, (prev) => ({
+          ...prev,
+          url: body.url.replace(/\/$/, ''),
+          token: body.token ? secrets.seal(body.token) : prev.token,
+          labelMapping: body.labelMapping ?? prev.labelMapping ?? {},
+          inbox: body.inbox ? { ...prev.inbox, ...body.inbox } : prev.inbox,
+        }));
+      } catch (err) {
+        if (err instanceof MealieError) return reply.code(403).send({ error: err.message });
+        throw err;
+      }
       return { ok: true };
     });
 

@@ -1,11 +1,11 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { generateKeyBetween, type ItemSource } from '@shopping/shared';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import type { SecretBox } from '../crypto.js';
 import type { Db } from '../db/index.js';
 import { stableUuid } from '../db/seed.js';
-import { catalogItems, integrations, listItems } from '../db/schema.js';
+import { catalogItems, integrations, listItems, users } from '../db/schema.js';
 import type { SyncHub } from '../sync/hub.js';
 import { toCatalogItem } from '../sync/rows.js';
 import type { SyncService } from '../sync/service.js';
@@ -56,11 +56,20 @@ export class MealieService {
 
   // ---- configuration ------------------------------------------------------
 
+  /** The user's household (Mealie belongs to the household); null for guests. */
+  private async householdOf(userId: string): Promise<string | null> {
+    const [u] = await this.db.select({ householdId: users.householdId, isGuest: users.isGuest }).from(users).where(eq(users.id, userId));
+    return u && !u.isGuest ? u.householdId : null;
+  }
+
+  /** The Mealie integration of the user's household. */
   async load(userId: string): Promise<IntegrationRow | undefined> {
+    const householdId = await this.householdOf(userId);
+    if (!householdId) return undefined;
     const [row] = await this.db
       .select()
       .from(integrations)
-      .where(and(eq(integrations.ownerId, userId), eq(integrations.type, 'mealie')));
+      .where(and(eq(integrations.householdId, householdId), eq(integrations.type, 'mealie')));
     return row;
   }
 
@@ -68,15 +77,31 @@ export class MealieService {
     return (row?.config ?? {}) as MealieConfig;
   }
 
+  /** Anyone in the household may set it up; the inbox then adds items in their name. */
   async save(userId: string, update: (prev: MealieConfig) => MealieConfig): Promise<MealieConfig> {
+    const householdId = await this.householdOf(userId);
+    if (!householdId) throw new MealieError('Mealie gehört zu einem Haushalt – Gäste können es nicht einrichten');
     const prev = this.config(await this.load(userId));
     const next = update(prev);
     if (next.inbox && !next.inbox.webhookSecret) next.inbox = { ...next.inbox, webhookSecret: randomBytes(24).toString('base64url') };
     await this.db
       .insert(integrations)
-      .values({ ownerId: userId, type: 'mealie', config: next as Record<string, unknown> })
-      .onConflictDoUpdate({ target: [integrations.ownerId, integrations.type], set: { config: next as Record<string, unknown> } });
+      .values({ ownerId: userId, householdId, type: 'mealie', config: next as Record<string, unknown> })
+      .onConflictDoUpdate({ target: [integrations.householdId, integrations.type], set: { config: next as Record<string, unknown>, ownerId: userId } });
     return next;
+  }
+
+  /** Who the inbox acts as: whoever set it up – or, if they moved out, someone still in the household. */
+  private async actor(row: IntegrationRow): Promise<string> {
+    if (!row.householdId) return row.ownerId;
+    const [owner] = await this.db.select({ householdId: users.householdId }).from(users).where(eq(users.id, row.ownerId));
+    if (owner?.householdId === row.householdId) return row.ownerId;
+    const [someone] = await this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.householdId, row.householdId), eq(users.isGuest, false)))
+      .limit(1);
+    return someone?.id ?? row.ownerId;
   }
 
   async setStatus(id: string, status: string, synced = false): Promise<void> {
@@ -109,7 +134,9 @@ export class MealieService {
     const [row] = await this.db
       .select()
       .from(integrations)
-      .where(and(eq(integrations.type, 'mealie'), sql`${integrations.config} -> 'inbox' ->> 'webhookSecret' = ${secret}`));
+      .where(
+        and(eq(integrations.type, 'mealie'), isNotNull(integrations.householdId), sql`${integrations.config} -> 'inbox' ->> 'webhookSecret' = ${secret}`),
+      );
     if (!row || !this.config(row).inbox?.enabled) return false;
     void this.runInbox(row.id).catch(() => undefined);
     return true;
@@ -205,7 +232,7 @@ export class MealieService {
 
       let added = 0;
       if (mutations.length) {
-        const result = await this.sync.apply(row.ownerId, mutations);
+        const result = await this.sync.apply(await this.actor(row), mutations);
         this.hub.notify(result.affectedUsers);
         if (result.rejected.length) {
           throw new MealieError(`Zielliste nimmt keine Artikel an (${result.rejected[0]!.reason})`);
@@ -241,7 +268,9 @@ export class MealieService {
       const rows = await this.db
         .select({ id: integrations.id })
         .from(integrations)
-        .where(and(eq(integrations.type, 'mealie'), sql`(${integrations.config} -> 'inbox' ->> 'enabled')::boolean IS TRUE`));
+        .where(
+          and(eq(integrations.type, 'mealie'), isNotNull(integrations.householdId), sql`(${integrations.config} -> 'inbox' ->> 'enabled')::boolean IS TRUE`),
+        );
       for (const r of rows) await this.runInbox(r.id).catch(() => undefined);
     };
     setTimeout(() => void tick().catch(() => undefined), 30_000).unref();

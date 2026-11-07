@@ -58,4 +58,7 @@ nicht überschrieben. Mit Anthropic-Key beschreibt Claude neue Artikel für die 
 - Mealie **v2** (`/api/households/...`).
 - Webhook-Endpunkt ohne Login, aber mit geheimem Pfad-Token; Daten werden immer per
   authentifizierter API nachgeladen.
+- Eine Anbindung pro Haushalt (`integrations.household_id`, eindeutig mit `type`); jedes Mitglied darf sie
+  ändern. `owner_id` ist, wer zuletzt gespeichert hat – in dessen Namen trägt der Eingangskorb ein (ist er
+  ausgezogen, jemand aus dem Haushalt).
 - Mealie-Token verschlüsselt in `integrations.config`.

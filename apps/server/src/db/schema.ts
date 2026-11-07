@@ -238,12 +238,14 @@ export const integrations = pgTable(
     ownerId: uuid('owner_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    /** One integration per household and type (Mealie belongs to a household, not a person). */
+    householdId: uuid('household_id').references(() => households.id, { onDelete: 'cascade' }),
     type: text('type').notNull(),
     config: jsonb('config').$type<Record<string, unknown>>().notNull().default({}),
     status: text('status'),
     lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
   },
-  (t) => [uniqueIndex('integrations_owner_type_idx').on(t.ownerId, t.type)],
+  (t) => [uniqueIndex('integrations_household_type_idx').on(t.householdId, t.type)],
 );
 
 /**
