@@ -115,3 +115,9 @@ verloren, sie liegen in der Outbox.
 
 Abgesichert durch Tests: zwei Clients offline in beliebiger Reihenfolge → gleicher Endzustand;
 doppelte Zustellung → keine doppelten Artikel; Rechte entzogen → Ablehnung statt stiller Änderung.
+
+**Aufräumen erledigter Einträge:** Der Server behält pro Einkaufs-, Merk- und ToDo-Liste die 100 zuletzt
+abgehakten Einträge (`DONE_KEEP`, nach `checked_at`). Ältere werden kurz nach dem Start und danach täglich
+weich gelöscht (`deleted=true`, neue `seq`, HLC-Stempel des Servers) – Clients entfernen sie beim nächsten
+Sync wie jede andere Löschung. Packlisten und Vorlagen bleiben unberührt; die Zeilen selbst bleiben stehen
+(Eintrags-Icons verweisen darauf).

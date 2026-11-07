@@ -46,7 +46,9 @@
   Zurück auf Zuhause geht es von selbst, wenn alles gekauft ist oder eine Stunde nichts abgehakt wurde.
 - **Hauptliste** ⭐: die Liste, die ohne weitere Angabe gemeint ist (Teilen aus anderen Apps, Home
   Assistant, KI-Assistenten).
-- **Zuletzt verwendet**: Gekauftes wandert nach unten und lässt sich mit einem Tipp zurückholen.
+- **Zuletzt verwendet**: Gekauftes wandert nach unten und lässt sich mit einem Tipp zurückholen. Pro Liste
+  bleiben die letzten 100 erledigten Einträge; ältere räumt der Server einmal täglich still auf (auch in Merk-
+  und ToDo-Listen, nicht in Packlisten und Vorlagen). Katalog und gelernte Kategorien bleiben erhalten.
 
 ## Listen
 

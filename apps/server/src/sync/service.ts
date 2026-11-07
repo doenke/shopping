@@ -41,6 +41,8 @@ interface Touched {
 }
 
 const nextSeq = sql`nextval('sync_seq')`;
+/** Checked entries kept per list (shopping, memo, todo); older ones are cleaned up. */
+export const DONE_KEEP = 100;
 
 function sameProperties(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
@@ -503,6 +505,34 @@ export class SyncService {
         .set({ categoryId, hlc: { ...row.hlc, categoryId: ts }, seq: nextSeq })
         .where(eq(listItems.id, itemId));
       return row.listId;
+    });
+  }
+
+  /**
+   * Keeps the history short: per shopping, memo and todo list only the newest `keep` checked entries stay,
+   * older ones are deleted (soft, so clients drop them on the next sync). Packing lists and templates stay
+   * untouched; the catalog and learned categories are not affected. Returns the members to notify.
+   */
+  pruneDone(keep = DONE_KEEP): Promise<Set<string>> {
+    return this.mutex.run(async () => {
+      const ts = this.clock.tick();
+      const rows = await this.db.execute<{ list_id: string }>(sql`
+        UPDATE list_items SET deleted = true, hlc = hlc || jsonb_build_object('deleted', ${ts}::text), seq = nextval('sync_seq')
+        WHERE id IN (
+          SELECT id FROM (
+            SELECT i.id, row_number() OVER (PARTITION BY i.list_id ORDER BY i.checked_at DESC NULLS LAST, i.seq DESC) AS n
+            FROM list_items i JOIN lists l ON l.id = i.list_id
+            WHERE i.checked AND NOT i.deleted AND NOT l.deleted AND NOT l.is_template AND l.list_type IN ('shopping', 'memo', 'todo')
+          ) ranked WHERE n > ${keep}
+        )
+        RETURNING list_id`);
+      const listIds = [...new Set(rows.map((r) => r.list_id))];
+      if (!listIds.length) return new Set<string>();
+      const members = await this.db
+        .select({ userId: listMembers.userId })
+        .from(listMembers)
+        .where(and(inArray(listMembers.listId, listIds), eq(listMembers.removed, false)));
+      return new Set(members.map((m) => m.userId));
     });
   }
 
