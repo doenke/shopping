@@ -122,7 +122,8 @@ weich gelöscht (`deleted=true`, neue `seq`, HLC-Stempel des Servers) – Client
 Sync wie jede andere Löschung. Packlisten und Vorlagen bleiben unberührt; die Zeilen selbst bleiben stehen
 (Eintrags-Icons verweisen darauf).
 
-**Wiederkehrende Checklisten:** `settings.reset` (`daily` | `weekly` | `monthly`) an ToDo- und Packlisten.
+**Wiederkehrende Checklisten:** `settings.reset` (`daily` | `weekly` | `monthly`) an ToDo-Listen
+(Packlisten nur von Hand über „Alles zurücksetzen“).
 Der Server prüft alle zehn Minuten und öffnet Einträge, deren `checked_at` vor dem Beginn des aktuellen
 Zeitraums liegt (Mitternacht Europe/Berlin; Woche ab Montag, Monat ab dem 1.), mit eigenem HLC-Stempel.
 Das ist zustandslos: ein verpasster Lauf holt sich beim nächsten nach, heute Abgehaktes bleibt bis zum Ende

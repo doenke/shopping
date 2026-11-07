@@ -1,4 +1,4 @@
-import { canReset, defaultVisibility, type ResetEvery, itemSpecification, SUGGESTED_LIST_GROUPS, packingInfo, type ItemRow, type ListRow, type ListType } from '@shopping/shared';
+import { canAutoReset, defaultVisibility, type ResetEvery, itemSpecification, SUGGESTED_LIST_GROUPS, packingInfo, type ItemRow, type ListRow, type ListType } from '@shopping/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, createList, itemToNew } from '../actions';
@@ -36,7 +36,7 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
   const [description, setDescription] = useState('');
   const [group, setGroup] = useState('');
   const [reset, setReset] = useState<ResetEvery | null>(null);
-  const resettable = canReset({ listType: type, isTemplate: asTemplate });
+  const resettable = canAutoReset({ listType: type, isTemplate: asTemplate });
   const templates = allTemplates.filter((t) => t.listType === type);
   // Several templates at once, e.g. "Basis" + "Ski" + "Kinder" – in the order they were picked.
   const [templateIds, setTemplateIds] = useState<string[]>([]);

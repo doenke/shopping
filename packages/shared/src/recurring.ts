@@ -1,6 +1,6 @@
 import type { ListRow } from './model.js';
 
-/** Recurring checklists (ToDo and packing lists): everything is unchecked again at the start of each period. */
+/** Recurring checklists (ToDo lists): everything is unchecked again at the start of each period. */
 export type ResetEvery = 'daily' | 'weekly' | 'monthly';
 export const RESET_EVERY: ResetEvery[] = ['daily', 'weekly', 'monthly'];
 export const RESET_LABEL: Record<ResetEvery, string> = { daily: 'täglich', weekly: 'wöchentlich (montags)', monthly: 'monatlich (am 1.)' };
@@ -11,9 +11,14 @@ export function canReset(list: Pick<ListRow, 'listType' | 'isTemplate'>): boolea
   return !list.isTemplate && (list.listType === 'todo' || list.listType === 'packing');
 }
 
+/** Automatic reset only for ToDo lists – on packing lists it would only confuse (they get archived instead). */
+export function canAutoReset(list: Pick<ListRow, 'listType' | 'isTemplate'>): boolean {
+  return !list.isTemplate && list.listType === 'todo';
+}
+
 export function listReset(list: Pick<ListRow, 'settings' | 'listType' | 'isTemplate'>): ResetEvery | null {
   const v = list.settings.reset;
-  return canReset(list) && RESET_EVERY.includes(v as ResetEvery) ? (v as ResetEvery) : null;
+  return canAutoReset(list) && RESET_EVERY.includes(v as ResetEvery) ? (v as ResetEvery) : null;
 }
 
 /** Date parts of an instant on the Berlin wall clock. */

@@ -1,4 +1,4 @@
-import { canReset, listDescription, listGroup, listReset, RESET_EVERY, RESET_LABEL, SUGGESTED_LIST_GROUPS, type ListRow, type Me, type ResetEvery } from '@shopping/shared';
+import { canAutoReset, listDescription, listGroup, listReset, RESET_EVERY, RESET_LABEL, SUGGESTED_LIST_GROUPS, type ListRow, type Me, type ResetEvery } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { editList, newListIcon } from '../actions';
 import { ListIcon } from './ListIcon';
@@ -32,7 +32,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
         onSubmit={async (e) => {
           e.preventDefault();
           if (!name.trim()) return;
-          await editList(list, { name, description, ...(todo ? { group } : {}), ...(canReset(list) ? { reset } : {}) });
+          await editList(list, { name, description, ...(todo ? { group } : {}), ...(canAutoReset(list) ? { reset } : {}) });
           ref.current?.close();
         }}
       >
@@ -82,7 +82,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
           </div>
         )}
 
-        {canReset(list) && <ResetSelect value={reset} onChange={setReset} />}
+        {canAutoReset(list) && <ResetSelect value={reset} onChange={setReset} />}
 
         <div className="field">
           <span>Icon</span>

@@ -552,7 +552,7 @@ export class SyncService {
             eq(lists.deleted, false),
             eq(lists.isTemplate, false),
             sql`${lists.archivedAt} IS NULL`,
-            inArray(lists.listType, ['todo', 'packing']),
+            eq(lists.listType, 'todo'),
             sql`${lists.settings} ->> 'reset' IN ('daily', 'weekly', 'monthly')`,
           ),
         );

@@ -361,11 +361,12 @@ describe('recurring checklists', () => {
     expect(resetPeriodStart('weekly', summer).toISOString()).toBe('2026-06-14T22:00:00.000Z');
   });
 
-  it('only for ToDo and packing lists', async () => {
+  it('only for ToDo lists', async () => {
     const { listReset } = await import('./recurring.js');
     expect(listReset({ listType: 'todo', isTemplate: false, settings: { reset: 'weekly' } })).toBe('weekly');
     expect(listReset({ listType: 'shopping', isTemplate: false, settings: { reset: 'weekly' } })).toBeNull();
-    expect(listReset({ listType: 'packing', isTemplate: true, settings: { reset: 'daily' } })).toBeNull();
+    expect(listReset({ listType: 'packing', isTemplate: false, settings: { reset: 'daily' } })).toBeNull();
+    expect(listReset({ listType: 'todo', isTemplate: true, settings: { reset: 'daily' } })).toBeNull();
     expect(listReset({ listType: 'packing', isTemplate: false, settings: { reset: 'yearly' } })).toBeNull();
   });
 });
