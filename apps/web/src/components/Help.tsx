@@ -58,8 +58,8 @@ function GuestHelp({ admins, isGuest }: { admins: string[]; isGuest: boolean }) 
     <>
       <h2>{isGuest ? 'Willkommen, Gast! 👋' : 'So sieht es für Gäste aus'}</h2>
       <p>
-        Jemand hat {isGuest ? 'dir' : 'einem Gast'} einen Link geschickt – und schon {isGuest ? 'bist du' : 'ist man'} auf genau dieser einen Liste dabei. Kein Konto,
-        kein Passwort, kein Formular. Nur die Liste.
+        Jemand hat {isGuest ? 'dir' : 'einem Gast'} einen Link geschickt – und schon {isGuest ? 'bist du' : 'ist man'} auf genau dieser einen Liste dabei. Kein
+        Konto, kein Passwort, kein Formular. Nur die Liste.
       </p>
 
       <h3>Was geht</h3>
@@ -110,14 +110,24 @@ function UserHelp({ me }: { me: Me }) {
         <Example then="Merkliste: Tipp von Ben, gibt's bei Netflix">Dune @Ben #Netflix</Example>
         <Example then="ToDo: Freitag fällig, Ben macht's">Reifen wechseln !Fr @Ben #Auto</Example>
       </ul>
-      <p className="muted">Steht „Milch“ schon drauf, wird zusammengelegt statt verdoppelt. Ganze Zutatenlisten oder Rezept-Links kannst du einfach einfügen.</p>
+      <p className="muted">
+        Steht „Milch“ schon drauf, wird zusammengelegt statt verdoppelt. Ganze Zutatenlisten oder Rezept-Links kannst du einfach einfügen.
+      </p>
 
       <h3>Vier Sorten Listen</h3>
       <ul>
-        <li>🛒 <strong>Einkauf</strong> – nach Gängen sortiert, Gekauftes rutscht nach unten.</li>
-        <li>🧳 <strong>Packliste</strong> – nach Person oder Koffer, am Ende ins Archiv.</li>
-        <li>📌 <strong>Merkliste</strong> – Filme, Bücher, Restaurants. Für „das wollten wir doch mal …“.</li>
-        <li>✅ <strong>ToDo</strong> – erst mal nur für dich, auf Wunsch auch wiederkehrend.</li>
+        <li>
+          🛒 <strong>Einkauf</strong> – nach Gängen sortiert, Gekauftes rutscht nach unten.
+        </li>
+        <li>
+          🧳 <strong>Packliste</strong> – nach Person oder Koffer, am Ende ins Archiv.
+        </li>
+        <li>
+          📌 <strong>Merkliste</strong> – Filme, Bücher, Restaurants. Für „das wollten wir doch mal …“.
+        </li>
+        <li>
+          ✅ <strong>ToDo</strong> – erst mal nur für dich, auf Wunsch auch wiederkehrend.
+        </li>
       </ul>
       <p>
         <strong>Vorlagen</strong> ◇ sind Listen zum Wiederverwenden: „Wocheneinkauf Basis“ + „Grillen“ ergibt in zwei Tipps den Samstagseinkauf.
@@ -177,8 +187,8 @@ function AdminHelp({ setup }: { setup?: HelpInfo['setup'] }) {
         <li>Ein neuer Haushalt heißt wie der Nachname seines ersten Mitglieds; umbenennen darf jedes Mitglied.</li>
         <li>Umzüge (andere Gruppe, anderer Claim) wirken bei der nächsten Anmeldung – die eigenen Listen ziehen mit.</li>
         <li>
-          Admin ist, wer in <code>{setup?.adminGroup ?? 'admins'}</code> ist. Du stellst die Bild-KI für alle ein (Einstellungen → Icons) und wirst Gästen
-          als Ansprechpartner genannt, wenn sie einen eigenen Zugang möchten.
+          Admin ist, wer in <code>{setup?.adminGroup ?? 'admins'}</code> ist. Du stellst die Bild-KI für alle ein (Einstellungen → Icons) und wirst Gästen als
+          Ansprechpartner genannt, wenn sie einen eigenen Zugang möchten.
         </li>
         <li>Gast → richtiger Zugang: in Pocket ID anlegen, fertig. Die Regeln oben machen den Rest.</li>
       </ul>

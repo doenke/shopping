@@ -5,11 +5,7 @@ import type { FieldClock } from './model.js';
  * timestamp is newer than the timestamp of the field's last write.
  * Returns the names of the fields that were applied.
  */
-export function applyPatch<T extends { hlc: FieldClock }>(
-  row: T,
-  patch: Partial<Record<keyof T, unknown>>,
-  ts: string,
-): (keyof T & string)[] {
+export function applyPatch<T extends { hlc: FieldClock }>(row: T, patch: Partial<Record<keyof T, unknown>>, ts: string): (keyof T & string)[] {
   const applied: (keyof T & string)[] = [];
   for (const [key, value] of Object.entries(patch)) {
     if (value === undefined) continue;

@@ -10,7 +10,11 @@ declare const self: ServiceWorkerGlobalScope;
 // App shell: everything the build produced is cached, so the app starts without network.
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
-registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/(api|auth|ws|s|oauth|mcp|icons|avatars|\.well-known)\//, /^\/(healthz|ws|mcp)$/] }));
+registerRoute(
+  new NavigationRoute(createHandlerBoundToURL('/index.html'), {
+    denylist: [/^\/(api|auth|ws|s|oauth|mcp|icons|avatars|\.well-known)\//, /^\/(healthz|ws|mcp)$/],
+  }),
+);
 
 // Icons and profile pictures: versioned URLs, so the cached copy is always right. Kept for offline use in the shop.
 registerRoute(
@@ -56,7 +60,10 @@ async function flushOutbox(): Promise<void> {
     // Throwing makes the browser retry the sync later.
     if (!res.ok) throw new Error(`push failed: ${res.status}`);
     const result = (await res.json()) as { acked: string[]; rejected: { mid: string }[] };
-    await db.outbox.where('mid').anyOf([...result.acked, ...result.rejected.map((r) => r.mid)]).delete();
+    await db.outbox
+      .where('mid')
+      .anyOf([...result.acked, ...result.rejected.map((r) => r.mid)])
+      .delete();
   } finally {
     db.close();
   }

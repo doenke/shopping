@@ -14,8 +14,10 @@ const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => 
   const url = String(input);
   const auth = (init?.headers as Record<string, string>)?.authorization;
   requests.push({ url, auth });
-  if (url === 'https://id.example/api/users/pocket-sub-1/profile-picture.png') return new Response(new Uint8Array(picture), { headers: { 'content-type': 'image/png' } });
-  if (url !== IDP && url.startsWith('https://id.example/api/users/')) return new Response('{}', { status: 404, headers: { 'content-type': 'application/json' } });
+  if (url === 'https://id.example/api/users/pocket-sub-1/profile-picture.png')
+    return new Response(new Uint8Array(picture), { headers: { 'content-type': 'image/png' } });
+  if (url !== IDP && url.startsWith('https://id.example/api/users/'))
+    return new Response('{}', { status: 404, headers: { 'content-type': 'application/json' } });
   if (url !== IDP) return new Response('down', { status: 502 });
   if (needsToken && auth !== 'Bearer at-1') return new Response('unauthorized', { status: 401 });
   return new Response(new Uint8Array(picture), { headers: { 'content-type': 'image/png' } });
@@ -24,7 +26,9 @@ const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => 
 let t: Awaited<ReturnType<typeof createTestApp>>;
 
 beforeAll(async () => {
-  picture = await sharp({ create: { width: 400, height: 300, channels: 3, background: '#3a7' } }).png().toBuffer();
+  picture = await sharp({ create: { width: 400, height: 300, channels: 3, background: '#3a7' } })
+    .png()
+    .toBuffer();
   t = await createTestApp({ fetchImpl: fakeFetch });
 });
 afterAll(async () => t?.close());

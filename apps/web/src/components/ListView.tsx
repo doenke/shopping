@@ -1,5 +1,14 @@
 import { useCustomCategories } from '../categories';
-import { categoriesInOrder, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
+import {
+  categoriesInOrder,
+  categoryInList,
+  packingInfo,
+  type CatalogIndex,
+  type CatalogItem,
+  type ItemRow,
+  type ListRow,
+  type UserInfo,
+} from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { clearChecked, setChecked } from '../actions';
 import { shopModeKnown, shoppingActivity, startShopping, stopShopping, useShopping } from '../shopMode';
@@ -63,10 +72,12 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
       const cat = categoryInList(i.categoryId, list.listType, custom).id;
       byCat.set(cat, [...(byCat.get(cat) ?? []), i]);
     }
-    return categoriesInOrder(list.listType, me?.categoryOrder, custom).filter((c) => byCat.has(c.id)).map((c) => ({
-      category: c,
-      items: byCat.get(c.id)!.sort((a, b) => a.position.localeCompare(b.position)),
-    }));
+    return categoriesInOrder(list.listType, me?.categoryOrder, custom)
+      .filter((c) => byCat.has(c.id))
+      .map((c) => ({
+        category: c,
+        items: byCat.get(c.id)!.sort((a, b) => a.position.localeCompare(b.position)),
+      }));
   }, [open, list.listType, me?.categoryOrder, custom]);
 
   const boost = useMemo(() => {
@@ -90,8 +101,8 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
 
       {list.isTemplate && (
         <p className="template-hint">
-          ◇ Vorlage – hier wird nichts abgehakt. Sie füllt neue Listen vor („+ Neu“) und lässt sich mit Listen abgleichen („⋮ → Mit Vorlage abgleichen“). Antippen
-          bearbeitet einen Artikel.
+          ◇ Vorlage – hier wird nichts abgehakt. Sie füllt neue Listen vor („+ Neu“) und lässt sich mit Listen abgleichen („⋮ → Mit Vorlage abgleichen“).
+          Antippen bearbeitet einen Artikel.
         </p>
       )}
 

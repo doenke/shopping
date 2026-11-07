@@ -122,7 +122,9 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   // "Auf Vorlage setzen": the list's own template first (the one "Mit Vorlage abgleichen" remembers).
   const templates = allLists.filter((l) => l.isTemplate && l.listType === list.listType);
   const rememberedTemplate =
-    typeof list.settings.templateId === 'string' && templates.some((t) => t.id === list.settings.templateId) ? list.settings.templateId : (templates[0]?.id ?? '');
+    typeof list.settings.templateId === 'string' && templates.some((t) => t.id === list.settings.templateId)
+      ? list.settings.templateId
+      : (templates[0]?.id ?? '');
   const [toTemplate, setToTemplate] = useState<string | null>(null);
   // The templates this thing is on already (same catalog item, or same name).
   const templateIds = templates.map((t) => t.id).join(',');
@@ -130,7 +132,13 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
     if (!templateIds) return [] as string[];
     const rows = await db.items.where('listId').anyOf(templateIds.split(',')).toArray();
     const key = item.name.trim().toLowerCase();
-    return [...new Set(rows.filter((r) => !r.deleted && (item.catalogItemId ? r.catalogItemId === item.catalogItemId : r.name.trim().toLowerCase() === key)).map((r) => r.listId))];
+    return [
+      ...new Set(
+        rows
+          .filter((r) => !r.deleted && (item.catalogItemId ? r.catalogItemId === item.catalogItemId : r.name.trim().toLowerCase() === key))
+          .map((r) => r.listId),
+      ),
+    ];
   }, [templateIds, item.catalogItemId, item.name]);
   const onTemplates = templates.filter((t) => onTemplateIds?.includes(t.id));
   const [templateDone, setTemplateDone] = useState<string | null>(null);
@@ -138,7 +146,17 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
     const template = templates.find((t) => t.id === toTemplate);
     if (!template) return;
     // As it is now in the editor (unsaved changes included), without amounts checked off etc.
-    await addItems(template.id, [{ ...itemToNew(item), name: name.trim() || item.name, properties: withCustom(properties), note: note.trim() || null, categoryId, person: person.trim() || null, container: container.trim() || null }]);
+    await addItems(template.id, [
+      {
+        ...itemToNew(item),
+        name: name.trim() || item.name,
+        properties: withCustom(properties),
+        note: note.trim() || null,
+        categoryId,
+        person: person.trim() || null,
+        container: container.trim() || null,
+      },
+    ]);
     setTemplateDone(template.name);
   };
 
@@ -303,7 +321,12 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
           <div className="field__row">
             <label className="field">
               <span>{labels.person}</span>
-              <input value={person} onChange={(e) => setPerson(e.target.value)} list="packing-people" placeholder={todo ? 'z. B. Anna' : memo ? 'z. B. Ben' : 'alle'} />
+              <input
+                value={person}
+                onChange={(e) => setPerson(e.target.value)}
+                list="packing-people"
+                placeholder={todo ? 'z. B. Anna' : memo ? 'z. B. Ben' : 'alle'}
+              />
             </label>
             <label className="field">
               <span>{labels.container}</span>
@@ -372,8 +395,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
 
         {isTemplate && (
           <label className="check field">
-            <input type="checkbox" checked={optional} onChange={(e) => setOptional(e.target.checked)} /> optional – beim Übernehmen erst einmal
-            abgewählt
+            <input type="checkbox" checked={optional} onChange={(e) => setOptional(e.target.checked)} /> optional – beim Übernehmen erst einmal abgewählt
           </label>
         )}
 
@@ -396,7 +418,13 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
         {packing && shoppingLists.length > 0 && me && !me.isGuest && (
           <div className="sheet__meta">
             {toShopping === null ? (
-              <button type="button" className="link" onClick={() => setToShopping(me.defaultListId && shoppingLists.some((l) => l.id === me.defaultListId) ? me.defaultListId : shoppingLists[0]!.id)}>
+              <button
+                type="button"
+                className="link"
+                onClick={() =>
+                  setToShopping(me.defaultListId && shoppingLists.some((l) => l.id === me.defaultListId) ? me.defaultListId : shoppingLists[0]!.id)
+                }
+              >
                 🛒 Auf Einkaufsliste setzen …
               </button>
             ) : shoppingDone ? (
@@ -490,11 +518,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
         )}
 
         <footer className="sheet__actions">
-          <button
-            type="button"
-            className="btn btn--danger"
-            onClick={remove}
-          >
+          <button type="button" className="btn btn--danger" onClick={remove}>
             Entfernen
           </button>
           <span className="spacer" />

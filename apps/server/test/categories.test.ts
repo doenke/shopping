@@ -10,7 +10,8 @@ let carla: { cookie: string };
 const clock = new Hlc('category-test');
 const as = (who: { cookie: string }, method: 'GET' | 'POST' | 'PATCH', url: string, payload?: unknown) =>
   t.app.inject({ method, url, headers: { cookie: who.cookie }, ...(payload !== undefined ? { payload: payload as object } : {}) });
-const category = (id: string, patch: Record<string, unknown>): Mutation => ({ mid: randomUUID(), entity: 'category', id, hlc: clock.tick(), patch }) as Mutation;
+const category = (id: string, patch: Record<string, unknown>): Mutation =>
+  ({ mid: randomUUID(), entity: 'category', id, hlc: clock.tick(), patch }) as Mutation;
 const pull = async (who: { cookie: string }, since = 0) => (await as(who, 'GET', `/api/v1/sync/pull?since=${since}`)).json();
 
 beforeAll(async () => {

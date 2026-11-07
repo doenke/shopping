@@ -15,7 +15,9 @@ export interface ImportResult {
 
 /** Guesses a category for a Mealie label by name, e.g. "Obst und Gemüse" -> obst-gemuese. */
 export function guessCategory(label: string): string | undefined {
-  const l = normalize(label).replace(/\bund\b/g, ' ').replace(/\s+/g, ' ');
+  const l = normalize(label)
+    .replace(/\bund\b/g, ' ')
+    .replace(/\s+/g, ' ');
   let best: { id: string; score: number } | undefined;
   for (const c of CATEGORIES) {
     const name = normalize(c.name).replace(/\s+/g, ' ');
@@ -81,15 +83,18 @@ export async function importFoods(db: Db, foods: MealieFood[], labelMapping: Rec
         }
       }
 
-      await tx.insert(catalogItems).values({
-        id: stableUuid('shopping-mealie', food.id),
-        name,
-        plural,
-        aliases,
-        categoryId: mapped ?? DEFAULT_CATEGORY,
-        source: 'mealie',
-        mealieFoodId: food.id,
-      }).onConflictDoNothing();
+      await tx
+        .insert(catalogItems)
+        .values({
+          id: stableUuid('shopping-mealie', food.id),
+          name,
+          plural,
+          aliases,
+          categoryId: mapped ?? DEFAULT_CATEGORY,
+          source: 'mealie',
+          mealieFoodId: food.id,
+        })
+        .onConflictDoNothing();
       result.created++;
     }
   });

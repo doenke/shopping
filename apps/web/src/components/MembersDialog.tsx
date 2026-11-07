@@ -94,9 +94,7 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
                 ))}
               </div>
             ) : (
-              <p className="muted">
-                {list.visibility === 'private' ? '🔒 Privat' : `🏠 ${me.household ?? 'Haushalt'}`} – das legt der Besitzer fest.
-              </p>
+              <p className="muted">{list.visibility === 'private' ? '🔒 Privat' : `🏠 ${me.household ?? 'Haushalt'}`} – das legt der Besitzer fest.</p>
             )}
           </div>
         )}

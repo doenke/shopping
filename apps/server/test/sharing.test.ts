@@ -136,7 +136,13 @@ describe('guests and members', () => {
   });
 
   it('lets only the owner remove members', async () => {
-    await t.app.inject({ method: 'GET', url: (await t.app.inject({ method: 'GET', url: `/api/v1/lists/${list2}/share-link`, headers: { cookie: owner.cookie } })).json().url.replace('http://localhost:3000', ''), headers: { cookie: member.cookie } });
+    await t.app.inject({
+      method: 'GET',
+      url: (await t.app.inject({ method: 'GET', url: `/api/v1/lists/${list2}/share-link`, headers: { cookie: owner.cookie } }))
+        .json()
+        .url.replace('http://localhost:3000', ''),
+      headers: { cookie: member.cookie },
+    });
     const denied = await t.app.inject({ method: 'DELETE', url: `/api/v1/lists/${list2}/members/${owner.id}`, headers: { cookie: member.cookie } });
     expect(denied.statusCode).toBe(403);
     const ok = await t.app.inject({ method: 'DELETE', url: `/api/v1/lists/${list2}/members/${member.id}`, headers: { cookie: owner.cookie } });

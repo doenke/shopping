@@ -204,7 +204,13 @@ export function ImportDialog({ listId, onClose }: Props) {
 
         {tab === 'plan' && (
           <div className="row row--center">
-            <input className="input input--date" type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} aria-label="Von" />
+            <input
+              className="input input--date"
+              type="date"
+              value={range.from}
+              onChange={(e) => setRange({ ...range, from: e.target.value })}
+              aria-label="Von"
+            />
             <span>bis</span>
             <input className="input input--date" type="date" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} aria-label="Bis" />
             <button type="button" className="btn" onClick={() => void loadPlan()} disabled={loading}>

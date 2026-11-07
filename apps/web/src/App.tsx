@@ -1,6 +1,31 @@
-import { canReset, categoriesInOrder, groupLists, inUserOrder, listGroup, parseInput, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
+import {
+  canReset,
+  categoriesInOrder,
+  groupLists,
+  inUserOrder,
+  listGroup,
+  parseInput,
+  type ListRow,
+  type ListType,
+  type Me,
+  type SectionKey,
+} from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, checkAll, resetList, archiveList, createList, deleteList, leaveList, saveAsTemplate, setCategoryOrder, setListOrder, setSectionOrder, setMainList, shareListAsText } from './actions';
+import {
+  addItems,
+  checkAll,
+  resetList,
+  archiveList,
+  createList,
+  deleteList,
+  leaveList,
+  saveAsTemplate,
+  setCategoryOrder,
+  setListOrder,
+  setSectionOrder,
+  setMainList,
+  shareListAsText,
+} from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
@@ -125,7 +150,6 @@ function Shell({ me }: { me: Me }) {
   const listId = route.page === 'list' ? (route.listId ?? (mainList ?? packingLists[0])?.id) : undefined;
   const addRef = useRef<HTMLInputElement>(null);
 
-
   const list = lists.find((l) => l.id === listId);
   const shopping = useShopping();
   /** The mode switch only exists on shopping lists; packing and ToDo lists are checked off at home. */
@@ -236,176 +260,208 @@ function Shell({ me }: { me: Me }) {
 
   return (
     <IconContext.Provider value={icons}>
-    <CategoryContext.Provider value={customCategories}>
-    <div className={`shell${wide ? ' shell--wide' : ''}${extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' ? ' shell--catalog' : ''}`}>
-      {wide
-        ? sidebar
-        : drawer && (
-            <div
-              className="drawer"
-              onClick={(e) => {
-                // Closes on the backdrop or a link/button – not when a section like "Archiv" is unfolded.
-                const t = e.target as HTMLElement;
-                if (t === e.currentTarget || (t.closest('a, button') && !t.closest('summary'))) setDrawer(false);
-              }}
-            >
-              {sidebar}
-            </div>
-          )}
-
-      <div className="main">
-        <header className={`topbar${shopMode ? ' topbar--shopping' : ''}`}>
-          {!wide && (
-            <button type="button" className="icon-btn" aria-label="Listen" onClick={() => setDrawer(true)}>
-              ☰
-            </button>
-          )}
-          <h1 className="topbar__title">
-            {route.page === 'list' && list && <ListIcon list={list} size="md" />}
-            {route.page === 'settings' ? (route.section ? SECTION_TITLE[route.section] : 'Einstellungen') : route.page === 'icons' ? 'Icons' : route.page === 'help' ? 'Hilfe' : (list?.name ?? 'Shopping')}
-          </h1>
-          {shopList &&
-            (shopping ? (
-              <button type="button" className="shop-toggle shop-toggle--on" onClick={stopShopping} aria-label="Einkauf beenden, zurück zu Zuhause">
-                🛒<span className="shop-toggle__label"> Einkaufen</span> <span aria-hidden>✕</span>
-              </button>
-            ) : (
-              <button type="button" className="shop-toggle" onClick={startShopping} aria-label="Einkaufen starten" title="Einkaufen starten – dann hakt Antippen ab">
-                🛒
-              </button>
-            ))}
-          {/* Phones: the people and the sync state move into the list menu, so the name keeps its room. */}
-          {route.page === 'list' && list && wide && <ListAvatars listId={list.id} refresh={membersSeen} onClick={() => setShowMembers(true)} />}
-          <InstallButton />
-          {(wide || !list || route.page !== 'list' || syncState === 'unauthorized') && <SyncBadge guest={me.isGuest} />}
-          {route.page === 'list' && list && (
-            <div className="menu">
-              <button type="button" className="icon-btn menu__button" aria-label="Listenmenü" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
-                ⋮{!wide && <SyncDot guest={me.isGuest} />}
-              </button>
-              {menu && (
-                <ListMenu
-                  list={list}
-                  me={me}
-                  compact={!wide}
-                  membersSeen={membersSeen}
-                  hasTemplates={templates.some((t) => t.listType === list.listType)}
-                  onClose={() => setMenu(false)}
-                  onImport={() => setImporting(true)}
-                  onApplyTemplate={() => setSyncDialog(true)}
-                  onMembers={() => setShowMembers(true)}
-                  onEdit={() => setEditing(true)}
-                  onCopied={() => setNotice('Liste als Text kopiert')}
-                  onNotice={setNotice}
-                />
+      <CategoryContext.Provider value={customCategories}>
+        <div
+          className={`shell${wide ? ' shell--wide' : ''}${extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' ? ' shell--catalog' : ''}`}
+        >
+          {wide
+            ? sidebar
+            : drawer && (
+                <div
+                  className="drawer"
+                  onClick={(e) => {
+                    // Closes on the backdrop or a link/button – not when a section like "Archiv" is unfolded.
+                    const t = e.target as HTMLElement;
+                    if (t === e.currentTarget || (t.closest('a, button') && !t.closest('summary'))) setDrawer(false);
+                  }}
+                >
+                  {sidebar}
+                </div>
               )}
+
+          <div className="main">
+            <header className={`topbar${shopMode ? ' topbar--shopping' : ''}`}>
+              {!wide && (
+                <button type="button" className="icon-btn" aria-label="Listen" onClick={() => setDrawer(true)}>
+                  ☰
+                </button>
+              )}
+              <h1 className="topbar__title">
+                {route.page === 'list' && list && <ListIcon list={list} size="md" />}
+                {route.page === 'settings'
+                  ? route.section
+                    ? SECTION_TITLE[route.section]
+                    : 'Einstellungen'
+                  : route.page === 'icons'
+                    ? 'Icons'
+                    : route.page === 'help'
+                      ? 'Hilfe'
+                      : (list?.name ?? 'Shopping')}
+              </h1>
+              {shopList &&
+                (shopping ? (
+                  <button type="button" className="shop-toggle shop-toggle--on" onClick={stopShopping} aria-label="Einkauf beenden, zurück zu Zuhause">
+                    🛒<span className="shop-toggle__label"> Einkaufen</span> <span aria-hidden>✕</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="shop-toggle"
+                    onClick={startShopping}
+                    aria-label="Einkaufen starten"
+                    title="Einkaufen starten – dann hakt Antippen ab"
+                  >
+                    🛒
+                  </button>
+                ))}
+              {/* Phones: the people and the sync state move into the list menu, so the name keeps its room. */}
+              {route.page === 'list' && list && wide && <ListAvatars listId={list.id} refresh={membersSeen} onClick={() => setShowMembers(true)} />}
+              <InstallButton />
+              {(wide || !list || route.page !== 'list' || syncState === 'unauthorized') && <SyncBadge guest={me.isGuest} />}
+              {route.page === 'list' && list && (
+                <div className="menu">
+                  <button type="button" className="icon-btn menu__button" aria-label="Listenmenü" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
+                    ⋮{!wide && <SyncDot guest={me.isGuest} />}
+                  </button>
+                  {menu && (
+                    <ListMenu
+                      list={list}
+                      me={me}
+                      compact={!wide}
+                      membersSeen={membersSeen}
+                      hasTemplates={templates.some((t) => t.listType === list.listType)}
+                      onClose={() => setMenu(false)}
+                      onImport={() => setImporting(true)}
+                      onApplyTemplate={() => setSyncDialog(true)}
+                      onMembers={() => setShowMembers(true)}
+                      onEdit={() => setEditing(true)}
+                      onCopied={() => setNotice('Liste als Text kopiert')}
+                      onNotice={setNotice}
+                    />
+                  )}
+                </div>
+              )}
+            </header>
+
+            <main className="content">
+              {route.page === 'help' ? (
+                <Help me={me} />
+              ) : route.page === 'settings' ? (
+                <Settings key={route.section ?? 'overview'} me={me} section={route.section} onSort={setSorting} />
+              ) : route.page === 'icons' && !guest ? (
+                <>
+                  <a className="settings-back" href="#/settings">
+                    ‹ Einstellungen
+                  </a>
+                  <IconReview catalog={catalog.items} admin={me.isAdmin} />
+                </>
+              ) : list && items ? (
+                <ListView
+                  ref={addRef}
+                  key={list.id}
+                  list={list}
+                  items={items}
+                  index={
+                    list.listType === 'packing'
+                      ? catalog.packingIndex
+                      : list.listType === 'memo' || list.listType === 'todo'
+                        ? catalog.emptyIndex
+                        : catalog.index
+                  }
+                  users={users}
+                  remoteChecks={remoteChecks}
+                />
+              ) : route.page === 'list' && route.listId && !list ? (
+                <div className="empty">
+                  <p>Liste wird geladen …</p>
+                </div>
+              ) : lists.length === 0 ? (
+                <div className="empty">
+                  <p className="empty__title">Noch keine Liste</p>
+                  <button type="button" className="btn btn--primary" onClick={() => newList()}>
+                    Erste Liste anlegen
+                  </button>
+                </div>
+              ) : null}
+            </main>
+          </div>
+
+          {newDialog && (
+            <NewListDialog
+              templates={templates}
+              groups={[...new Set(todoLists.map(listGroup).filter((g): g is string => !!g))]}
+              onClose={() => setNewDialog(false)}
+            />
+          )}
+          {syncDialog && list && (
+            <SyncTemplateDialog list={list} templates={templates.filter((t) => t.listType === list.listType)} onClose={() => setSyncDialog(false)} />
+          )}
+          {sharedRecipe && <RecipeUrlDialog url={sharedRecipe} listId={mainList?.id} onClose={() => setSharedRecipe(null)} />}
+          {notice && (
+            <div className="snackbar" role="status">
+              <span>{notice}</span>
             </div>
           )}
-        </header>
-
-        <main className="content">
-          {route.page === 'help' ? (
-            <Help me={me} />
-          ) : route.page === 'settings' ? (
-            <Settings key={route.section ?? 'overview'} me={me} section={route.section} onSort={setSorting} />
-          ) : route.page === 'icons' && !guest ? (
-            <>
-              <a className="settings-back" href="#/settings">
-                ‹ Einstellungen
-              </a>
-              <IconReview catalog={catalog.items} admin={me.isAdmin} />
-            </>
-          ) : list && items ? (
-            <ListView
-              ref={addRef}
-              key={list.id}
+          {editing && list && (
+            <ListEditDialog
               list={list}
-              items={items}
-              index={list.listType === 'packing' ? catalog.packingIndex : list.listType === 'memo' || list.listType === 'todo' ? catalog.emptyIndex : catalog.index}
-              users={users}
-              remoteChecks={remoteChecks}
+              me={me}
+              groups={[...new Set(todoLists.map(listGroup).filter((g): g is string => !!g))]}
+              onClose={() => setEditing(false)}
+              onSortCategories={() => {
+                setEditing(false);
+                setSorting(list.listType);
+              }}
             />
-          ) : route.page === 'list' && route.listId && !list ? (
-            <div className="empty">
-              <p>Liste wird geladen …</p>
-            </div>
-          ) : lists.length === 0 ? (
-            <div className="empty">
-              <p className="empty__title">Noch keine Liste</p>
-              <button type="button" className="btn btn--primary" onClick={() => newList()}>
-                Erste Liste anlegen
-              </button>
-            </div>
-          ) : null}
-        </main>
-      </div>
-
-      {newDialog && <NewListDialog
-          templates={templates}
-          groups={[...new Set(todoLists.map(listGroup).filter((g): g is string => !!g))]}
-          onClose={() => setNewDialog(false)}
-        />}
-      {syncDialog && list && (
-        <SyncTemplateDialog list={list} templates={templates.filter((t) => t.listType === list.listType)} onClose={() => setSyncDialog(false)} />
-      )}
-      {sharedRecipe && <RecipeUrlDialog url={sharedRecipe} listId={mainList?.id} onClose={() => setSharedRecipe(null)} />}
-      {notice && (
-        <div className="snackbar" role="status">
-          <span>{notice}</span>
+          )}
+          {sorting === 'lists' && (
+            <SortDialog
+              title="Listen sortieren"
+              hint="So stehen die Listen in der Seitenleiste – nur bei dir, auf allen deinen Geräten."
+              groups={[
+                // The sections themselves first, then the lists inside each.
+                { title: 'Abschnitte', items: sections.map((s) => ({ id: `section:${s.key}`, label: s.title ?? 'Einkaufslisten' })) },
+                ...sections
+                  .filter((s) => s.lists.length)
+                  .map((s) => ({ title: s.title ?? 'Einkaufslisten', items: s.lists.map((l) => ({ id: l.id, label: l.name })) })),
+              ]}
+              onSave={async (ids) => {
+                await setSectionOrder(ids.filter((id) => id.startsWith('section:')).map((id) => id.slice('section:'.length) as SectionKey));
+                await setListOrder([...ids.filter((id) => !id.startsWith('section:')), ...archived.map((l) => l.id)]);
+              }}
+              onReset={async () => {
+                await setSectionOrder([]);
+                await setListOrder([]);
+              }}
+              onClose={() => setSorting(null)}
+            />
+          )}
+          {sorting && sorting !== 'lists' && (
+            <SortDialog
+              title={`Kategorien sortieren – ${LIST_TYPE_LABEL[sorting]}`}
+              hint="Zum Beispiel in der Reihenfolge deines Weges durch den Laden. Gilt nur für dich, auf allen deinen Geräten."
+              groups={[{ title: null, items: categoriesInOrder(sorting, me.categoryOrder, customCategories).map((c) => ({ id: c.id, label: c.name })) }]}
+              onSave={(ids) => setCategoryOrder(sorting, ids, me.categoryOrder)}
+              onReset={() => setCategoryOrder(sorting, [], me.categoryOrder)}
+              onClose={() => setSorting(null)}
+            />
+          )}
+          {showMembers && list && (
+            <MembersDialog
+              list={list}
+              me={me}
+              onClose={() => {
+                setShowMembers(false);
+                setMembersSeen((n) => n + 1);
+              }}
+            />
+          )}
+          {importing && list && <ImportDialog listId={list.id} onClose={() => setImporting(false)} />}
+          {extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' && (
+            <CatalogPanel key={list.listType} listId={list.id} listType={list.listType} catalog={catalog.items} items={items ?? []} />
+          )}
         </div>
-      )}
-      {editing && list && (
-        <ListEditDialog
-          list={list}
-          me={me}
-          groups={[...new Set(todoLists.map(listGroup).filter((g): g is string => !!g))]}
-          onClose={() => setEditing(false)}
-          onSortCategories={() => {
-            setEditing(false);
-            setSorting(list.listType);
-          }}
-        />
-      )}
-      {sorting === 'lists' && (
-        <SortDialog
-          title="Listen sortieren"
-          hint="So stehen die Listen in der Seitenleiste – nur bei dir, auf allen deinen Geräten."
-          groups={[
-            // The sections themselves first, then the lists inside each.
-            { title: 'Abschnitte', items: sections.map((s) => ({ id: `section:${s.key}`, label: s.title ?? 'Einkaufslisten' })) },
-            ...sections.filter((s) => s.lists.length).map((s) => ({ title: s.title ?? 'Einkaufslisten', items: s.lists.map((l) => ({ id: l.id, label: l.name })) })),
-          ]}
-          onSave={async (ids) => {
-            await setSectionOrder(ids.filter((id) => id.startsWith('section:')).map((id) => id.slice('section:'.length) as SectionKey));
-            await setListOrder([...ids.filter((id) => !id.startsWith('section:')), ...archived.map((l) => l.id)]);
-          }}
-          onReset={async () => {
-            await setSectionOrder([]);
-            await setListOrder([]);
-          }}
-          onClose={() => setSorting(null)}
-        />
-      )}
-      {sorting && sorting !== 'lists' && (
-        <SortDialog
-          title={`Kategorien sortieren – ${LIST_TYPE_LABEL[sorting]}`}
-          hint="Zum Beispiel in der Reihenfolge deines Weges durch den Laden. Gilt nur für dich, auf allen deinen Geräten."
-          groups={[{ title: null, items: categoriesInOrder(sorting, me.categoryOrder, customCategories).map((c) => ({ id: c.id, label: c.name })) }]}
-          onSave={(ids) => setCategoryOrder(sorting, ids, me.categoryOrder)}
-          onReset={() => setCategoryOrder(sorting, [], me.categoryOrder)}
-          onClose={() => setSorting(null)}
-        />
-      )}
-      {showMembers && list && <MembersDialog list={list} me={me} onClose={() => {
-            setShowMembers(false);
-            setMembersSeen((n) => n + 1);
-          }} />}
-      {importing && list && <ImportDialog listId={list.id} onClose={() => setImporting(false)} />}
-      {extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' && (
-        <CatalogPanel key={list.listType} listId={list.id} listType={list.listType} catalog={catalog.items} items={items ?? []} />
-      )}
-    </div>
-    </CategoryContext.Provider>
+      </CategoryContext.Provider>
     </IconContext.Provider>
   );
 }
@@ -557,7 +613,8 @@ function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImp
               .count()
               .then((n) => {
                 if (n === 0) return onNotice('Es ist schon alles erledigt.');
-                if (confirm(`Alle ${n} offenen Einträge als erledigt markieren?`)) void checkAll(list.id).then((c) => onNotice(c === 1 ? '1 Eintrag als erledigt markiert.' : `${c} Einträge als erledigt markiert.`));
+                if (confirm(`Alle ${n} offenen Einträge als erledigt markieren?`))
+                  void checkAll(list.id).then((c) => onNotice(c === 1 ? '1 Eintrag als erledigt markiert.' : `${c} Einträge als erledigt markiert.`));
               });
           }}
         >
@@ -577,7 +634,8 @@ function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onImp
               .count()
               .then((n) => {
                 if (n === 0) return onNotice('Es ist noch nichts abgehakt.');
-                if (confirm(n === 1 ? 'Den abgehakten Eintrag wieder öffnen?' : `Alle ${n} abgehakten Einträge wieder öffnen?`)) void resetList(list.id).then((c) => onNotice(c === 1 ? '1 Eintrag wieder offen.' : `${c} Einträge wieder offen.`));
+                if (confirm(n === 1 ? 'Den abgehakten Eintrag wieder öffnen?' : `Alle ${n} abgehakten Einträge wieder öffnen?`))
+                  void resetList(list.id).then((c) => onNotice(c === 1 ? '1 Eintrag wieder offen.' : `${c} Einträge wieder offen.`));
               });
           }}
         >

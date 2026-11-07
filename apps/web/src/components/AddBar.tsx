@@ -1,4 +1,14 @@
-import { asksForTemplates, CatalogIndex, extractPackingTokens, type ListRow, isOwnName, itemSpecification, parseInput, type CatalogItem, type ListType } from '@shopping/shared';
+import {
+  asksForTemplates,
+  CatalogIndex,
+  extractPackingTokens,
+  type ListRow,
+  isOwnName,
+  itemSpecification,
+  parseInput,
+  type CatalogItem,
+  type ListType,
+} from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, catalogToParsed, stopAskingForTemplates, templatesMissing, type NewItem } from '../actions';
 import { useLists, useTileView } from '../hooks';
@@ -144,7 +154,7 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
               setBlock((b) => (b ? `${b}\n${pasted}` : pasted));
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') (text ? setText('') : setBlock(null));
+              if (e.key === 'Escape') text ? setText('') : setBlock(null);
             }}
             aria-label="Artikel hinzufügen"
           />
@@ -165,7 +175,8 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
       {offer && !text && !block && list && (
         <div className="addbar__results template-offer">
           <p>
-            {offer.items.length === 1 ? `„${offer.items[0]!.name}“` : `${offer.items.length} neue Dinge`} auch in {offer.templates.length === 1 ? 'die Vorlage' : 'eine Vorlage'}?
+            {offer.items.length === 1 ? `„${offer.items[0]!.name}“` : `${offer.items.length} neue Dinge`} auch in{' '}
+            {offer.templates.length === 1 ? 'die Vorlage' : 'eine Vorlage'}?
           </p>
           <div className="chips">
             {offer.templates.map((t) => {
@@ -197,7 +208,12 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
       )}
       {block && (
         <div className="addbar__results addbar__block">
-          <textarea value={block} onChange={(e) => setBlock(e.target.value || null)} rows={Math.min(10, block.split('\n').length)} aria-label="Eingefügte Liste" />
+          <textarea
+            value={block}
+            onChange={(e) => setBlock(e.target.value || null)}
+            rows={Math.min(10, block.split('\n').length)}
+            aria-label="Eingefügte Liste"
+          />
           <div className="row">
             <button type="button" className="btn btn--primary" disabled={!blockItems.length} onClick={() => void addBlock()}>
               {blockItems.length} Artikel hinzufügen

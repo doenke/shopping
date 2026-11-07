@@ -13,7 +13,8 @@ const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => 
     described.push(String(body.messages[1].content));
     return json({ result: { response: 'a round loaf of dark bread' } });
   }
-  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" fill="#FF00FF"/><circle cx="256" cy="256" r="130" fill="#8B5A2B"/></svg>';
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" fill="#FF00FF"/><circle cx="256" cy="256" r="130" fill="#8B5A2B"/></svg>';
   return json({ result: { image: (await sharp(Buffer.from(svg)).png().toBuffer()).toString('base64') } });
 }) as typeof fetch;
 
@@ -22,9 +23,14 @@ let cookie: string;
 const req = (method: 'GET' | 'POST' | 'PUT' | 'PATCH', url: string, payload?: unknown) =>
   t.app.inject({ method, url, headers: { cookie }, ...(payload !== undefined ? { payload: payload as object } : {}) });
 
-const itemsOf = async (listId: string) => (await req('GET', `/api/v1/lists/${listId}`)).json().items as { id: string; name: string; catalogItemId: string | null }[];
+const itemsOf = async (listId: string) =>
+  (await req('GET', `/api/v1/lists/${listId}`)).json().items as { id: string; name: string; catalogItemId: string | null }[];
 const pulled = async (id: string) => (await req('GET', '/api/v1/sync/pull?since=0')).json().items.find((i: { id: string }) => i.id === id);
-const jobsFor = (id: string) => t.db.select().from(iconJobs).where(and(eq(iconJobs.targetType, 'entry'), eq(iconJobs.targetId, id)));
+const jobsFor = (id: string) =>
+  t.db
+    .select()
+    .from(iconJobs)
+    .where(and(eq(iconJobs.targetType, 'entry'), eq(iconJobs.targetId, id)));
 
 beforeAll(async () => {
   t = await createTestApp({ fetchImpl: fakeFetch });
@@ -32,9 +38,13 @@ beforeAll(async () => {
   ({ cookie } = await t.login('Anna', '', ['admins']));
   await req('PUT', '/api/v1/icons/settings', { autoApprove: true, cloudflare: { accountId: 'a', token: 't' } });
   // The style has been found: four anchors.
-  const image = await sharp({ create: { width: 512, height: 512, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).webp().toBuffer();
+  const image = await sharp({ create: { width: 512, height: 512, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .webp()
+    .toBuffer();
   for (const name of ['Milch', 'Brot', 'Äpfel', 'Käse']) {
-    await t.db.insert(icons).values({ targetType: 'item', targetId: name, status: 'approved', isAnchor: true, provider: 'upload', model: 'manual', prompt: '', image, thumb: image });
+    await t.db
+      .insert(icons)
+      .values({ targetType: 'item', targetId: name, status: 'approved', isAnchor: true, provider: 'upload', model: 'manual', prompt: '', image, thumb: image });
   }
 });
 afterAll(async () => t?.close());
@@ -82,7 +92,6 @@ describe('free-text entries', () => {
     expect((await pulled(third)).icon).toBe((await pulled(first)).icon);
   });
 
-
   it('of a Merkliste can get a new picture on request', async () => {
     const memo = (await req('POST', '/api/v1/lists', { name: 'Filme', type: 'memo' })).json().id;
     await req('POST', `/api/v1/lists/${memo}/items`, { text: 'Dune' });
@@ -97,7 +106,9 @@ describe('free-text entries', () => {
     expect(pulledFirst.icon).toMatch(/^[0-9a-f]{10}$/);
     await req('PATCH', `/api/v1/items/${first}`, { category: 'Brot & Gebäck' });
     expect(await t.icons.adoptFreeEntries()).toBeGreaterThanOrEqual(1);
-    const own = (await req('GET', '/api/v1/catalog')).json().items.find((c: { name: string; kind: string }) => c.name === 'Zwergenbrot' && c.kind === 'shopping');
+    const own = (await req('GET', '/api/v1/catalog'))
+      .json()
+      .items.find((c: { name: string; kind: string }) => c.name === 'Zwergenbrot' && c.kind === 'shopping');
     expect(own).toMatchObject({ source: 'user', categoryId: 'brot-gebaeck', kind: 'shopping' });
     expect(own.icon).toMatch(/^[0-9a-f]{10}$/);
     expect((await t.app.inject({ method: 'GET', url: `/icons/item/${own.id}.webp?v=${own.icon}` })).statusCode).toBe(200);
@@ -111,7 +122,11 @@ describe('free-text entries', () => {
 });
 
 describe('list icons', () => {
-  const listJobs = (id: string) => t.db.select().from(iconJobs).where(and(eq(iconJobs.targetType, 'list'), eq(iconJobs.targetId, id)));
+  const listJobs = (id: string) =>
+    t.db
+      .select()
+      .from(iconJobs)
+      .where(and(eq(iconJobs.targetType, 'list'), eq(iconJobs.targetId, id)));
 
   it('come from the name, and again after a rename', async () => {
     const id = (await req('POST', '/api/v1/lists', { name: 'Baumarkt' })).json().id;

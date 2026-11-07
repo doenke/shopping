@@ -183,9 +183,5 @@ export async function processIcon(input: Buffer): Promise<ProcessedIcon> {
  * colour, like the pictures it is asked to produce, and below 512 px (Cloudflare limit).
  */
 export async function referenceImage(master: Buffer, size = 448): Promise<Buffer> {
-  return sharp(master)
-    .resize(size, size)
-    .flatten({ background: KEY_COLOR })
-    .png()
-    .toBuffer();
+  return sharp(master).resize(size, size).flatten({ background: KEY_COLOR }).png().toBuffer();
 }

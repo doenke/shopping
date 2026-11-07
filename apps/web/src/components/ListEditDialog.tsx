@@ -1,4 +1,17 @@
-import { asksForTemplates, canAutoReset, listDescription, listTemplateIds, listGroup, listReset, RESET_EVERY, RESET_LABEL, SUGGESTED_LIST_GROUPS, type ListRow, type Me, type ResetEvery } from '@shopping/shared';
+import {
+  asksForTemplates,
+  canAutoReset,
+  listDescription,
+  listTemplateIds,
+  listGroup,
+  listReset,
+  RESET_EVERY,
+  RESET_LABEL,
+  SUGGESTED_LIST_GROUPS,
+  type ListRow,
+  type Me,
+  type ResetEvery,
+} from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { editList, newListIcon } from '../actions';
 import { useLists } from '../hooks';
@@ -38,7 +51,13 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
         onSubmit={async (e) => {
           e.preventDefault();
           if (!name.trim()) return;
-          await editList(list, { name, description, ...(todo ? { group } : {}), ...(canAutoReset(list) ? { reset } : {}), ...(templates.length ? { askTemplates } : {}) });
+          await editList(list, {
+            name,
+            description,
+            ...(todo ? { group } : {}),
+            ...(canAutoReset(list) ? { reset } : {}),
+            ...(templates.length ? { askTemplates } : {}),
+          });
           ref.current?.close();
         }}
       >
@@ -103,7 +122,9 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
                 ↕ Kategorien sortieren …
               </button>
             </div>
-            <small className="muted">Reihenfolge wie dein Weg durch den Laden – gilt nur für dich, für alle {list.listType === 'packing' ? 'Packlisten' : 'Einkaufslisten'}.</small>
+            <small className="muted">
+              Reihenfolge wie dein Weg durch den Laden – gilt nur für dich, für alle {list.listType === 'packing' ? 'Packlisten' : 'Einkaufslisten'}.
+            </small>
           </div>
         )}
 

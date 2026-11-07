@@ -102,9 +102,7 @@ export async function oauthRoutes(app: FastifyInstance, { config, db }: { config
   // ---- dynamic client registration (RFC 7591) -------------------------------
 
   app.post('/oauth/register', async (request, reply) => {
-    const body = z
-      .object({ client_name: z.string().max(100).optional(), redirect_uris: z.array(z.string()).min(1).max(10) })
-      .safeParse(request.body);
+    const body = z.object({ client_name: z.string().max(100).optional(), redirect_uris: z.array(z.string()).min(1).max(10) }).safeParse(request.body);
     if (!body.success || !body.data.redirect_uris.every(validRedirect)) {
       return reply.code(400).send({ error: 'invalid_redirect_uri', error_description: 'redirect_uris müssen https (oder http auf localhost) sein' });
     }
@@ -236,7 +234,8 @@ h1{font-size:1.3rem;margin-top:0}ul{padding-left:20px}button{min-height:44px;pad
       refreshExpiresAt: new Date(Date.now() + REFRESH_TTL_DAYS * 86_400_000),
     };
     if (replaceId) await db.update(apiTokens).set(row).where(eq(apiTokens.id, replaceId));
-    else await db.insert(apiTokens).values({ ...row, userId: values.userId, kind: 'oauth', clientId: values.clientId, name: values.name, scopes: values.scopes });
+    else
+      await db.insert(apiTokens).values({ ...row, userId: values.userId, kind: 'oauth', clientId: values.clientId, name: values.name, scopes: values.scopes });
     return reply.header('Cache-Control', 'no-store').send({
       access_token: access,
       token_type: 'Bearer',
@@ -262,13 +261,7 @@ h1{font-size:1.3rem;margin-top:0}ul{padding-left:20px}button{min-height:44px;pad
       const [row] = await db
         .select()
         .from(apiTokens)
-        .where(
-          and(
-            eq(apiTokens.refreshHash, hashToken(body.refresh_token)),
-            isNull(apiTokens.revokedAt),
-            gt(apiTokens.refreshExpiresAt, new Date()),
-          ),
-        );
+        .where(and(eq(apiTokens.refreshHash, hashToken(body.refresh_token)), isNull(apiTokens.revokedAt), gt(apiTokens.refreshExpiresAt, new Date())));
       if (!row || (body.client_id && row.clientId !== body.client_id)) return tokenError(reply, 'invalid_grant', 'Refresh-Token ungültig');
       // Rotation: the old refresh token stops working.
       return issue(reply, { userId: row.userId, clientId: row.clientId!, name: row.name, scopes: row.scopes as Scope[] }, row.id);

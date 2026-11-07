@@ -23,10 +23,7 @@ export function listAsText(
     const p = packingInfo(i);
     const spec = itemSpecification(i);
     const due = list.listType === 'todo' ? dueOf(i) : null;
-    const extra =
-      list.listType === 'memo'
-        ? [p.person ? `Tipp von ${p.person}` : null, p.container]
-        : [p.person, p.container];
+    const extra = list.listType === 'memo' ? [p.person ? `Tipp von ${p.person}` : null, p.container] : [p.person, p.container];
     const parts = [due ? formatDue(due, now).label : null, spec || null].filter(Boolean).join(' · ');
     const tail = extra.filter(Boolean).join(', ');
     return `• ${i.name}${parts ? ` – ${parts}` : ''}${tail ? ` (${tail})` : ''}${list.isTemplate && i.optional ? ' (optional)' : ''}`;
@@ -49,6 +46,13 @@ export function listAsText(
   }
   const groups = categoriesInOrder(list.listType, categoryOrder, custom)
     .filter((c) => byCat.has(c.id))
-    .map((c) => `${c.name}\n${byCat.get(c.id)!.sort((a, b) => a.position.localeCompare(b.position)).map(line).join('\n')}`);
+    .map(
+      (c) =>
+        `${c.name}\n${byCat
+          .get(c.id)!
+          .sort((a, b) => a.position.localeCompare(b.position))
+          .map(line)
+          .join('\n')}`,
+    );
   return `${head}\n\n${groups.join('\n\n')}`;
 }

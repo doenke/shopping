@@ -13,7 +13,20 @@ export interface CategoryDef {
 export type CustomCategories = readonly CategoryRow[];
 
 /** Colours offered for own categories. */
-export const CATEGORY_COLORS = ['#5BAA45', '#C98A3E', '#E3B505', '#D2544B', '#4A90C9', '#C2569A', '#3FA7A0', '#7A7FD1', '#9B6FC4', '#8C6D4F', '#6B8E3D', '#5C7CBA'];
+export const CATEGORY_COLORS = [
+  '#5BAA45',
+  '#C98A3E',
+  '#E3B505',
+  '#D2544B',
+  '#4A90C9',
+  '#C2569A',
+  '#3FA7A0',
+  '#7A7FD1',
+  '#9B6FC4',
+  '#8C6D4F',
+  '#6B8E3D',
+  '#5C7CBA',
+];
 
 /** A colour for a new category: the first one not yet taken in that list type. */
 export function nextCategoryColor(listType: string, custom: CustomCategories = []): string {

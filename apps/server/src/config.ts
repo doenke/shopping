@@ -9,7 +9,10 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().default(3000),
   HOST: z.string().default('0.0.0.0'),
   DATABASE_URL: z.string().min(1),
-  PUBLIC_URL: z.string().url().transform((u) => u.replace(/\/$/, '')),
+  PUBLIC_URL: z
+    .string()
+    .url()
+    .transform((u) => u.replace(/\/$/, '')),
   /** Used to encrypt stored secrets (Mealie token) and sign the login cookie. */
   SECRET_KEY: z.string().min(16),
   OIDC_ISSUER: z.string().url().optional(),

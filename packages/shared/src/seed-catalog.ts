@@ -500,7 +500,12 @@ function parse(data: Record<string, string>, kind: SeedItem['kind']): SeedItem[]
       seen.add(name.toLowerCase());
       out.push({
         name,
-        aliases: aliases ? aliases.split(',').map((a) => a.trim()).filter(Boolean) : [],
+        aliases: aliases
+          ? aliases
+              .split(',')
+              .map((a) => a.trim())
+              .filter(Boolean)
+          : [],
         categoryId,
         defaultUnit: unit || null,
         pantry: flags.includes('p'),

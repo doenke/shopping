@@ -79,7 +79,9 @@ export async function mealieRoutes(app: FastifyInstance, opts: Options): Promise
           targetListId: cfg.inbox?.targetListId ?? null,
           webhookUrl: secret ? `${config.PUBLIC_URL}/hooks/mealie/${secret}` : null,
           // Apprise URL for Mealie's notifier (json:// for http, jsons:// for https).
-          appriseUrl: secret ? `${host.protocol === 'https:' ? 'jsons' : 'json'}://${host.host}${host.pathname.replace(/\/$/, '')}/hooks/mealie/${secret}` : null,
+          appriseUrl: secret
+            ? `${host.protocol === 'https:' ? 'jsons' : 'json'}://${host.host}${host.pathname.replace(/\/$/, '')}/hooks/mealie/${secret}`
+            : null,
         },
         status: row?.status ?? null,
         lastSyncAt: row?.lastSyncAt ?? null,

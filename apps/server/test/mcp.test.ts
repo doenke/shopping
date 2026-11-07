@@ -22,7 +22,7 @@ async function mcpClient(token: string) {
   return client;
 }
 
-const textOf = (r: unknown) => ((r as { content: { text: string }[] }).content[0]?.text ?? '');
+const textOf = (r: unknown) => (r as { content: { text: string }[] }).content[0]?.text ?? '';
 
 describe('OAuth for MCP clients', () => {
   let accessToken: string;
@@ -84,7 +84,15 @@ describe('OAuth for MCP clients', () => {
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       payload: new URLSearchParams(o).toString(),
     });
-    const wrong = await t.app.inject(form({ grant_type: 'authorization_code', code, client_id: clientId, redirect_uri: redirect, code_verifier: 'falsch-falsch-falsch-falsch-falsch-falsch-1' }));
+    const wrong = await t.app.inject(
+      form({
+        grant_type: 'authorization_code',
+        code,
+        client_id: clientId,
+        redirect_uri: redirect,
+        code_verifier: 'falsch-falsch-falsch-falsch-falsch-falsch-1',
+      }),
+    );
     expect(wrong.json().error).toBe('invalid_grant');
     // A code is single-use, so get a fresh one.
     const again = await t.app.inject({
@@ -94,7 +102,9 @@ describe('OAuth for MCP clients', () => {
       payload: new URLSearchParams({ ...fields, decision: 'allow' }).toString(),
     });
     const code2 = new URL(again.headers.location as string).searchParams.get('code')!;
-    const tok = await t.app.inject(form({ grant_type: 'authorization_code', code: code2, client_id: clientId, redirect_uri: redirect, code_verifier: verifier }));
+    const tok = await t.app.inject(
+      form({ grant_type: 'authorization_code', code: code2, client_id: clientId, redirect_uri: redirect, code_verifier: verifier }),
+    );
     expect(tok.json()).toMatchObject({ token_type: 'Bearer', expires_in: 3600, scope: 'read write' });
     accessToken = tok.json().access_token;
     refreshToken = tok.json().refresh_token;
@@ -122,7 +132,9 @@ describe('MCP tools', () => {
   let client: Client;
 
   beforeAll(async () => {
-    const token = (await t.app.inject({ method: 'POST', url: '/api/v1/tokens', headers: { cookie }, payload: { name: 'mcp', scopes: ['read', 'write'] } })).json().token;
+    const token = (
+      await t.app.inject({ method: 'POST', url: '/api/v1/tokens', headers: { cookie }, payload: { name: 'mcp', scopes: ['read', 'write'] } })
+    ).json().token;
     client = await mcpClient(token);
   });
   afterAll(async () => client?.close());

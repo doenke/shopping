@@ -87,12 +87,18 @@ export class WebhookService {
     for (const listId of msg.removedLists) events.push({ type: 'list.removed', data: { id: listId } });
     for (const i of msg.items) {
       events.push(
-        i.deleted ? { type: 'item.removed', data: { id: i.id, listId: i.listId } } : { type: 'item.changed', data: toApiItem(i, names, listTypes.get(i.listId)) },
+        i.deleted
+          ? { type: 'item.removed', data: { id: i.id, listId: i.listId } }
+          : { type: 'item.changed', data: toApiItem(i, names, listTypes.get(i.listId)) },
       );
     }
     const wanted = events.filter((e) => row.events.includes(e.type as WebhookEvent));
     const ok = wanted.length === 0 || (await this.post(row, wanted));
-    if (ok) await this.db.update(webhooks).set({ cursor: msg.seq }).where(and(eq(webhooks.id, id), sql`${webhooks.cursor} < ${msg.seq}`));
+    if (ok)
+      await this.db
+        .update(webhooks)
+        .set({ cursor: msg.seq })
+        .where(and(eq(webhooks.id, id), sql`${webhooks.cursor} < ${msg.seq}`));
   }
 
   /** POSTs with retries; records the outcome. */
@@ -118,7 +124,10 @@ export class WebhookService {
         });
         status = `HTTP ${res.status}`;
         if (res.ok) {
-          await this.db.update(webhooks).set({ lastStatus: status, lastDeliveryAt: sql`now()`, failures: 0 }).where(eq(webhooks.id, row.id));
+          await this.db
+            .update(webhooks)
+            .set({ lastStatus: status, lastDeliveryAt: sql`now()`, failures: 0 })
+            .where(eq(webhooks.id, row.id));
           return true;
         }
         // The receiver does not want it (bad URL, rejected signature): retrying will not help.
@@ -169,7 +178,10 @@ export class WebhookService {
   }
 
   private async own(userId: string, id: string): Promise<Row> {
-    const [row] = await this.db.select().from(webhooks).where(and(eq(webhooks.id, id), eq(webhooks.userId, userId)));
+    const [row] = await this.db
+      .select()
+      .from(webhooks)
+      .where(and(eq(webhooks.id, id), eq(webhooks.userId, userId)));
     if (!row) throw new ApiError(404, 'not_found', 'Webhook nicht gefunden');
     return row;
   }

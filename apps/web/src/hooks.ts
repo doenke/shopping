@@ -163,13 +163,10 @@ function readTileView(): TileView {
 
 /** Tiles (pictures in a grid) or rows (picture, text next to it); per device. */
 export function useTileView(): [TileView, (v: TileView) => void] {
-  const view = useSyncExternalStore(
-    (fn) => {
-      window.addEventListener(TILE_VIEW_KEY, fn);
-      return () => window.removeEventListener(TILE_VIEW_KEY, fn);
-    },
-    readTileView,
-  );
+  const view = useSyncExternalStore((fn) => {
+    window.addEventListener(TILE_VIEW_KEY, fn);
+    return () => window.removeEventListener(TILE_VIEW_KEY, fn);
+  }, readTileView);
   const set = (v: TileView) => {
     try {
       localStorage.setItem(TILE_VIEW_KEY, v);

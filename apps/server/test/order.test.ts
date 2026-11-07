@@ -60,4 +60,3 @@ describe('ToDo lists in Kategorien', () => {
     expect(back.json().group).toBeNull();
   });
 });
-

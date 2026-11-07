@@ -1,4 +1,16 @@
-import { dueOf, listReset, RESET_LABEL, formatDue, isoDate, listDescription, packingInfo, type CatalogIndex, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
+import {
+  dueOf,
+  listReset,
+  RESET_LABEL,
+  formatDue,
+  isoDate,
+  listDescription,
+  packingInfo,
+  type CatalogIndex,
+  type ItemRow,
+  type ListRow,
+  type UserInfo,
+} from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { setChecked } from '../actions';
 import type { RemoteCheck } from '../sync/engine';
@@ -105,7 +117,13 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
     const remote = remoteChecks.get(item.id);
     return (
       <li key={item.id} className={`task${item.checked ? ' task--done' : ''}${remote ? ' tile--remote' : ''}`}>
-        <button type="button" className="task__check" aria-label={item.checked ? 'Wieder offen' : 'Erledigt'} aria-pressed={item.checked} onClick={() => toggle(item)}>
+        <button
+          type="button"
+          className="task__check"
+          aria-label={item.checked ? 'Wieder offen' : 'Erledigt'}
+          aria-pressed={item.checked}
+          onClick={() => toggle(item)}
+        >
           {item.checked ? '✓' : ''}
         </button>
         <button type="button" className="task__body" onClick={() => setEditing(item.id)}>
@@ -126,7 +144,14 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
 
   return (
     <section className="listview">
-      <AddBar ref={addRef} listId={list.id} listType={list.listType} index={index} boost={noBoost} placeholder="Neue Aufgabe, z. B. Reifen wechseln !Fr @Ben #Auto" />
+      <AddBar
+        ref={addRef}
+        listId={list.id}
+        listType={list.listType}
+        index={index}
+        boost={noBoost}
+        placeholder="Neue Aufgabe, z. B. Reifen wechseln !Fr @Ben #Auto"
+      />
 
       {description && <p className="list-description">{description}</p>}
 
@@ -154,10 +179,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
       {items.length === 0 && (
         <div className="empty">
           <p className="empty__title">Nichts zu tun</p>
-          <p>
-            Tippe oben eine Aufgabe ein. „!morgen“, „!Fr“ oder „!12.11.“ setzt das Fälligkeitsdatum, „@Ben“ wer sich kümmert, „#Garten“ den
-            Bereich.
-          </p>
+          <p>Tippe oben eine Aufgabe ein. „!morgen“, „!Fr“ oder „!12.11.“ setzt das Fälligkeitsdatum, „@Ben“ wer sich kümmert, „#Garten“ den Bereich.</p>
         </div>
       )}
 

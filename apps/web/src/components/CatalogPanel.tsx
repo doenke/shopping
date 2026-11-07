@@ -19,7 +19,8 @@ export function CatalogPanel({ listId, listType, catalog, items }: Props) {
   const [category, setCategory] = useState(categories[0]!.id);
   const onList = useMemo(() => new Set(items.filter((i) => !i.checked && i.catalogItemId).map((i) => i.catalogItemId)), [items]);
   const shown = useMemo(
-    () => catalog.filter((c) => !c.hidden && c.categoryId === category && (c.kind ?? 'shopping') === listType).sort((a, b) => a.name.localeCompare(b.name, 'de')),
+    () =>
+      catalog.filter((c) => !c.hidden && c.categoryId === category && (c.kind ?? 'shopping') === listType).sort((a, b) => a.name.localeCompare(b.name, 'de')),
     [catalog, category, listType],
   );
 

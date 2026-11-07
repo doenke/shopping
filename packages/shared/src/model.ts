@@ -197,10 +197,7 @@ export interface ChangeSet {
   seq: number;
 }
 
-export type ClientMessage =
-  | { t: 'hello'; since: number }
-  | { t: 'push'; mutations: Mutation[] }
-  | { t: 'ping' };
+export type ClientMessage = { t: 'hello'; since: number } | { t: 'push'; mutations: Mutation[] } | { t: 'ping' };
 
 export type ServerMessage =
   | ({ t: 'changes' } & ChangeSet)

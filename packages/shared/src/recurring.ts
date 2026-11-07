@@ -24,7 +24,16 @@ export function listReset(list: Pick<ListRow, 'settings' | 'listType' | 'isTempl
 /** Date parts of an instant on the Berlin wall clock. */
 function berlin(at: Date): { y: number; m: number; d: number; h: number; min: number; weekday: number } {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat('en-GB', { timeZone: TZ, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hourCycle: 'h23', weekday: 'short' })
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: TZ,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      hourCycle: 'h23',
+      weekday: 'short',
+    })
       .formatToParts(at)
       .map((p) => [p.type, p.value]),
   );

@@ -10,8 +10,9 @@ const call = async (method: 'GET' | 'POST' | 'PATCH' | 'DELETE', url: string, pa
 beforeAll(async () => {
   t = await createTestApp();
   const { cookie } = await t.login('Anna');
-  token = (await t.app.inject({ method: 'POST', url: '/api/v1/tokens', headers: { cookie }, payload: { name: 'Home Assistant', scopes: ['read', 'write', 'mealie'] } })).json()
-    .token as string;
+  token = (
+    await t.app.inject({ method: 'POST', url: '/api/v1/tokens', headers: { cookie }, payload: { name: 'Home Assistant', scopes: ['read', 'write', 'mealie'] } })
+  ).json().token as string;
   await call('POST', '/api/v1/lists', { name: 'Einkauf' });
 });
 afterAll(async () => t?.close());

@@ -95,8 +95,22 @@ function CategoryRowEdit({ category }: { category: CategoryRow }) {
   return (
     <li>
       <ItemIcon name={category.name} categoryId={category.id} size="sm" />
-      <input value={name} maxLength={40} aria-label="Name" onChange={(e) => setName(e.target.value)} onBlur={save} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
-      <button type="button" className="own-categories__color" style={{ background: category.color }} aria-label="Farbe wechseln" title="Farbe wechseln" onClick={nextColor} />
+      <input
+        value={name}
+        maxLength={40}
+        aria-label="Name"
+        onChange={(e) => setName(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      />
+      <button
+        type="button"
+        className="own-categories__color"
+        style={{ background: category.color }}
+        aria-label="Farbe wechseln"
+        title="Farbe wechseln"
+        onClick={nextColor}
+      />
       <button type="button" className="icon-btn" aria-label={`${category.name} löschen`} onClick={remove}>
         🗑
       </button>

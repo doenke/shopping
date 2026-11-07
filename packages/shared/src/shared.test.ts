@@ -18,20 +18,20 @@ import { seedCatalog } from './seed-catalog.js';
 const catalog: CatalogItem[] = seedCatalog()
   .filter((s) => s.kind === 'shopping')
   .map((s, i) => ({
-  id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
-  name: s.name,
-  plural: null,
-  categoryId: s.categoryId,
-  defaultUnit: s.defaultUnit,
-  aliases: s.aliases,
-  pantry: s.pantry,
-  source: 'seed',
-  mealieFoodId: null,
-  icon: null,
-  kind: s.kind,
-  hidden: false,
-  seq: 0,
-}));
+    id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+    name: s.name,
+    plural: null,
+    categoryId: s.categoryId,
+    defaultUnit: s.defaultUnit,
+    aliases: s.aliases,
+    pantry: s.pantry,
+    source: 'seed',
+    mealieFoodId: null,
+    icon: null,
+    kind: s.kind,
+    hidden: false,
+    seq: 0,
+  }));
 const index = new CatalogIndex(catalog);
 
 describe('parser', () => {
@@ -154,7 +154,14 @@ describe('planAdd', () => {
 describe('packing lists', () => {
   const packing: CatalogItem[] = seedCatalog()
     .filter((s) => s.kind === 'packing')
-    .map((s, i) => ({ ...catalog[0]!, id: `00000000-0000-4000-9000-${String(i).padStart(12, '0')}`, name: s.name, aliases: s.aliases, categoryId: s.categoryId, kind: 'packing' as const }));
+    .map((s, i) => ({
+      ...catalog[0]!,
+      id: `00000000-0000-4000-9000-${String(i).padStart(12, '0')}`,
+      name: s.name,
+      aliases: s.aliases,
+      categoryId: s.categoryId,
+      kind: 'packing' as const,
+    }));
   const index = new CatalogIndex(packing);
 
   it('reads person and Packstück from the input', () => {
@@ -194,7 +201,21 @@ describe('packing lists', () => {
   });
 
   it('tells the own name of an item from a synonym', () => {
-    const lamp = { id: 'l', name: 'Taschenlampe', plural: 'Taschenlampen', aliases: ['Stirnlampe'], categoryId: 'technik', defaultUnit: null, pantry: false, source: 'seed' as const, mealieFoodId: null, hidden: false, kind: 'packing' as const, icon: null, seq: 0 };
+    const lamp = {
+      id: 'l',
+      name: 'Taschenlampe',
+      plural: 'Taschenlampen',
+      aliases: ['Stirnlampe'],
+      categoryId: 'technik',
+      defaultUnit: null,
+      pantry: false,
+      source: 'seed' as const,
+      mealieFoodId: null,
+      hidden: false,
+      kind: 'packing' as const,
+      icon: null,
+      seq: 0,
+    };
     expect(isOwnName(lamp, 'taschenlampen')).toBe(true);
     expect(isOwnName(lamp, 'Stirnlampe')).toBe(false);
     // An item of its own beats the synonym.
@@ -205,7 +226,14 @@ describe('packing lists', () => {
 
   it('puts own categories before the catch-all and forgets deleted ones', () => {
     const own = (id: string, name: string, listType: 'shopping' | 'packing', deleted = false) => ({
-      id, name, listType, color: '#5BAA45', ownerId: 'u', deleted, hlc: {}, seq: 0,
+      id,
+      name,
+      listType,
+      color: '#5BAA45',
+      ownerId: 'u',
+      deleted,
+      hlc: {},
+      seq: 0,
     });
     const custom = [own('c1', 'Zelten', 'packing'), own('c2', 'Angeln', 'packing'), own('c3', 'Weg', 'packing', true), own('c4', 'Asia-Laden', 'shopping')];
     const packing = categoriesFor('packing', custom).map((c) => c.name);
@@ -221,7 +249,8 @@ describe('packing lists', () => {
 
 describe('a pasted ingredient list', () => {
   it('becomes one item per line, with amounts, units and notes', () => {
-    const block = '1 Zehe(n)\tKnoblauch\n30 g\tPetersilie (glatt)\n100 g\tButter (Zimmertemperatur)\n200 g Bergkäse, gerieben\n1,5 kg Kartoffeln\nSalz\n\n• 2 EL\tButterschmalz\n';
+    const block =
+      '1 Zehe(n)\tKnoblauch\n30 g\tPetersilie (glatt)\n100 g\tButter (Zimmertemperatur)\n200 g Bergkäse, gerieben\n1,5 kg Kartoffeln\nSalz\n\n• 2 EL\tButterschmalz\n';
     const items = parseInput(block, index);
     expect(items.map((i) => i.name)).toEqual(['Knoblauch', 'Petersilie', 'Butter', 'Bergkäse', 'Kartoffeln', 'Salz', 'Butterschmalz']);
     expect(items[0]).toMatchObject({ amounts: [{ q: 1, u: 'zehe' }], note: null });

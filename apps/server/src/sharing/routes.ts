@@ -46,7 +46,10 @@ export async function sharingRoutes(app: FastifyInstance, opts: Options): Promis
   }
 
   async function listForToken(token: string): Promise<string | undefined> {
-    const [link] = await db.select({ listId: shareLinks.listId }).from(shareLinks).where(eq(shareLinks.tokenHash, hash(token)));
+    const [link] = await db
+      .select({ listId: shareLinks.listId })
+      .from(shareLinks)
+      .where(eq(shareLinks.tokenHash, hash(token)));
     return link?.listId;
   }
 
@@ -93,7 +96,14 @@ export async function sharingRoutes(app: FastifyInstance, opts: Options): Promis
     if (!(await sync.isMember(request.userId, id))) return reply.code(404).send({ error: 'not_found' });
     const [list] = await db.select({ ownerId: lists.ownerId }).from(lists).where(eq(lists.id, id));
     const rows = await db
-      .select({ id: users.id, displayName: users.displayName, avatarVersion: users.avatarVersion, isGuest: users.isGuest, via: listMembers.via, joinedAt: listMembers.joinedAt })
+      .select({
+        id: users.id,
+        displayName: users.displayName,
+        avatarVersion: users.avatarVersion,
+        isGuest: users.isGuest,
+        via: listMembers.via,
+        joinedAt: listMembers.joinedAt,
+      })
       .from(listMembers)
       .innerJoin(users, eq(users.id, listMembers.userId))
       .where(and(eq(listMembers.listId, id), eq(listMembers.removed, false)))

@@ -79,7 +79,10 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
   const added = (r: { added: { name: string; specification: string; action: string }[] }) =>
     r.added.length
       ? r.added
-          .map((a) => `- ${a.name}${a.specification ? ` – ${a.specification}` : ''} (${a.action === 'created' ? 'neu' : a.action === 'merged' ? 'zusammengeführt' : 'wieder auf der Liste'})`)
+          .map(
+            (a) =>
+              `- ${a.name}${a.specification ? ` – ${a.specification}` : ''} (${a.action === 'created' ? 'neu' : a.action === 'merged' ? 'zusammengeführt' : 'wieder auf der Liste'})`,
+          )
           .join('\n')
       : 'Nichts hinzugefügt.';
 
@@ -97,17 +100,28 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
       },
       annotations: { readOnlyHint: true },
     },
-    guard('read', async ({ include_templates, type, include_archived }: { include_templates: boolean; type?: 'shopping' | 'packing' | 'memo' | 'todo'; include_archived: boolean }) => {
-      const lists = await api.lists(userId, include_templates ? 'include' : 'exclude', { type, archived: include_archived });
-      return text(
-        lists
-          .map(
-            (l) =>
-              `- ${l.isTemplate ? '◇ ' : ''}${l.name}${l.type === 'packing' ? ' [Packliste]' : l.type === 'memo' ? ' [Merkliste]' : l.type === 'todo' ? ` [ToDo${l.group ? ` · ${l.group}` : ''}]` : ''}${l.visibility === 'private' ? ' 🔒 privat' : ''}${l.isMain ? ' ⭐ Hauptliste' : ''}${l.archived ? ' (archiviert)' : ''} – ${l.openItems} offen${l.description ? ` – ${l.description}` : ''} (id: ${l.id})`,
-          )
-          .join('\n') || 'Keine Listen.',
-      );
-    }),
+    guard(
+      'read',
+      async ({
+        include_templates,
+        type,
+        include_archived,
+      }: {
+        include_templates: boolean;
+        type?: 'shopping' | 'packing' | 'memo' | 'todo';
+        include_archived: boolean;
+      }) => {
+        const lists = await api.lists(userId, include_templates ? 'include' : 'exclude', { type, archived: include_archived });
+        return text(
+          lists
+            .map(
+              (l) =>
+                `- ${l.isTemplate ? '◇ ' : ''}${l.name}${l.type === 'packing' ? ' [Packliste]' : l.type === 'memo' ? ' [Merkliste]' : l.type === 'todo' ? ` [ToDo${l.group ? ` · ${l.group}` : ''}]` : ''}${l.visibility === 'private' ? ' 🔒 privat' : ''}${l.isMain ? ' ⭐ Hauptliste' : ''}${l.archived ? ' (archiviert)' : ''} – ${l.openItems} offen${l.description ? ` – ${l.description}` : ''} (id: ${l.id})`,
+            )
+            .join('\n') || 'Keine Listen.',
+        );
+      },
+    ),
   );
 
   server.registerTool(
@@ -181,7 +195,12 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         container: z.string().nullable().optional().describe('Packliste: Packstück, z. B. „Koffer“'),
         tipFrom: z.string().nullable().optional().describe('Merkliste: von wem der Tipp kommt'),
         where: z.string().nullable().optional().describe('Merkliste: wo es das gibt, z. B. „Netflix“'),
-        due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional().describe('ToDo-Liste: fällig am (JJJJ-MM-TT), null entfernt'),
+        due: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .nullable()
+          .optional()
+          .describe('ToDo-Liste: fällig am (JJJJ-MM-TT), null entfernt'),
         assignee: z.string().nullable().optional().describe('ToDo-Liste: wer sich kümmert'),
         area: z.string().nullable().optional().describe('ToDo-Liste: Bereich'),
       },
@@ -226,7 +245,11 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         name: z.string().min(1).max(80),
         template: z.string().optional().describe('Name einer Vorlage'),
         type: z.enum(['shopping', 'packing', 'memo', 'todo']).optional().describe('Ohne Vorlage: Einkaufsliste (Standard), Packliste oder Merkliste'),
-        description: z.string().max(300).optional().describe('Worum es geht, z. B. „Filme und Serien, die wir sehen wollen“ (wichtig für die Icons von Merklisten)'),
+        description: z
+          .string()
+          .max(300)
+          .optional()
+          .describe('Worum es geht, z. B. „Filme und Serien, die wir sehen wollen“ (wichtig für die Icons von Merklisten)'),
         group: z.string().max(40).optional().describe('Nur ToDo-Listen: Kategorie, z. B. Arbeit, Hobby, Urlaub'),
         private: z.boolean().optional().describe('Nur für mich – sonst sieht der ganze Haushalt die Liste (ToDo-Listen sind ohne Angabe privat)'),
       },
@@ -248,8 +271,10 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         group?: string;
         private?: boolean;
       }) => {
-      const l = await api.createList(userId, name, { template, type, description, group, private: priv });
-      return text(`${l.type === 'packing' ? 'Packliste' : l.type === 'memo' ? 'Merkliste' : l.type === 'todo' ? 'ToDo-Liste' : 'Liste'} „${l.name}“ angelegt (${l.openItems} Einträge${l.visibility === 'private' ? ', privat' : ', für den ganzen Haushalt'}).`);
+        const l = await api.createList(userId, name, { template, type, description, group, private: priv });
+        return text(
+          `${l.type === 'packing' ? 'Packliste' : l.type === 'memo' ? 'Merkliste' : l.type === 'todo' ? 'ToDo-Liste' : 'Liste'} „${l.name}“ angelegt (${l.openItems} Einträge${l.visibility === 'private' ? ', privat' : ', für den ganzen Haushalt'}).`,
+        );
       },
     ),
   );
@@ -319,8 +344,14 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
       title: 'Wochenplan einkaufen',
       description: 'Setzt die Zutaten aller Rezepte aus dem Mealie-Wochenplan im Zeitraum auf die Liste (gleiche Zutaten zusammengefasst).',
       inputSchema: {
-        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('YYYY-MM-DD'),
-        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('YYYY-MM-DD'),
+        from: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .describe('YYYY-MM-DD'),
+        to: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .describe('YYYY-MM-DD'),
         list: listParam,
         include_pantry: z.boolean().default(false),
       },
@@ -387,7 +418,10 @@ export async function mcpRoutes(
 
   // Stateless server: no server-initiated streams, no sessions to end.
   const notAllowed = async (_request: FastifyRequest, reply: FastifyReply) =>
-    reply.code(405).header('Allow', 'POST').send({ jsonrpc: '2.0', error: { code: -32000, message: 'Method not allowed' }, id: null });
+    reply
+      .code(405)
+      .header('Allow', 'POST')
+      .send({ jsonrpc: '2.0', error: { code: -32000, message: 'Method not allowed' }, id: null });
   app.get('/mcp', notAllowed);
   app.delete('/mcp', notAllowed);
 }

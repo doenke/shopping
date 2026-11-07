@@ -26,11 +26,7 @@ export async function seedBaseCatalog(db: DbOrTx): Promise<number> {
     pantry: s.pantry,
     source: 'seed' as const,
   }));
-  const inserted = await db
-    .insert(catalogItems)
-    .values(rows)
-    .onConflictDoNothing({ target: catalogItems.id })
-    .returning({ id: catalogItems.id });
+  const inserted = await db.insert(catalogItems).values(rows).onConflictDoNothing({ target: catalogItems.id }).returning({ id: catalogItems.id });
   return inserted.length;
 }
 

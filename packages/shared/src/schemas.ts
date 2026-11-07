@@ -71,8 +71,6 @@ export const MutationSchema = z.discriminatedUnion('entity', [
   z.object({ mid: id, entity: z.literal('category'), id, hlc, patch: CategoryPatchSchema }),
 ]);
 
-
-
 export const ClientMessageSchema = z.discriminatedUnion('t', [
   z.object({ t: z.literal('hello'), since: z.number().int().min(0) }),
   z.object({ t: z.literal('push'), mutations: z.array(MutationSchema).max(500) }),

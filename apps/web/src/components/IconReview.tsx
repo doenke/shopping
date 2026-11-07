@@ -202,7 +202,11 @@ export function IconReview({ catalog, admin }: { catalog: CatalogItem[]; admin: 
     });
 
   if (!status) {
-    return <div className="settings">{message ? <p className={message.kind === 'ok' ? 'success' : 'error'}>{message.text}</p> : <p className="muted">Lädt …</p>}</div>;
+    return (
+      <div className="settings">
+        {message ? <p className={message.kind === 'ok' ? 'success' : 'error'}>{message.text}</p> : <p className="muted">Lädt …</p>}
+      </div>
+    );
   }
 
   return (
@@ -213,19 +217,22 @@ export function IconReview({ catalog, admin }: { catalog: CatalogItem[]; admin: 
           <p>
             <strong>Schritt 1: Stil finden.</strong> Für zwölf typische Artikel entstehen Entwürfe ohne Vorlage.{' '}
             {status.settings.autoApprove ? (
-              <>Die ersten {status.minAnchors}, die alle Prüfungen bestehen, werden automatisch zur <strong>Stil-Referenz ★</strong>.</>
+              <>
+                Die ersten {status.minAnchors}, die alle Prüfungen bestehen, werden automatisch zur <strong>Stil-Referenz ★</strong>.
+              </>
             ) : (
-              <>Nimm die, die gut zusammenpassen, als <strong>Stil-Referenz ★</strong>.</>
+              <>
+                Nimm die, die gut zusammenpassen, als <strong>Stil-Referenz ★</strong>.
+              </>
             )}{' '}
-            Ab {status.minAnchors} Stil-Referenzen ({status.anchors} bisher) werden alle weiteren Icons mit diesen Referenzbildern im selben Stil
-            erzeugt.
+            Ab {status.minAnchors} Stil-Referenzen ({status.anchors} bisher) werden alle weiteren Icons mit diesen Referenzbildern im selben Stil erzeugt.
           </p>
         ) : (
           <>
             <progress max={status.items} value={status.withIcon} />
             <p>
-              {status.withIcon} von {status.items} Artikeln haben ein Icon, {status.categoriesWithIcon} von {ALL_CATEGORIES.length + custom.filter((c) => !c.deleted).length} Kategorien.{' '}
-              {status.anchors} Stil-Referenzen.
+              {status.withIcon} von {status.items} Artikeln haben ein Icon, {status.categoriesWithIcon} von{' '}
+              {ALL_CATEGORIES.length + custom.filter((c) => !c.deleted).length} Kategorien. {status.anchors} Stil-Referenzen.
             </p>
           </>
         )}
@@ -240,30 +247,38 @@ export function IconReview({ catalog, admin }: { catalog: CatalogItem[]; admin: 
             Pausiert bis {paused.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}: {status.settings.pauseReason}
           </p>
         )}
-        {!admin && <p className="muted">Bild-KI, Budget und Automatik gelten für alle auf diesem Server und werden von den Admins eingestellt. Prüfen und freigeben kannst du trotzdem.</p>}
+        {!admin && (
+          <p className="muted">
+            Bild-KI, Budget und Automatik gelten für alle auf diesem Server und werden von den Admins eingestellt. Prüfen und freigeben kannst du trotzdem.
+          </p>
+        )}
         {admin && (
-        <div className="row">
-          <button type="button" className="btn btn--primary" disabled={busy || !configured} onClick={() => void runNow()}>
-            {busy ? 'Erzeuge …' : 'Nächsten Auftrag jetzt erzeugen'}
-          </button>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={status.settings.enabled}
-              disabled={!configured}
-              onChange={(e) => void run(async () => void (await api('/api/v1/icons/settings', { method: 'PUT', body: JSON.stringify({ enabled: e.target.checked }) })))}
-            />
-            Automatisch im Hintergrund (bis zum Tageslimit)
-          </label>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={status.settings.autoApprove}
-              onChange={(e) => void run(async () => void (await api('/api/v1/icons/settings', { method: 'PUT', body: JSON.stringify({ autoApprove: e.target.checked }) })))}
-            />
-            Automatisch freigeben (was alle Prüfungen besteht)
-          </label>
-        </div>
+          <div className="row">
+            <button type="button" className="btn btn--primary" disabled={busy || !configured} onClick={() => void runNow()}>
+              {busy ? 'Erzeuge …' : 'Nächsten Auftrag jetzt erzeugen'}
+            </button>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={status.settings.enabled}
+                disabled={!configured}
+                onChange={(e) =>
+                  void run(async () => void (await api('/api/v1/icons/settings', { method: 'PUT', body: JSON.stringify({ enabled: e.target.checked }) })))
+                }
+              />
+              Automatisch im Hintergrund (bis zum Tageslimit)
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={status.settings.autoApprove}
+                onChange={(e) =>
+                  void run(async () => void (await api('/api/v1/icons/settings', { method: 'PUT', body: JSON.stringify({ autoApprove: e.target.checked }) })))
+                }
+              />
+              Automatisch freigeben (was alle Prüfungen besteht)
+            </label>
+          </div>
         )}
         {message && <p className={message.kind === 'ok' ? 'success' : 'error'}>{message.text}</p>}
       </section>
@@ -276,8 +291,8 @@ export function IconReview({ catalog, admin }: { catalog: CatalogItem[]; admin: 
         </h2>
         {status.settings.autoApprove && targets.length > 0 && (
           <p className="muted">
-            Diese Entwürfe sind bei einer Prüfung durchgefallen und deshalb nicht freigegeben – die App zeigt dort das Kategorie-Icon. Du kannst
-            einen trotzdem nehmen, neu erzeugen lassen oder es dabei belassen.
+            Diese Entwürfe sind bei einer Prüfung durchgefallen und deshalb nicht freigegeben – die App zeigt dort das Kategorie-Icon. Du kannst einen trotzdem
+            nehmen, neu erzeugen lassen oder es dabei belassen.
           </p>
         )}
         {targets.length === 0 && <p className="muted">{status.settings.autoApprove ? 'Alles bestanden.' : 'Gerade gibt es nichts zu prüfen.'}</p>}
@@ -306,7 +321,13 @@ export function IconReview({ catalog, admin }: { catalog: CatalogItem[]; admin: 
               </li>
             ))}
           </ul>
-          <button type="button" className="btn" style={admin ? undefined : { display: 'none' }} disabled={busy} onClick={() => void run(async () => void (await post('/api/v1/icons/retry-failed')))}>
+          <button
+            type="button"
+            className="btn"
+            style={admin ? undefined : { display: 'none' }}
+            disabled={busy}
+            onClick={() => void run(async () => void (await post('/api/v1/icons/retry-failed')))}
+          >
             Noch einmal versuchen
           </button>
         </section>
@@ -556,7 +577,9 @@ function Gallery({ icons, catalog, alternatives, busy, run }: GalleryProps) {
               type="button"
               className="btn"
               disabled={busy}
-              onClick={() => void run(async () => void (await post('/api/v1/icons/generate', { targetType: sel.targetType, targetId: sel.targetId, provider: p })))}
+              onClick={() =>
+                void run(async () => void (await post('/api/v1/icons/generate', { targetType: sel.targetType, targetId: sel.targetId, provider: p })))
+              }
             >
               Mit {PROVIDER_LABEL[p]} neu
             </button>
@@ -661,8 +684,8 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
 
       <h3>Cloudflare</h3>
       <p className="muted">
-        Kostenloses Konto bei Cloudflare, dann <em>AI → Workers AI → REST API</em>: dort stehen die Account-ID und „API-Token erstellen“
-        (Vorlage „Workers AI“). Das Gratis-Kontingent reicht für rund 150 Icons am Tag.
+        Kostenloses Konto bei Cloudflare, dann <em>AI → Workers AI → REST API</em>: dort stehen die Account-ID und „API-Token erstellen“ (Vorlage „Workers AI“).
+        Das Gratis-Kontingent reicht für rund 150 Icons am Tag.
       </p>
       <label className="field">
         <span>Account-ID</span>
@@ -670,7 +693,13 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
       </label>
       <label className="field">
         <span>API-Token</span>
-        <input type="password" value={cfToken} onChange={(e) => setCfToken(e.target.value)} placeholder={s.cloudflare.hasToken ? 'gespeichert – leer lassen zum Behalten' : ''} autoComplete="off" />
+        <input
+          type="password"
+          value={cfToken}
+          onChange={(e) => setCfToken(e.target.value)}
+          placeholder={s.cloudflare.hasToken ? 'gespeichert – leer lassen zum Behalten' : ''}
+          autoComplete="off"
+        />
       </label>
       <div className="field__row">
         <label className="field">
@@ -699,7 +728,13 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
       <p className="muted">Für einzelne Artikel, die mit FLUX nicht gelingen („Mit Bezahl-Modell neu“), oder als Hauptanbieter.</p>
       <label className="field">
         <span>API-Key</span>
-        <input type="password" value={oaKey} onChange={(e) => setOaKey(e.target.value)} placeholder={s.openai.hasKey ? 'gespeichert – leer lassen zum Behalten' : ''} autoComplete="off" />
+        <input
+          type="password"
+          value={oaKey}
+          onChange={(e) => setOaKey(e.target.value)}
+          placeholder={s.openai.hasKey ? 'gespeichert – leer lassen zum Behalten' : ''}
+          autoComplete="off"
+        />
       </label>
       <div className="field__row">
         <label className="field">
@@ -726,13 +761,19 @@ function SettingsForm({ status, open, onSaved }: { status: Status; open: boolean
 
       <h3>Claude (optional, bezahlt)</h3>
       <p className="muted">
-        Claude malt keine Bilder, zeichnet aber Icons als SVG (sehr einheitlicher Stil, mit Sonnet etwa 3–4 Cent pro Entwurf). Außerdem prüft
-        Claude jeden Entwurf vor („erkennbar? Schrift? passt zum Stil?“, mit Haiku unter 0,1 Cent) und beschreibt Artikel aus Mealie. Key aus der
-        Anthropic Console; Preise in Dollar, hier als Euro gerechnet.
+        Claude malt keine Bilder, zeichnet aber Icons als SVG (sehr einheitlicher Stil, mit Sonnet etwa 3–4 Cent pro Entwurf). Außerdem prüft Claude jeden
+        Entwurf vor („erkennbar? Schrift? passt zum Stil?“, mit Haiku unter 0,1 Cent) und beschreibt Artikel aus Mealie. Key aus der Anthropic Console; Preise
+        in Dollar, hier als Euro gerechnet.
       </p>
       <label className="field">
         <span>API-Key</span>
-        <input type="password" value={anKey} onChange={(e) => setAnKey(e.target.value)} placeholder={s.anthropic.hasKey ? 'gespeichert – leer lassen zum Behalten' : 'sk-ant-…'} autoComplete="off" />
+        <input
+          type="password"
+          value={anKey}
+          onChange={(e) => setAnKey(e.target.value)}
+          placeholder={s.anthropic.hasKey ? 'gespeichert – leer lassen zum Behalten' : 'sk-ant-…'}
+          autoComplete="off"
+        />
       </label>
       <div className="field__row field__row--wrap">
         <label className="field">

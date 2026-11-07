@@ -284,7 +284,6 @@ export const oauthClients = pgTable('oauth_clients', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-
 /** Household-wide settings (not per user), e.g. the icon generator. */
 export const appSettings = pgTable('app_settings', {
   key: text('key').primaryKey(),
@@ -351,7 +350,9 @@ export const iconJobs = pgTable(
   },
   (t) => [
     // At most one open job per target.
-    uniqueIndex('icon_jobs_open_idx').on(t.targetType, t.targetId).where(sql`status = 'queued'`),
+    uniqueIndex('icon_jobs_open_idx')
+      .on(t.targetType, t.targetId)
+      .where(sql`status = 'queued'`),
     index('icon_jobs_status_idx').on(t.status, t.priority),
   ],
 );

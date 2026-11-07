@@ -68,7 +68,13 @@ export function ListAvatars({ listId, refresh, onClick, inline = false }: { list
       </span>
     );
   return (
-    <button type="button" className="avatar-stack" onClick={onClick} title={people.map((p) => p.displayName).join(', ')} aria-label={`Zugriff: ${people.map((p) => p.displayName).join(', ')}`}>
+    <button
+      type="button"
+      className="avatar-stack"
+      onClick={onClick}
+      title={people.map((p) => p.displayName).join(', ')}
+      aria-label={`Zugriff: ${people.map((p) => p.displayName).join(', ')}`}
+    >
       {shown.map((p) => (
         <Avatar key={p.id} user={p} />
       ))}

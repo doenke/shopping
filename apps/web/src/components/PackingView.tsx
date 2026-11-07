@@ -1,5 +1,14 @@
 import { useCustomCategories } from '../categories';
-import { categoriesInOrder, categoryInList, packingInfo, type CatalogIndex, type CatalogItem, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
+import {
+  categoriesInOrder,
+  categoryInList,
+  packingInfo,
+  type CatalogIndex,
+  type CatalogItem,
+  type ItemRow,
+  type ListRow,
+  type UserInfo,
+} from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { archiveList, setChecked } from '../actions';
 import { navigate, useMe, useTileView } from '../hooks';
@@ -168,10 +177,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
       {items.length === 0 && (
         <div className="empty">
           <p className="empty__title">Noch nichts auf der Packliste</p>
-          <p>
-            Tippe oben, was mit soll. Mit „@Anna“ gehört es Anna, mit „#Koffer“ kommt es in den Koffer – zum Beispiel „Zahnbürste @Ben
-            #Kulturbeutel“.
-          </p>
+          <p>Tippe oben, was mit soll. Mit „@Anna“ gehört es Anna, mit „#Koffer“ kommt es in den Koffer – zum Beispiel „Zahnbürste @Ben #Kulturbeutel“.</p>
         </div>
       )}
 
@@ -224,16 +230,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
         </div>
       )}
 
-      {editItem && (
-        <ItemEditor
-          key={editItem.id}
-          item={editItem}
-          list={list}
-          items={items}
-          users={users}
-          onClose={() => setEditing(null)}
-        />
-      )}
+      {editItem && <ItemEditor key={editItem.id} item={editItem} list={list} items={items} users={users} onClose={() => setEditing(null)} />}
     </section>
   );
 });

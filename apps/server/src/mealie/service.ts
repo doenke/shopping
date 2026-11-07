@@ -134,9 +134,7 @@ export class MealieService {
     const [row] = await this.db
       .select()
       .from(integrations)
-      .where(
-        and(eq(integrations.type, 'mealie'), isNotNull(integrations.householdId), sql`${integrations.config} -> 'inbox' ->> 'webhookSecret' = ${secret}`),
-      );
+      .where(and(eq(integrations.type, 'mealie'), isNotNull(integrations.householdId), sql`${integrations.config} -> 'inbox' ->> 'webhookSecret' = ${secret}`));
     if (!row || !this.config(row).inbox?.enabled) return false;
     void this.runInbox(row.id).catch(() => undefined);
     return true;
@@ -180,14 +178,10 @@ export class MealieService {
         return { added: 0, skipped: 0 };
       }
 
-      const recipeNames = new Map(
-        (list.recipeReferences ?? []).filter((r) => r.recipe?.name).map((r) => [r.recipeId, r.recipe!.name!]),
-      );
+      const recipeNames = new Map((list.recipeReferences ?? []).filter((r) => r.recipe?.name).map((r) => [r.recipeId, r.recipe!.name!]));
       const converter = await this.converter(cfg);
       const ids = open.map((i) => stableUuid('mealie-inbox', i.id));
-      const existing = new Set(
-        (await this.db.select({ id: listItems.id }).from(listItems).where(inArray(listItems.id, ids))).map((r) => r.id),
-      );
+      const existing = new Set((await this.db.select({ id: listItems.id }).from(listItems).where(inArray(listItems.id, ids))).map((r) => r.id));
       let position = await this.lastPosition(inbox.targetListId);
 
       const mutations: unknown[] = [];

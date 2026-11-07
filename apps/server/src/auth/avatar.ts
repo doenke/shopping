@@ -57,11 +57,7 @@ export class AvatarService {
       if (url && /^https?:\/\//.test(url)) {
         const raw = await this.download(url, accessToken);
         if (raw) {
-          avatar = await sharp(raw, { failOn: 'error' })
-            .rotate()
-            .resize(AVATAR_SIZE, AVATAR_SIZE, { fit: 'cover' })
-            .webp({ quality: 85 })
-            .toBuffer();
+          avatar = await sharp(raw, { failOn: 'error' }).rotate().resize(AVATAR_SIZE, AVATAR_SIZE, { fit: 'cover' }).webp({ quality: 85 }).toBuffer();
         }
       }
       const version = avatar ? createHash('sha1').update(avatar).digest('hex').slice(0, 10) : null;

@@ -73,10 +73,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   // Used by the Docker/Compose health check: healthy only if the database answers.
   app.get('/healthz', async (_request, reply) => {
     try {
-      await Promise.race([
-        db.execute(sql`SELECT 1`),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
-      ]);
+      await Promise.race([db.execute(sql`SELECT 1`), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
       return { ok: true, version: process.env.APP_VERSION || 'dev' };
     } catch {
       return reply.code(503).send({ ok: false, error: 'database unavailable' });
@@ -139,7 +136,11 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
 
     /** For the help page: who the admins are (guests ask them for an account) and, for admins, the household setup. */
     api.get('/api/v1/help', async (request) => {
-      const admins = await db.select({ displayName: users.displayName }).from(users).where(and(eq(users.isAdmin, true), eq(users.isGuest, false))).orderBy(users.displayName);
+      const admins = await db
+        .select({ displayName: users.displayName })
+        .from(users)
+        .where(and(eq(users.isAdmin, true), eq(users.isGuest, false)))
+        .orderBy(users.displayName);
       const [me] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, request.userId));
       return {
         admins: admins.map((a) => a.displayName),
@@ -181,7 +182,13 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
           .select()
           .from(catalogItems)
           .where(since ? gt(catalogItems.seq, since) : undefined);
-        return { items: rows.map(toCatalogItem), categories: CATEGORIES, categoryIcons: await icons.categoryIcons(), pendingIcons: await icons.pendingTargets(), seq };
+        return {
+          items: rows.map(toCatalogItem),
+          categories: CATEGORIES,
+          categoryIcons: await icons.categoryIcons(),
+          pendingIcons: await icons.pendingTargets(),
+          seq,
+        };
       });
     });
 
@@ -239,7 +246,8 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   // ---- Web app ------------------------------------------------------------
 
   const webDist =
-    config.WEB_DIST ?? [resolve(fileURLToPath(import.meta.url), '../../../web/dist'), resolve(fileURLToPath(import.meta.url), '../../web/dist')].find(existsSync);
+    config.WEB_DIST ??
+    [resolve(fileURLToPath(import.meta.url), '../../../web/dist'), resolve(fileURLToPath(import.meta.url), '../../web/dist')].find(existsSync);
   if (webDist && existsSync(webDist)) {
     await app.register(fastifyStatic, {
       root: webDist,

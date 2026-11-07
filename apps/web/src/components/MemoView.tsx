@@ -81,7 +81,14 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
 
   return (
     <section className={`listview${tileView === 'rows' ? ' listview--rows' : ''}`}>
-      <AddBar ref={addRef} listId={list.id} listType={list.listType} index={index} boost={noBoost} placeholder="Was wollt ihr euch merken? z. B. Dune @Ben #Netflix" />
+      <AddBar
+        ref={addRef}
+        listId={list.id}
+        listType={list.listType}
+        index={index}
+        boost={noBoost}
+        placeholder="Was wollt ihr euch merken? z. B. Dune @Ben #Netflix"
+      />
 
       {description && <p className="list-description">{description}</p>}
 
@@ -104,8 +111,8 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
         <div className="empty">
           <p className="empty__title">Noch nichts gemerkt</p>
           <p>
-            Tippe oben, was ihr euch merken wollt. Mit „@Ben“ merkst du, von wem der Tipp kommt, mit „#Netflix“, wo es das gibt – zum Beispiel
-            „Dune @Ben #Netflix“.
+            Tippe oben, was ihr euch merken wollt. Mit „@Ben“ merkst du, von wem der Tipp kommt, mit „#Netflix“, wo es das gibt – zum Beispiel „Dune @Ben
+            #Netflix“.
           </p>
         </div>
       )}
@@ -147,7 +154,14 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
           {showDone && (
             <div className="tiles">
               {done.map((item) => (
-                <Tile key={item.id} item={item} variant="done" extra={extraOf(item)} onTap={() => void setChecked(item, false)} onLongPress={() => setEditing(item.id)} />
+                <Tile
+                  key={item.id}
+                  item={item}
+                  variant="done"
+                  extra={extraOf(item)}
+                  onTap={() => void setChecked(item, false)}
+                  onLongPress={() => setEditing(item.id)}
+                />
               ))}
             </div>
           )}

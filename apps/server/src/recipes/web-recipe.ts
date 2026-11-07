@@ -24,10 +24,28 @@ function privateAddress(ip: string): boolean {
   if (isIP(ip) === 6) {
     const v = ip.toLowerCase();
     if (v.startsWith('::ffff:')) return privateAddress(v.slice(7));
-    return v === '::1' || v === '::' || v.startsWith('fc') || v.startsWith('fd') || v.startsWith('fe8') || v.startsWith('fe9') || v.startsWith('fea') || v.startsWith('feb');
+    return (
+      v === '::1' ||
+      v === '::' ||
+      v.startsWith('fc') ||
+      v.startsWith('fd') ||
+      v.startsWith('fe8') ||
+      v.startsWith('fe9') ||
+      v.startsWith('fea') ||
+      v.startsWith('feb')
+    );
   }
   const [a, b] = ip.split('.').map(Number) as [number, number];
-  return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+  return (
+    a === 10 ||
+    a === 127 ||
+    a === 0 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    a >= 224
+  );
 }
 
 async function assertPublic(url: URL): Promise<void> {
@@ -45,7 +63,11 @@ async function fetchPage(input: string, fetchImpl: typeof fetch): Promise<{ html
     const res = await fetchImpl(url, {
       redirect: 'manual',
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { accept: 'text/html,application/xhtml+xml', 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36', 'accept-language': 'de-DE,de;q=0.9' },
+      headers: {
+        accept: 'text/html,application/xhtml+xml',
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
+        'accept-language': 'de-DE,de;q=0.9',
+      },
     }).catch(() => {
       throw new RecipeError('Die Seite ist nicht erreichbar');
     });
@@ -64,8 +86,25 @@ async function fetchPage(input: string, fetchImpl: typeof fetch): Promise<{ html
 }
 
 const ENTITIES: Record<string, string> = {
-  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', frac12: '½', frac14: '¼', frac34: '¾',
-  auml: 'ä', ouml: 'ö', uuml: 'ü', Auml: 'Ä', Ouml: 'Ö', Uuml: 'Ü', szlig: 'ß', eacute: 'é', egrave: 'è', deg: '°',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+  frac12: '½',
+  frac14: '¼',
+  frac34: '¾',
+  auml: 'ä',
+  ouml: 'ö',
+  uuml: 'ü',
+  Auml: 'Ä',
+  Ouml: 'Ö',
+  Uuml: 'Ü',
+  szlig: 'ß',
+  eacute: 'é',
+  egrave: 'è',
+  deg: '°',
 };
 
 function decode(s: string): string {

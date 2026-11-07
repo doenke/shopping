@@ -251,12 +251,18 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
     ({ userId, params, body }) => api.updateItem(userId, params.id, body),
   );
 
-  route('POST', '/api/v1/items/:id/check', { summary: 'Abhaken (gekauft)', tag: 'Artikel', params: ItemRef }, async ({ userId, params }) =>
-    (await api.setChecked(userId, [params.id], true))[0],
+  route(
+    'POST',
+    '/api/v1/items/:id/check',
+    { summary: 'Abhaken (gekauft)', tag: 'Artikel', params: ItemRef },
+    async ({ userId, params }) => (await api.setChecked(userId, [params.id], true))[0],
   );
 
-  route('POST', '/api/v1/items/:id/uncheck', { summary: 'Wieder auf die Liste', tag: 'Artikel', params: ItemRef }, async ({ userId, params }) =>
-    (await api.setChecked(userId, [params.id], false))[0],
+  route(
+    'POST',
+    '/api/v1/items/:id/uncheck',
+    { summary: 'Wieder auf die Liste', tag: 'Artikel', params: ItemRef },
+    async ({ userId, params }) => (await api.setChecked(userId, [params.id], false))[0],
   );
 
   route('DELETE', '/api/v1/items/:id', { summary: 'Artikel entfernen', tag: 'Artikel', params: ItemRef }, async ({ userId, params }) => ({

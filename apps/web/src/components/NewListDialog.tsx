@@ -1,4 +1,14 @@
-import { canAutoReset, defaultVisibility, type ResetEvery, itemSpecification, SUGGESTED_LIST_GROUPS, packingInfo, type ItemRow, type ListRow, type ListType } from '@shopping/shared';
+import {
+  canAutoReset,
+  defaultVisibility,
+  type ResetEvery,
+  itemSpecification,
+  SUGGESTED_LIST_GROUPS,
+  packingInfo,
+  type ItemRow,
+  type ListRow,
+  type ListType,
+} from '@shopping/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, createList, itemToNew } from '../actions';
@@ -198,12 +208,12 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
         )}
 
         <label className="check field">
-          <input type="checkbox" checked={asTemplate} onChange={(e) => chooseTemplateMode(e.target.checked)} /> Als Vorlage anlegen (nicht abhakbar, füllt
-          neue Listen vor)
+          <input type="checkbox" checked={asTemplate} onChange={(e) => chooseTemplateMode(e.target.checked)} /> Als Vorlage anlegen (nicht abhakbar, füllt neue
+          Listen vor)
         </label>
         <label className="check field">
-          <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} /> Privat – nur für mich (sonst sieht der ganze
-          Haushalt sie)
+          <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} /> Privat – nur für mich (sonst sieht der ganze Haushalt
+          sie)
         </label>
 
         {template && (
@@ -225,7 +235,9 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
                 </li>
               );
             })}
-            {sorted.length === 0 && items && <li className="muted">{chosenTemplates.length > 1 ? 'Die Vorlagen sind noch leer.' : 'Die Vorlage ist noch leer.'}</li>}
+            {sorted.length === 0 && items && (
+              <li className="muted">{chosenTemplates.length > 1 ? 'Die Vorlagen sind noch leer.' : 'Die Vorlage ist noch leer.'}</li>
+            )}
           </ul>
         )}
 

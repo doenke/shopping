@@ -31,7 +31,10 @@ describe('ToDo lists', () => {
   it('keep due date, who and area, sorted by due date', async () => {
     const res = await as(anna, 'POST', `/api/v1/lists/${listId}/items`, {
       text: 'Reifen wechseln !2026-11-20 @Ben #Auto, Steuer !2026-11-15',
-      items: [{ name: 'Fenster putzen', area: 'Haus' }, { name: 'Hecke schneiden', due: '2026-11-18', assignee: 'Anna', area: 'Garten' }],
+      items: [
+        { name: 'Fenster putzen', area: 'Haus' },
+        { name: 'Hecke schneiden', due: '2026-11-18', assignee: 'Anna', area: 'Garten' },
+      ],
     });
     expect(res.statusCode).toBe(200);
     const items = (await as(anna, 'GET', `/api/v1/lists/${listId}`)).json().items;

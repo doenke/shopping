@@ -71,7 +71,14 @@ export function Login() {
           }}
         >
           <p className="login__or">oder ohne Account, nur für diese Liste:</p>
-          <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Dein Name, z. B. Oma" aria-label="Dein Name" required maxLength={40} />
+          <input
+            value={guestName}
+            onChange={(e) => setGuestName(e.target.value)}
+            placeholder="Dein Name, z. B. Oma"
+            aria-label="Dein Name"
+            required
+            maxLength={40}
+          />
           <button className="btn" type="submit">
             Als Gast weiter
           </button>

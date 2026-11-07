@@ -340,7 +340,12 @@ export class SyncEngine {
 
   private async flush(): Promise<void> {
     if (this.ws?.readyState !== WebSocket.OPEN) return;
-    const entries = (await db.outbox.orderBy('n').limit(MAX_BATCH * 2).toArray()).filter((e) => !this.inflight.has(e.mid));
+    const entries = (
+      await db.outbox
+        .orderBy('n')
+        .limit(MAX_BATCH * 2)
+        .toArray()
+    ).filter((e) => !this.inflight.has(e.mid));
     const batch = entries.slice(0, MAX_BATCH);
     if (batch.length === 0) return;
     for (const e of batch) this.inflight.add(e.mid);
@@ -452,7 +457,10 @@ export class SyncEngine {
         });
         if (res.ok) {
           const r = (await res.json()) as { acked: string[]; rejected: { mid: string }[] };
-          await db.outbox.where('mid').anyOf([...r.acked, ...r.rejected.map((x) => x.mid)]).delete();
+          await db.outbox
+            .where('mid')
+            .anyOf([...r.acked, ...r.rejected.map((x) => x.mid)])
+            .delete();
           await this.updatePending();
         }
       }
@@ -468,7 +476,12 @@ export class SyncEngine {
       const since = (await getMeta<number>('catalogSeq')) ?? 0;
       const res = await fetch(`/api/v1/catalog?since=${since}`, { signal: AbortSignal.timeout(20_000) });
       if (!res.ok) return;
-      const data = (await res.json()) as { items: import('@shopping/shared').CatalogItem[]; categoryIcons?: Record<string, string>; pendingIcons?: string[]; seq: number };
+      const data = (await res.json()) as {
+        items: import('@shopping/shared').CatalogItem[];
+        categoryIcons?: Record<string, string>;
+        pendingIcons?: string[];
+        seq: number;
+      };
       await db.transaction('rw', [db.catalog, db.meta], async () => {
         await db.catalog.bulkPut(data.items);
         await setMeta('catalogSeq', data.seq);

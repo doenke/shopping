@@ -16,8 +16,7 @@ const listeners = new Set<() => void>();
 let deferred: InstallPromptEvent | null = null;
 let installed = false;
 
-const standalone = () =>
-  window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+const standalone = () => window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
 const ios = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -47,13 +46,10 @@ function current(): InstallOffer {
 }
 
 export function useInstallOffer(): InstallOffer {
-  return useSyncExternalStore(
-    (fn) => {
-      listeners.add(fn);
-      return () => listeners.delete(fn);
-    },
-    current,
-  );
+  return useSyncExternalStore((fn) => {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  }, current);
 }
 
 /** Shows the browser's install dialog. */

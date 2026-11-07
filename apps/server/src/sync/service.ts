@@ -94,10 +94,7 @@ export class SyncService {
           const touched = await this.db.transaction((tx) => this.applyOne(tx, userId, m));
           result.acked.push(m.mid);
           if (touched.lists.length) {
-            const members = await this.db
-              .select({ userId: listMembers.userId })
-              .from(listMembers)
-              .where(inArray(listMembers.listId, touched.lists));
+            const members = await this.db.select({ userId: listMembers.userId }).from(listMembers).where(inArray(listMembers.listId, touched.lists));
             for (const mem of members) result.affectedUsers.add(mem.userId);
           }
           for (const id of touched.users ?? []) result.affectedUsers.add(id);
@@ -458,7 +455,6 @@ export class SyncService {
     );
   }
 
-
   private async applyItem(tx: Tx, userId: string, id: string, patch: ItemPatch, ts: string): Promise<string[]> {
     const [existing] = await tx.select().from(listItems).where(eq(listItems.id, id)).for('update');
     const listId = existing?.listId ?? patch.listId;
@@ -509,11 +505,7 @@ export class SyncService {
         if (duplicate) {
           const target = toItemRow(duplicate);
           const mergeTs = this.clock.tick();
-          applyPatch(
-            target,
-            { amounts: mergeAmounts(target.amounts, row.amounts), attributes: mergeSources(target.attributes, row.attributes) },
-            mergeTs,
-          );
+          applyPatch(target, { amounts: mergeAmounts(target.amounts, row.amounts), attributes: mergeSources(target.attributes, row.attributes) }, mergeTs);
           await tx
             .update(listItems)
             .set({ amounts: target.amounts, attributes: target.attributes, hlc: target.hlc, seq: nextSeq })
@@ -805,9 +797,7 @@ export class SyncService {
     const lists_ = listRows.map(toListRow);
     for (const l of lists_) if (l.deleted) removedLists.push(l.id);
 
-    const memberIds = active.length
-      ? await db.selectDistinct({ userId: listMembers.userId }).from(listMembers).where(inArray(listMembers.listId, active))
-      : [];
+    const memberIds = active.length ? await db.selectDistinct({ userId: listMembers.userId }).from(listMembers).where(inArray(listMembers.listId, active)) : [];
     const ids = [...new Set([userId, ...memberIds.map((m) => m.userId)])];
     const userRows = await db.select().from(users).where(inArray(users.id, ids));
     const me = userRows.find((u) => u.id === userId);
@@ -818,12 +808,7 @@ export class SyncService {
     const categoryRows = await db
       .select()
       .from(customCategories)
-      .where(
-        and(
-          this.categoriesOf(userId, me?.householdId ?? null),
-          categoriesFull ? eq(customCategories.deleted, false) : gt(customCategories.seq, since),
-        ),
-      );
+      .where(and(this.categoriesOf(userId, me?.householdId ?? null), categoriesFull ? eq(customCategories.deleted, false) : gt(customCategories.seq, since)));
 
     return {
       lists: lists_.filter((l) => !l.deleted),

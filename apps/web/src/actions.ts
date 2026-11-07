@@ -1,4 +1,24 @@
-import { categoriesFor, defaultVisibility, listTemplateIds, listAsText, nextCategoryColor, type CategoryPatch, type CustomCategoryType, packingInfo, planAdd, samePacking, type CatalogItem, type ItemPatch, type ItemRow, type ListRow, type ListType, type NewItem, type ParsedItem, type ResetEvery, type SectionKey } from '@shopping/shared';
+import {
+  categoriesFor,
+  defaultVisibility,
+  listTemplateIds,
+  listAsText,
+  nextCategoryColor,
+  type CategoryPatch,
+  type CustomCategoryType,
+  packingInfo,
+  planAdd,
+  samePacking,
+  type CatalogItem,
+  type ItemPatch,
+  type ItemRow,
+  type ListRow,
+  type ListType,
+  type NewItem,
+  type ParsedItem,
+  type ResetEvery,
+  type SectionKey,
+} from '@shopping/shared';
 import { db } from './db';
 import { sync } from './sync/engine';
 
@@ -133,7 +153,10 @@ export async function saveAsTemplate(list: ListRow, name: string): Promise<strin
 }
 
 /** Name, description and (ToDo lists) Kategorie in one change – one settings patch, nothing overwrites the other. */
-export async function editList(list: ListRow, edit: { name: string; description: string; group?: string; reset?: ResetEvery | null; askTemplates?: boolean }): Promise<void> {
+export async function editList(
+  list: ListRow,
+  edit: { name: string; description: string; group?: string; reset?: ResetEvery | null; askTemplates?: boolean },
+): Promise<void> {
   const settings = { ...list.settings };
   if (edit.description.trim()) settings.description = edit.description.trim();
   else delete settings.description;

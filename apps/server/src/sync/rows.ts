@@ -63,7 +63,17 @@ export function toUserInfo(r: UserRecord): UserInfo {
 }
 
 export function toMe(r: UserRecord, household: string | null = null, householdIsOwner = false): Me {
-  return { ...toUserInfo(r), email: r.email, isAdmin: r.isAdmin, defaultListId: r.defaultListId, household, householdIsOwner, categoryOrder: r.categoryOrder, listOrder: r.listOrder, sectionOrder: r.sectionOrder };
+  return {
+    ...toUserInfo(r),
+    email: r.email,
+    isAdmin: r.isAdmin,
+    defaultListId: r.defaultListId,
+    household,
+    householdIsOwner,
+    categoryOrder: r.categoryOrder,
+    listOrder: r.listOrder,
+    sectionOrder: r.sectionOrder,
+  };
 }
 
 export function toCatalogItem(r: CatalogRecord): CatalogItem {

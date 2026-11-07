@@ -1,4 +1,18 @@
-import { categoryInList, type CustomCategories, dueOf, formatAmounts, getCategory, itemSpecification, listDescription, listGroup, packingInfo, type ItemRow, type ItemSource, type ListRow, type ListType } from '@shopping/shared';
+import {
+  categoryInList,
+  type CustomCategories,
+  dueOf,
+  formatAmounts,
+  getCategory,
+  itemSpecification,
+  listDescription,
+  listGroup,
+  packingInfo,
+  type ItemRow,
+  type ItemSource,
+  type ListRow,
+  type ListType,
+} from '@shopping/shared';
 
 /** The public shape of an item in the REST API, SSE and MCP. */
 export interface ApiItem {

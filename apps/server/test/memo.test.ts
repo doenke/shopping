@@ -14,7 +14,8 @@ const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => 
   }
   const form = init!.body as FormData;
   prompts.push(String(form.get('prompt')));
-  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" fill="#FF00FF"/><circle cx="256" cy="256" r="130" fill="#D9A55B"/></svg>';
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" fill="#FF00FF"/><circle cx="256" cy="256" r="130" fill="#D9A55B"/></svg>';
   return json({ result: { image: (await sharp(Buffer.from(svg)).png().toBuffer()).toString('base64') } });
 }) as typeof fetch;
 

@@ -28,7 +28,11 @@ const SettingsBody = z.object({
       token: z.string().trim().max(200).optional(),
       model: z.enum(CLOUDFLARE_MODELS).optional(),
       dailyLimit: z.number().int().min(0).max(5000).optional(),
-      size: z.number().int().refine((n) => [512, 768, 1024].includes(n)).optional(),
+      size: z
+        .number()
+        .int()
+        .refine((n) => [512, 768, 1024].includes(n))
+        .optional(),
     })
     .optional(),
   openai: z

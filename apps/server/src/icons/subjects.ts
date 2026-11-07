@@ -473,4 +473,17 @@ export const CATEGORY_SUBJECTS: Record<string, string> = {
 };
 
 /** The style reference set ("anchor set") is found with these items first (plan 10, phase 1). */
-export const ANCHOR_ITEMS = ['Äpfel', 'Bananen', 'Möhren', 'Brot', 'Milch', 'Käse', 'Eier', 'Hackfleisch', 'Nudeln', 'Gehackte Tomaten', 'Toilettenpapier', 'Kaffee'];
+export const ANCHOR_ITEMS = [
+  'Äpfel',
+  'Bananen',
+  'Möhren',
+  'Brot',
+  'Milch',
+  'Käse',
+  'Eier',
+  'Hackfleisch',
+  'Nudeln',
+  'Gehackte Tomaten',
+  'Toilettenpapier',
+  'Kaffee',
+];

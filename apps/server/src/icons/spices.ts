@@ -86,7 +86,7 @@ function shade(hex: string, factor: number): string {
 /** Always the same pile (fixed pseudo-random dots), lit from the top left. */
 const DOTS = (() => {
   let seed = 7;
-  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const dots: { x: number; y: number; r: number; t: number }[] = [];
   const cx = 256;
   const base = 380;

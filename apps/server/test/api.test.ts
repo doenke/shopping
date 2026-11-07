@@ -24,7 +24,12 @@ describe('API tokens', () => {
   it('are shown once, listed without the secret, and cannot create tokens themselves', async () => {
     expect(token).toMatch(/^shp_/);
     const list = await t.app.inject({ method: 'GET', url: '/api/v1/tokens', headers: { cookie } });
-    expect(list.json().map((x: { name: string }) => x.name).sort()).toEqual(['Dashboard', 'Home Assistant']);
+    expect(
+      list
+        .json()
+        .map((x: { name: string }) => x.name)
+        .sort(),
+    ).toEqual(['Dashboard', 'Home Assistant']);
     expect(list.body).not.toContain(token);
     expect((await call('POST', '/api/v1/tokens', { name: 'x', scopes: ['read'] })).statusCode).toBe(403);
   });
@@ -85,10 +90,9 @@ describe('REST API', () => {
     await call('POST', `/api/v1/lists/${tpl.id}/items`, { items: ['Würstchen', 'Grillkohle'] });
     const sun = (await call('POST', `/api/v1/lists/${tpl.id}/items`, { text: 'Sonnencreme' })).json().added[0];
     // Optional flag is an app feature; set it via sync like the app does.
-    await t.sync.apply(
-      (await t.app.inject({ method: 'GET', url: '/api/v1/me', headers: { cookie } })).json().id,
-      [{ mid: crypto.randomUUID(), entity: 'item', id: sun.id, hlc: t.sync.clock.tick(), patch: { optional: true } }],
-    );
+    await t.sync.apply((await t.app.inject({ method: 'GET', url: '/api/v1/me', headers: { cookie } })).json().id, [
+      { mid: crypto.randomUUID(), entity: 'item', id: sun.id, hlc: t.sync.clock.tick(), patch: { optional: true } },
+    ]);
     expect((await call('POST', `/api/v1/items/${sun.id}/check`)).statusCode).toBe(409);
     const applied = (await call('POST', '/api/v1/lists/default/apply-template', { template: 'Grillabend' })).json();
     expect(applied.added.map((a: { name: string }) => a.name).sort()).toEqual(['Grillkohle', 'Würstchen']);

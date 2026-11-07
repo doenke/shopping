@@ -79,7 +79,11 @@ export function SyncTemplateDialog({ list, templates, onClose }: Props) {
     if (!template) return;
     const intoList = diff.missingInList.filter((i) => toList.has(i.id));
     const intoTemplate = diff.missingInTemplate.filter((i) => toTemplate.has(i.id));
-    if (intoList.length) await addItems(list.id, intoList.map((i) => ({ ...itemToNew(i), sources: [{ type: 'template' as const, label: template.name }] })));
+    if (intoList.length)
+      await addItems(
+        list.id,
+        intoList.map((i) => ({ ...itemToNew(i), sources: [{ type: 'template' as const, label: template.name }] })),
+      );
     if (intoTemplate.length) await addItems(template.id, intoTemplate.map(itemToNew));
     for (const { t, l } of diff.different) {
       const choice = diffChoice.get(t.id);
@@ -89,7 +93,9 @@ export function SyncTemplateDialog({ list, templates, onClose }: Props) {
     // Remember the template for next time.
     const known = listTemplateIds(list);
     if (list.settings.templateId !== template.id || !known.includes(template.id))
-      await sync.mutateList(list.id, { settings: { ...list.settings, templateId: template.id, templateIds: known.includes(template.id) ? known : [...known, template.id] } });
+      await sync.mutateList(list.id, {
+        settings: { ...list.settings, templateId: template.id, templateIds: known.includes(template.id) ? known : [...known, template.id] },
+      });
     ref.current?.close();
   };
 

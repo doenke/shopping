@@ -118,7 +118,10 @@ export function TokensCard() {
             <li key={t.id}>
               <label>
                 <span className="spacer">
-                  {t.name} <small className="muted">· {t.prefix}… · {t.scopes.join(', ')} · zuletzt benutzt: {date(t.lastUsedAt)}</small>
+                  {t.name}{' '}
+                  <small className="muted">
+                    · {t.prefix}… · {t.scopes.join(', ')} · zuletzt benutzt: {date(t.lastUsedAt)}
+                  </small>
                 </span>
                 <button type="button" className="link danger" onClick={() => void revoke(t)}>
                   widerrufen
@@ -139,7 +142,10 @@ export function TokensCard() {
             <li key={t.id}>
               <label>
                 <span className="spacer">
-                  {t.name} <small className="muted">· verbunden seit {date(t.createdAt)} · zuletzt benutzt: {date(t.lastUsedAt)}</small>
+                  {t.name}{' '}
+                  <small className="muted">
+                    · verbunden seit {date(t.createdAt)} · zuletzt benutzt: {date(t.lastUsedAt)}
+                  </small>
                 </span>
                 <button type="button" className="link danger" onClick={() => void revoke(t)}>
                   trennen

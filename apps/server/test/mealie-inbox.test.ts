@@ -12,8 +12,28 @@ const salz = { id: 'food-salz', name: 'Salz', label: null };
 /** A tiny fake Mealie that remembers which items were ticked off. */
 function fakeMealie() {
   const items = [
-    { id: 'm1', shoppingListId: 'inbox', quantity: 2, unit: null, food: zwiebel, note: '', display: '2 Zwiebeln', checked: false, recipeReferences: [{ recipeId: 'r-chili' }] },
-    { id: 'm2', shoppingListId: 'inbox', quantity: 500, unit: unitG, food: hack, note: 'gemischt', display: '500 g Hackfleisch gemischt', checked: false, recipeReferences: [{ recipeId: 'r-chili' }] },
+    {
+      id: 'm1',
+      shoppingListId: 'inbox',
+      quantity: 2,
+      unit: null,
+      food: zwiebel,
+      note: '',
+      display: '2 Zwiebeln',
+      checked: false,
+      recipeReferences: [{ recipeId: 'r-chili' }],
+    },
+    {
+      id: 'm2',
+      shoppingListId: 'inbox',
+      quantity: 500,
+      unit: unitG,
+      food: hack,
+      note: 'gemischt',
+      display: '500 g Hackfleisch gemischt',
+      checked: false,
+      recipeReferences: [{ recipeId: 'r-chili' }],
+    },
     { id: 'm3', shoppingListId: 'inbox', quantity: 0, unit: null, food: null, note: 'Klopapier', display: 'Klopapier', checked: false },
     { id: 'm4', shoppingListId: 'inbox', quantity: 1, unit: null, food: zwiebel, note: '', display: '1 Zwiebel', checked: true },
   ];
@@ -123,7 +143,11 @@ describe('mealie inbox', () => {
     await waitFor(async () => (await pull()).items.length === 3);
     const items = (await pull()).items;
     const byName = Object.fromEntries(items.map((i) => [i.name, i]));
-    expect(byName.Zwiebeln).toMatchObject({ amounts: [{ q: 2, u: null }], categoryId: 'obst-gemuese', attributes: { sources: [{ type: 'mealie_recipe', label: 'Chili con Carne' }] } });
+    expect(byName.Zwiebeln).toMatchObject({
+      amounts: [{ q: 2, u: null }],
+      categoryId: 'obst-gemuese',
+      attributes: { sources: [{ type: 'mealie_recipe', label: 'Chili con Carne' }] },
+    });
     expect(byName.Hackfleisch).toMatchObject({ amounts: [{ q: 500, u: 'g' }], note: 'gemischt', categoryId: 'fleisch-fisch' });
     expect(byName.Toilettenpapier).toMatchObject({ categoryId: 'haushalt', attributes: { sources: [{ type: 'mealie_list', label: 'Einkauf' }] } });
     expect(mealie.items.every((i) => i.checked)).toBe(true);

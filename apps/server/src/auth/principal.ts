@@ -35,16 +35,17 @@ const LAST_USED_GRANULARITY_MS = 5 * 60_000;
 async function tokenPrincipal(db: Db, token: string): Promise<Principal | null> {
   const now = new Date();
   const [row] = await db
-    .select({ id: apiTokens.id, name: apiTokens.name, userId: apiTokens.userId, scopes: apiTokens.scopes, lastUsedAt: apiTokens.lastUsedAt, isGuest: users.isGuest })
+    .select({
+      id: apiTokens.id,
+      name: apiTokens.name,
+      userId: apiTokens.userId,
+      scopes: apiTokens.scopes,
+      lastUsedAt: apiTokens.lastUsedAt,
+      isGuest: users.isGuest,
+    })
     .from(apiTokens)
     .innerJoin(users, eq(users.id, apiTokens.userId))
-    .where(
-      and(
-        eq(apiTokens.tokenHash, hashToken(token)),
-        isNull(apiTokens.revokedAt),
-        or(isNull(apiTokens.expiresAt), gt(apiTokens.expiresAt, now)),
-      ),
-    );
+    .where(and(eq(apiTokens.tokenHash, hashToken(token)), isNull(apiTokens.revokedAt), or(isNull(apiTokens.expiresAt), gt(apiTokens.expiresAt, now))));
   if (!row || row.isGuest) return null;
   if (!row.lastUsedAt || now.getTime() - row.lastUsedAt.getTime() > LAST_USED_GRANULARITY_MS) {
     await db.update(apiTokens).set({ lastUsedAt: now }).where(eq(apiTokens.id, row.id));

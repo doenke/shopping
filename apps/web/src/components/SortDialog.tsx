@@ -121,7 +121,11 @@ export function SortDialog({ title, hint, groups: initial, onSave, onReset, onCl
               {group.items.map((item, i) => {
                 const active = dragging?.id === item.id;
                 return (
-                  <li key={item.id} className={active ? 'sortlist__dragging' : undefined} style={active ? { transform: `translateY(${dragging.dy}px)` } : undefined}>
+                  <li
+                    key={item.id}
+                    className={active ? 'sortlist__dragging' : undefined}
+                    style={active ? { transform: `translateY(${dragging.dy}px)` } : undefined}
+                  >
                     <button
                       type="button"
                       className="sortlist__handle"

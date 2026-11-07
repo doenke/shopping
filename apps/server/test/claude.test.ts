@@ -218,7 +218,9 @@ describe('Claude in the icon pipeline', () => {
   it('steps in when FLUX cannot deliver', async () => {
     await req('PUT', '/api/v1/icons/settings', { provider: 'cloudflare', cloudflare: { accountId: 'a', token: 't' } });
     await t.db.execute(sql`DELETE FROM icon_jobs WHERE status = 'queued'`);
-    await t.db.execute(sql`INSERT INTO icon_jobs (target_type, target_id, priority, candidates, provider) VALUES ('category', 'baumarkt-garten', 500, 2, 'cloudflare')`);
+    await t.db.execute(
+      sql`INSERT INTO icon_jobs (target_type, target_id, priority, candidates, provider) VALUES ('category', 'baumarkt-garten', 500, 2, 'cloudflare')`,
+    );
     // The fake Cloudflare answers 404: three failed attempts, then Claude takes over.
     for (let n = 0; n < 3; n++) expect(await t.icons.runNext()).toBe('failed');
     const [job] = await t.db.execute<{ status: string; provider: string; candidates: number }>(

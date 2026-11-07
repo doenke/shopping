@@ -11,7 +11,17 @@ import { toCatalogItem } from '../sync/rows.js';
 import type { SyncHub } from '../sync/hub.js';
 import type { SyncService } from '../sync/service.js';
 import { ApiError } from '../api/errors.js';
-import { ClaudeReviewer, ClaudeSvgGenerator, renderSvg, entryContext, ENTRY_SYSTEM, LIST_SYSTEM, listContext, type EntryContext, type ReviewVerdict } from './anthropic.js';
+import {
+  ClaudeReviewer,
+  ClaudeSvgGenerator,
+  renderSvg,
+  entryContext,
+  ENTRY_SYSTEM,
+  LIST_SYSTEM,
+  listContext,
+  type EntryContext,
+  type ReviewVerdict,
+} from './anthropic.js';
 import { CloudflareGenerator, OpenAiGenerator, QuotaExceeded, type IconDomain, type IconGenerator, type ProviderId } from './generators.js';
 import { processIcon, referenceImage } from './image.js';
 import { buildPrompt, DEFAULT_STYLE } from './prompt.js';
@@ -174,7 +184,9 @@ export class IconService {
           ? new CloudflareGenerator({ accountId: cf.accountId, token: this.secrets.open(cf.token), model: cf.model, size: cf.size, fetchImpl: this.fetchImpl })
           : null;
       case 'openai':
-        return oa.apiKey ? new OpenAiGenerator({ apiKey: this.secrets.open(oa.apiKey), model: oa.model, quality: oa.quality, fetchImpl: this.fetchImpl }) : null;
+        return oa.apiKey
+          ? new OpenAiGenerator({ apiKey: this.secrets.open(oa.apiKey), model: oa.model, quality: oa.quality, fetchImpl: this.fetchImpl })
+          : null;
       case 'claude':
         return an.apiKey ? new ClaudeSvgGenerator({ apiKey: this.secrets.open(an.apiKey), model: an.svgModel, fetchImpl: this.fetchImpl }) : null;
     }
@@ -251,7 +263,15 @@ export class IconService {
       .onConflictDoUpdate({
         target: [iconJobs.targetType, iconJobs.targetId],
         targetWhere: sql`status = 'queued'`,
-        set: { priority: sql`greatest(${iconJobs.priority}, ${values.priority})`, candidates: values.candidates, provider: values.provider, paid: values.paid, hint: values.hint, attempts: 0, updatedAt: sql`now()` },
+        set: {
+          priority: sql`greatest(${iconJobs.priority}, ${values.priority})`,
+          candidates: values.candidates,
+          provider: values.provider,
+          paid: values.paid,
+          hint: values.hint,
+          attempts: 0,
+          updatedAt: sql`now()`,
+        },
       });
   }
 
@@ -364,7 +384,8 @@ export class IconService {
 
   private async assertTarget(targetType: IconTarget, targetId: string): Promise<void> {
     if (targetType === 'category') {
-      if (!ALL_CATEGORIES.some((c) => c.id === targetId) && !(await this.customCategory(targetId))) throw new ApiError(404, 'not_found', 'Unbekannte Kategorie');
+      if (!ALL_CATEGORIES.some((c) => c.id === targetId) && !(await this.customCategory(targetId)))
+        throw new ApiError(404, 'not_found', 'Unbekannte Kategorie');
       return;
     }
     if (!/^[0-9a-f-]{36}$/.test(targetId)) throw new ApiError(404, 'not_found', 'Unbekannter Artikel');
@@ -387,12 +408,18 @@ export class IconService {
 
   private async customCategory(id: string) {
     if (!/^[0-9a-f-]{36}$/.test(id)) return null;
-    const [row] = await this.db.select().from(customCategories).where(and(eq(customCategories.id, id), eq(customCategories.deleted, false)));
+    const [row] = await this.db
+      .select()
+      .from(customCategories)
+      .where(and(eq(customCategories.id, id), eq(customCategories.deleted, false)));
     return row ?? null;
   }
 
   private async listOf(listId: string) {
-    const [row] = await this.db.select().from(lists).where(and(eq(lists.id, listId), eq(lists.deleted, false)));
+    const [row] = await this.db
+      .select()
+      .from(lists)
+      .where(and(eq(lists.id, listId), eq(lists.deleted, false)));
     return row
       ? {
           name: row.name,
@@ -412,7 +439,11 @@ export class IconService {
       .where(and(eq(listItems.id, itemId), eq(listItems.deleted, false), eq(lists.deleted, false)));
     if (!row) return null;
     // Shopping/packing: free text (or just turned into a catalog item of the household).
-    if (row.list.listType !== 'memo' && !(['shopping', 'packing'].includes(row.list.listType) && (!row.item.catalogItemId || (await this.isUserItem(row.item.catalogItemId))))) return null;
+    if (
+      row.list.listType !== 'memo' &&
+      !(['shopping', 'packing'].includes(row.list.listType) && (!row.item.catalogItemId || (await this.isUserItem(row.item.catalogItemId))))
+    )
+      return null;
     const info = packingInfo(row.item);
     return {
       listId: row.list.id,
@@ -546,12 +577,7 @@ export class IconService {
   async runNext(): Promise<RunResult> {
     const s = await this.settings();
     if (s.pausedUntil && new Date(s.pausedUntil) > new Date()) return 'paused';
-    const [job] = await this.db
-      .select()
-      .from(iconJobs)
-      .where(eq(iconJobs.status, 'queued'))
-      .orderBy(desc(iconJobs.priority), asc(iconJobs.createdAt))
-      .limit(1);
+    const [job] = await this.db.select().from(iconJobs).where(eq(iconJobs.status, 'queued')).orderBy(desc(iconJobs.priority), asc(iconJobs.createdAt)).limit(1);
     if (!job) return 'idle';
 
     // The same thing on the other kind of list (Zahnpasta to buy and to pack) already has a picture: that one.
@@ -608,14 +634,16 @@ export class IconService {
       for (let n = 0; n < count; n++) {
         if (!(await this.withinBudget(s, gen.provider, gen.costMicro))) break;
         const seed = randomInt(1, 2 ** 31 - 1);
-        const result = await gen.generate({ prompt, references, referenceSvgs, seed, subject, style: s.style, hint: job.hint, context, domain }).catch((err: Error) => {
-          // A broken SVG is one bad candidate, not a broken provider.
-          if (gen.provider === 'claude' && !(err instanceof QuotaExceeded) && /SVG|Element|Verweis|url\(|Inhalt|JSON/.test(err.message)) {
-            this.log.warn({ err: err.message }, 'SVG unbrauchbar');
-            return null;
-          }
-          throw err;
-        });
+        const result = await gen
+          .generate({ prompt, references, referenceSvgs, seed, subject, style: s.style, hint: job.hint, context, domain })
+          .catch((err: Error) => {
+            // A broken SVG is one bad candidate, not a broken provider.
+            if (gen.provider === 'claude' && !(err instanceof QuotaExceeded) && /SVG|Element|Verweis|url\(|Inhalt|JSON/.test(err.message)) {
+              this.log.warn({ err: err.message }, 'SVG unbrauchbar');
+              return null;
+            }
+            throw err;
+          });
         if (!result) continue;
         await this.recordUsage(gen.provider, 1, result.costMicro);
         const processed = await processIcon(result.image).catch((err: Error) => {
@@ -639,20 +667,23 @@ export class IconService {
         }
         if (aiReview) verdicts.push(aiReview);
         if (!aiReview || aiReview.ok) passed++;
-        const [inserted] = await this.db.insert(icons).values({
-          targetType: job.targetType,
-          targetId: job.targetId,
-          provider: gen.provider,
-          model: gen.model,
-          prompt,
-          seed,
-          referenceSet,
-          checks: { ...processed.checks },
-          aiReview,
-          svg: result.svg ?? null,
-          image: processed.image,
-          thumb: processed.thumb,
-        }).returning({ id: icons.id });
+        const [inserted] = await this.db
+          .insert(icons)
+          .values({
+            targetType: job.targetType,
+            targetId: job.targetId,
+            provider: gen.provider,
+            model: gen.model,
+            prompt,
+            seed,
+            referenceSet,
+            checks: { ...processed.checks },
+            aiReview,
+            svg: result.svg ?? null,
+            image: processed.image,
+            thumb: processed.thumb,
+          })
+          .returning({ id: icons.id });
         made++;
         // Automatic approval: the first good one goes live, no further candidates are paid for.
         if (s.autoApprove && passesChecks({ ...processed.checks }, aiReview)) {
@@ -672,14 +703,22 @@ export class IconService {
       this.log.warn({ err: message, target: job.targetId, attempts }, 'Icon-Erzeugung fehlgeschlagen');
       if (made) await this.finishJob(job.id, 'done');
       else if (attempts >= 3 && !(await this.fallbackToClaude(job, s))) await this.finishJob(job.id, 'failed', message);
-      else await this.db.update(iconJobs).set({ attempts, error: message, updatedAt: sql`now()` }).where(eq(iconJobs.id, job.id));
+      else
+        await this.db
+          .update(iconJobs)
+          .set({ attempts, error: message, updatedAt: sql`now()` })
+          .where(eq(iconJobs.id, job.id));
       return 'failed';
     }
 
     if (!made && !(await this.withinBudget(s, gen.provider, gen.costMicro))) return 'budget';
     // Everything failed the AI pre-review: one more round, with what was wrong as a hint.
     if (made && !passed && job.attempts === 0) {
-      const reason = verdicts.map((v) => v.shows).filter(Boolean).slice(0, 2).join('; ');
+      const reason = verdicts
+        .map((v) => v.shows)
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('; ');
       await this.db
         .update(iconJobs)
         .set({ attempts: 1, hint: [job.hint, reason ? `clearly recognisable, not like: ${reason}` : null].filter(Boolean).join('. '), updatedAt: sql`now()` })
@@ -722,7 +761,11 @@ export class IconService {
         })
         .catch(() => null);
     }
-    if (color) await this.db.update(catalogItems).set({ iconSubject: `spice:${color}` }).where(eq(catalogItems.id, itemId));
+    if (color)
+      await this.db
+        .update(catalogItems)
+        .set({ iconSubject: `spice:${color}` })
+        .where(eq(catalogItems.id, itemId));
     return color;
   }
 
@@ -731,14 +774,27 @@ export class IconService {
     const processed = await processIcon(await renderSvg(svg));
     const [icon] = await this.db
       .insert(icons)
-      .values({ targetType: 'item', targetId: itemId, provider: 'builtin', model: 'spice', prompt: `Gewürz ${color}`, checks: { ...processed.checks }, svg, image: processed.image, thumb: processed.thumb })
+      .values({
+        targetType: 'item',
+        targetId: itemId,
+        provider: 'builtin',
+        model: 'spice',
+        prompt: `Gewürz ${color}`,
+        checks: { ...processed.checks },
+        svg,
+        image: processed.image,
+        thumb: processed.thumb,
+      })
       .returning({ id: icons.id });
     await this.approve(icon!.id, null);
     await this.finishJob(jobId, 'done');
   }
 
   private async finishJob(id: string, status: 'done' | 'failed', error: string | null = null): Promise<void> {
-    await this.db.update(iconJobs).set({ status, error, updatedAt: sql`now()` }).where(eq(iconJobs.id, id));
+    await this.db
+      .update(iconJobs)
+      .set({ status, error, updatedAt: sql`now()` })
+      .where(eq(iconJobs.id, id));
   }
 
   /** Works through the queue until it is empty, paused or out of budget. */
@@ -837,7 +893,10 @@ export class IconService {
           const claude = s.anthropic.categorize ? this.claude(s, 'claude-haiku-5-5') : null;
           if (!categoryId && claude && (await this.withinBudget(s, 'claude', 1_000))) {
             categoryId = await claude
-              .categorize({ name: r.name, listType: r.list_type, listName: r.list_name }, categories.map((c) => ({ id: c.id, name: c.name })))
+              .categorize(
+                { name: r.name, listType: r.list_type, listName: r.list_name },
+                categories.map((c) => ({ id: c.id, name: c.name })),
+              )
               .then(async (res) => {
                 await this.recordUsage('claude', 0, res.costMicro);
                 return res.categoryId;
@@ -881,7 +940,10 @@ export class IconService {
       LIMIT 200`);
     if (!rows.length) return 0;
     const catalog = (await this.db.select().from(catalogItems)).map(toCatalogItem);
-    const index = { shopping: new CatalogIndex(catalog.filter((c) => c.kind !== 'packing')), packing: new CatalogIndex(catalog.filter((c) => c.kind === 'packing')) };
+    const index = {
+      shopping: new CatalogIndex(catalog.filter((c) => c.kind !== 'packing')),
+      packing: new CatalogIndex(catalog.filter((c) => c.kind === 'packing')),
+    };
     const touched = new Set<string>();
     let adopted = 0;
     for (const r of rows) {
@@ -891,7 +953,15 @@ export class IconService {
       if (!existing) {
         const created = await this.db
           .insert(catalogItems)
-          .values({ id, name: r.name, categoryId: r.category_id ?? defaultCategoryFor(r.list_type), kind: r.list_type, source: 'user', aliases: [], categoryLocked: true })
+          .values({
+            id,
+            name: r.name,
+            categoryId: r.category_id ?? defaultCategoryFor(r.list_type),
+            kind: r.list_type,
+            source: 'user',
+            aliases: [],
+            categoryLocked: true,
+          })
           .onConflictDoNothing()
           .returning({ id: catalogItems.id });
         if (created.length) adopted++;
@@ -912,9 +982,16 @@ export class IconService {
       for (const l of linked) touched.add(l.list_id);
       // Pictures still waiting for those entries: the catalog item gets one instead.
       if (linked.length) {
-        await this.db
-          .delete(iconJobs)
-          .where(and(eq(iconJobs.targetType, 'entry'), eq(iconJobs.status, 'queued'), inArray(iconJobs.targetId, linked.map((l) => l.id))));
+        await this.db.delete(iconJobs).where(
+          and(
+            eq(iconJobs.targetType, 'entry'),
+            eq(iconJobs.status, 'queued'),
+            inArray(
+              iconJobs.targetId,
+              linked.map((l) => l.id),
+            ),
+          ),
+        );
       }
     }
     if (adopted) await this.broadcastCatalog();
@@ -940,8 +1017,14 @@ export class IconService {
     const [full] = icon ? [icon] : await this.db.select().from(icons).where(eq(icons.id, source.id));
     if (!full) return;
     const { id: _id, targetType: _t, targetId: _i, isAnchor: _a, ...rest } = full;
-    const [copy] = await this.db.insert(icons).values({ ...rest, targetType: 'item', targetId: catalogItemId }).returning({ id: icons.id });
-    await this.db.update(catalogItems).set({ icon: iconToken(copy!.id), seq: sql`nextval('sync_seq')` }).where(eq(catalogItems.id, catalogItemId));
+    const [copy] = await this.db
+      .insert(icons)
+      .values({ ...rest, targetType: 'item', targetId: catalogItemId })
+      .returning({ id: icons.id });
+    await this.db
+      .update(catalogItems)
+      .set({ icon: iconToken(copy!.id), seq: sql`nextval('sync_seq')` })
+      .where(eq(catalogItems.id, catalogItemId));
   }
 
   /**
@@ -961,7 +1044,10 @@ export class IconService {
     const [full] = await this.db.select().from(icons).where(eq(icons.id, sourceIconId));
     if (!full?.image) return;
     const { id: _id, targetType: _t, targetId: _i, isAnchor: _a, status: _s, ...rest } = full;
-    const [copy] = await this.db.insert(icons).values({ ...rest, status: 'candidate', targetType, targetId }).returning({ id: icons.id });
+    const [copy] = await this.db
+      .insert(icons)
+      .values({ ...rest, status: 'candidate', targetType, targetId })
+      .returning({ id: icons.id });
     await this.approve(copy!.id, null, undefined, false);
   }
 
@@ -1035,7 +1121,10 @@ export class IconService {
   async approve(iconId: string, userId: string | null, anchor?: boolean, twins = true): Promise<void> {
     await this.sync.exclusive(() =>
       this.db.transaction(async (tx) => {
-        const [icon] = await tx.select({ id: icons.id, targetType: icons.targetType, targetId: icons.targetId, status: icons.status }).from(icons).where(eq(icons.id, iconId));
+        const [icon] = await tx
+          .select({ id: icons.id, targetType: icons.targetType, targetId: icons.targetId, status: icons.status })
+          .from(icons)
+          .where(eq(icons.id, iconId));
         if (!icon || icon.status === 'rejected' || icon.status === 'retired') throw new ApiError(404, 'not_found', 'Icon nicht gefunden');
         const sameTarget = and(eq(icons.targetType, icon.targetType), eq(icons.targetId, icon.targetId), sql`${icons.id} <> ${iconId}`);
         // The previous icon and the other candidates are done with; their pictures are dropped.
@@ -1048,10 +1137,16 @@ export class IconService {
           .set({ status: 'approved', reviewedAt: sql`now()`, reviewedBy: userId, ...(anchor !== undefined ? { isAnchor: anchor } : {}) })
           .where(eq(icons.id, iconId));
         if (icon.targetType === 'item') {
-          await tx.update(catalogItems).set({ icon: iconToken(iconId), seq: sql`nextval('sync_seq')` }).where(eq(catalogItems.id, icon.targetId));
+          await tx
+            .update(catalogItems)
+            .set({ icon: iconToken(iconId), seq: sql`nextval('sync_seq')` })
+            .where(eq(catalogItems.id, icon.targetId));
         }
         if (icon.targetType === 'list') {
-          await tx.update(lists).set({ icon: iconToken(iconId), seq: sql`nextval('sync_seq')` }).where(eq(lists.id, icon.targetId));
+          await tx
+            .update(lists)
+            .set({ icon: iconToken(iconId), seq: sql`nextval('sync_seq')` })
+            .where(eq(lists.id, icon.targetId));
         }
         if (icon.targetType === 'entry') {
           // A free-text entry's picture also goes to every other free-text entry of that name.
@@ -1101,7 +1196,10 @@ export class IconService {
   async reject(iconId: string, userId: string): Promise<void> {
     await this.sync.exclusive(() =>
       this.db.transaction(async (tx) => {
-        const [icon] = await tx.select({ targetType: icons.targetType, targetId: icons.targetId, status: icons.status }).from(icons).where(eq(icons.id, iconId));
+        const [icon] = await tx
+          .select({ targetType: icons.targetType, targetId: icons.targetId, status: icons.status })
+          .from(icons)
+          .where(eq(icons.id, iconId));
         if (!icon) throw new ApiError(404, 'not_found', 'Icon nicht gefunden');
         await tx
           .update(icons)
@@ -1109,13 +1207,22 @@ export class IconService {
           .where(eq(icons.id, iconId));
         // Taking back an approved icon: the app falls back to the category icon.
         if (icon.status === 'approved' && icon.targetType === 'item') {
-          await tx.update(catalogItems).set({ icon: null, seq: sql`nextval('sync_seq')` }).where(eq(catalogItems.id, icon.targetId));
+          await tx
+            .update(catalogItems)
+            .set({ icon: null, seq: sql`nextval('sync_seq')` })
+            .where(eq(catalogItems.id, icon.targetId));
         }
         if (icon.status === 'approved' && icon.targetType === 'list') {
-          await tx.update(lists).set({ icon: null, seq: sql`nextval('sync_seq')` }).where(eq(lists.id, icon.targetId));
+          await tx
+            .update(lists)
+            .set({ icon: null, seq: sql`nextval('sync_seq')` })
+            .where(eq(lists.id, icon.targetId));
         }
         if (icon.status === 'approved' && icon.targetType === 'entry') {
-          await tx.update(listItems).set({ icon: null, seq: sql`nextval('sync_seq')` }).where(eq(listItems.icon, iconToken(iconId)));
+          await tx
+            .update(listItems)
+            .set({ icon: null, seq: sql`nextval('sync_seq')` })
+            .where(eq(listItems.icon, iconToken(iconId)));
         }
       }),
     );
@@ -1157,7 +1264,10 @@ export class IconService {
   ): Promise<void> {
     await this.assertTarget(targetType, targetId);
     if (targetType === 'item' && opts.subject !== undefined) {
-      await this.db.update(catalogItems).set({ iconSubject: opts.subject?.trim() || null }).where(eq(catalogItems.id, targetId));
+      await this.db
+        .update(catalogItems)
+        .set({ iconSubject: opts.subject?.trim() || null })
+        .where(eq(catalogItems.id, targetId));
     }
     // Unreviewed candidates of the target make way for the new ones.
     await this.db
@@ -1177,7 +1287,16 @@ export class IconService {
     });
     const [row] = await this.db
       .insert(icons)
-      .values({ targetType, targetId, provider: 'upload', model: 'manual', prompt: '', checks: { ...processed.checks }, image: processed.image, thumb: processed.thumb })
+      .values({
+        targetType,
+        targetId,
+        provider: 'upload',
+        model: 'manual',
+        prompt: '',
+        checks: { ...processed.checks },
+        image: processed.image,
+        thumb: processed.thumb,
+      })
       .returning({ id: icons.id });
     await this.broadcastCatalog();
     return row!.id;
@@ -1206,7 +1325,10 @@ export class IconService {
     const listById = new Map(listRows.map((l) => [l.id, l.name]));
     const catIds = targets.filter((t) => t.targetType === 'category' && /^[0-9a-f-]{36}$/.test(t.targetId)).map((t) => t.targetId);
     const ownCats = catIds.length
-      ? await this.db.select({ id: customCategories.id, name: customCategories.name, subject: customCategories.iconSubject }).from(customCategories).where(inArray(customCategories.id, catIds))
+      ? await this.db
+          .select({ id: customCategories.id, name: customCategories.name, subject: customCategories.iconSubject })
+          .from(customCategories)
+          .where(inArray(customCategories.id, catIds))
       : [];
     const ownCatById = new Map(ownCats.map((c) => [c.id, c]));
     return (t: { targetType: IconTarget; targetId: string }) => {
@@ -1221,7 +1343,11 @@ export class IconService {
         return { name: getCategory(t.targetId).name, categoryId: t.targetId, subject: CATEGORY_SUBJECTS[t.targetId] ?? null };
       }
       const r = byId.get(t.targetId);
-      return { name: r?.name ?? '?', categoryId: r?.categoryId ?? 'eigene', subject: r?.subject ?? (r ? (SEED_SUBJECTS[r.name] ?? PACKING_SUBJECTS[r.name] ?? null) : null) };
+      return {
+        name: r?.name ?? '?',
+        categoryId: r?.categoryId ?? 'eigene',
+        subject: r?.subject ?? (r ? (SEED_SUBJECTS[r.name] ?? PACKING_SUBJECTS[r.name] ?? null) : null),
+      };
     };
   }
 
@@ -1288,7 +1414,10 @@ export class IconService {
       )
       .orderBy(asc(icons.createdAt));
     const name = await this.names(rows);
-    const targets = new Map<string, ReturnType<typeof name> & { targetType: IconTarget; targetId: string; approved: string | null; candidates: typeof rows; since: Date }>();
+    const targets = new Map<
+      string,
+      ReturnType<typeof name> & { targetType: IconTarget; targetId: string; approved: string | null; candidates: typeof rows; since: Date }
+    >();
     for (const r of rows) {
       const key = `${r.targetType}:${r.targetId}`;
       let t = targets.get(key);

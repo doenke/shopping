@@ -13,10 +13,7 @@ export interface PlannedChange {
   kind: 'merged' | 'restored' | 'created';
 }
 
-type ExistingItem = Pick<
-  ItemRow,
-  'id' | 'catalogItemId' | 'name' | 'checked' | 'deleted' | 'amounts' | 'properties' | 'note' | 'attributes' | 'position'
->;
+type ExistingItem = Pick<ItemRow, 'id' | 'catalogItemId' | 'name' | 'checked' | 'deleted' | 'amounts' | 'properties' | 'note' | 'attributes' | 'position'>;
 
 function sameItem(item: ExistingItem, p: NewItem): boolean {
   // Packing lists: Annas T-Shirts and Bens T-Shirts (or the ones in another Packstück) stay apart.

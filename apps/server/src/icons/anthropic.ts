@@ -1,6 +1,15 @@
 import Anthropic from '@anthropic-ai/sdk';
 import sharp from 'sharp';
-import { DOMAIN_TEXT, QuotaExceeded, thingPrompt, thingSystem, type GenerateRequest, type GenerateResult, type IconDomain, type IconGenerator } from './generators.js';
+import {
+  DOMAIN_TEXT,
+  QuotaExceeded,
+  thingPrompt,
+  thingSystem,
+  type GenerateRequest,
+  type GenerateResult,
+  type IconDomain,
+  type IconGenerator,
+} from './generators.js';
 
 /**
  * Claude in the icon pipeline (docs/konzept/10-icons-plan.md):
@@ -98,7 +107,24 @@ export function sanitizeSvg(svg: string): string {
   const s = svg.trim();
   if (!/^<svg[\s>]/i.test(s) || !/<\/svg>$/i.test(s)) throw new Error('kein vollständiges SVG');
   if (s.length > 60_000) throw new Error('SVG zu groß');
-  const allowed = new Set(['svg', 'g', 'path', 'circle', 'ellipse', 'rect', 'polygon', 'polyline', 'line', 'defs', 'lineargradient', 'radialgradient', 'stop', 'clippath', 'title', 'desc']);
+  const allowed = new Set([
+    'svg',
+    'g',
+    'path',
+    'circle',
+    'ellipse',
+    'rect',
+    'polygon',
+    'polyline',
+    'line',
+    'defs',
+    'lineargradient',
+    'radialgradient',
+    'stop',
+    'clippath',
+    'title',
+    'desc',
+  ]);
   for (const m of s.matchAll(/<\s*([a-zA-Z][\w:-]*)/g)) {
     if (!allowed.has(m[1]!.toLowerCase())) throw new Error(`unerlaubtes Element <${m[1]}>`);
   }
@@ -109,7 +135,10 @@ export function sanitizeSvg(svg: string): string {
 }
 
 export async function renderSvg(svg: string): Promise<Buffer> {
-  return sharp(Buffer.from(svg), { density: 144 }).resize(1024, 1024, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
+  return sharp(Buffer.from(svg), { density: 144 })
+    .resize(1024, 1024, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
 }
 
 export interface ClaudeOptions {
@@ -137,14 +166,23 @@ export class ClaudeSvgGenerator implements IconGenerator {
     // Style references first and stable (cached across icons), the task last.
     const refs: Anthropic.Beta.BetaContentBlockParam[] = [];
     if (referenceSvgs?.length) {
-      refs.push({ type: 'text', text: `Approved icons of the set (SVG source) – match exactly this drawing style:\n\n${referenceSvgs.map((s, i) => `Reference ${i + 1}:\n${s}`).join('\n\n')}` });
+      refs.push({
+        type: 'text',
+        text: `Approved icons of the set (SVG source) – match exactly this drawing style:\n\n${referenceSvgs.map((s, i) => `Reference ${i + 1}:\n${s}`).join('\n\n')}`,
+      });
     } else if (references.length) {
       refs.push({ type: 'text', text: 'Approved icons of the set (pictures) – match their style, colour treatment and level of detail:' });
       for (const r of references) refs.push({ type: 'image', source: png(r) });
     }
     if (refs.length) refs[refs.length - 1] = { ...refs[refs.length - 1]!, cache_control: { type: 'ephemeral' } } as Anthropic.Beta.BetaContentBlockParam;
 
-    const task = [`Draw: ${subject}.`, domain ? `It is the icon for ${DOMAIN_TEXT[domain]}.` : null, context ? `It stands for ${context}.` : null, hint ? `Extra wish: ${hint}.` : null, `Style notes: ${style}`]
+    const task = [
+      `Draw: ${subject}.`,
+      domain ? `It is the icon for ${DOMAIN_TEXT[domain]}.` : null,
+      context ? `It stands for ${context}.` : null,
+      hint ? `Extra wish: ${hint}.` : null,
+      `Style notes: ${style}`,
+    ]
       .filter(Boolean)
       .join('\n');
     let msg: Anthropic.Beta.BetaMessage;
@@ -212,7 +250,11 @@ const LIST_KIND: Record<string, string> = {
 };
 
 export function listContext(l: ListContext): string {
-  return [`"${l.name}" – a ${LIST_KIND[l.listType] ?? 'list'}`, l.group ? `in the category "${l.group}"` : null, l.description ? `(about: ${l.description})` : null]
+  return [
+    `"${l.name}" – a ${LIST_KIND[l.listType] ?? 'list'}`,
+    l.group ? `in the category "${l.group}"` : null,
+    l.description ? `(about: ${l.description})` : null,
+  ]
     .filter(Boolean)
     .join(' ');
 }
@@ -280,7 +322,9 @@ export class ClaudeReviewer {
           'Check the candidate for this icon set of a household list app (groceries, things to pack, films and books, tasks, lists): soft flat illustration, ' +
           'one object or motif (or a small typical group), transparent background, light from top left, no text, no logos. "Recognizable" means it clearly ' +
           'shows what it is meant to show' +
-          (item.domain === 'memo' || item.domain === 'list' || item.domain === 'category' ? ' – a symbolic motif is right here, it does not have to be a product' : '') +
+          (item.domain === 'memo' || item.domain === 'list' || item.domain === 'category'
+            ? ' – a symbolic motif is right here, it does not have to be a product'
+            : '') +
           '. Be strict about recognisability and text, lenient about small style differences.',
       },
     );
@@ -323,7 +367,10 @@ export class ClaudeReviewer {
         messages: [{ role: 'user', content }],
         output_config: {
           effort: 'low',
-          format: { type: 'json_schema', schema: { type: 'object', properties: { subject: { type: 'string' } }, required: ['subject'], additionalProperties: false } },
+          format: {
+            type: 'json_schema',
+            schema: { type: 'object', properties: { subject: { type: 'string' } }, required: ['subject'], additionalProperties: false },
+          },
         },
       });
     } catch (err) {
@@ -349,7 +396,12 @@ export class ClaudeReviewer {
           effort: 'low',
           format: {
             type: 'json_schema',
-            schema: { type: 'object', properties: { spice: { type: 'boolean' }, color: { type: 'string' } }, required: ['spice', 'color'], additionalProperties: false },
+            schema: {
+              type: 'object',
+              properties: { spice: { type: 'boolean' }, color: { type: 'string' } },
+              required: ['spice', 'color'],
+              additionalProperties: false,
+            },
           },
         },
       });
@@ -385,7 +437,12 @@ export class ClaudeReviewer {
           effort: 'low',
           format: {
             type: 'json_schema',
-            schema: { type: 'object', properties: { category: { type: 'string', enum: categories.map((c) => c.id) } }, required: ['category'], additionalProperties: false },
+            schema: {
+              type: 'object',
+              properties: { category: { type: 'string', enum: categories.map((c) => c.id) } },
+              required: ['category'],
+              additionalProperties: false,
+            },
           },
         },
       });
@@ -407,7 +464,10 @@ export class ClaudeReviewer {
         messages: [{ role: 'user', content: thingPrompt(name, category, listName) }],
         output_config: {
           effort: 'low',
-          format: { type: 'json_schema', schema: { type: 'object', properties: { subject: { type: 'string' } }, required: ['subject'], additionalProperties: false } },
+          format: {
+            type: 'json_schema',
+            schema: { type: 'object', properties: { subject: { type: 'string' } }, required: ['subject'], additionalProperties: false },
+          },
         },
       });
     } catch (err) {

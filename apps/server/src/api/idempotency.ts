@@ -25,7 +25,10 @@ export async function withIdempotency(db: Db, request: FastifyRequest, reply: Fa
 
   const inserted = await db.insert(idempotencyKeys).values({ userId, key, requestHash }).onConflictDoNothing().returning({ key: idempotencyKeys.key });
   if (!inserted.length) {
-    const [prev] = await db.select().from(idempotencyKeys).where(and(eq(idempotencyKeys.userId, userId), eq(idempotencyKeys.key, key)));
+    const [prev] = await db
+      .select()
+      .from(idempotencyKeys)
+      .where(and(eq(idempotencyKeys.userId, userId), eq(idempotencyKeys.key, key)));
     if (prev && prev.requestHash !== requestHash) {
       throw new ApiError(422, 'idempotency_key_reused', 'Dieser Idempotency-Key wurde schon für eine andere Anfrage benutzt');
     }

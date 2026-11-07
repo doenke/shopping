@@ -168,12 +168,22 @@ export class CloudflareGenerator implements IconGenerator {
     const res = await this.fetch(this.url(CLOUDFLARE_TEXT_MODEL), {
       method: 'POST',
       headers: { authorization: `Bearer ${this.opts.token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ messages: [{ role: 'system', content: system }, { role: 'user', content: `Entry: ${context}` }], max_tokens: 60 }),
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: `Entry: ${context}` },
+        ],
+        max_tokens: 60,
+      }),
       signal: AbortSignal.timeout(30_000),
     });
     if (!res.ok) await this.check(res);
     const body = (await res.json()) as { result?: { response?: string } };
-    const text = body.result?.response?.trim().replace(/^["'„]|["'“]$/g, '').split('\n')[0]?.trim();
+    const text = body.result?.response
+      ?.trim()
+      .replace(/^["'„]|["'“]$/g, '')
+      .split('\n')[0]
+      ?.trim();
     if (!text) throw new Error('Cloudflare: keine Beschreibung erhalten');
     return text.slice(0, 200);
   }
@@ -197,7 +207,11 @@ export class CloudflareGenerator implements IconGenerator {
     });
     if (!res.ok) await this.check(res);
     const body = (await res.json()) as { result?: { response?: string } };
-    const text = body.result?.response?.trim().replace(/^["'„]|["'“]$/g, '').split('\n')[0]?.trim();
+    const text = body.result?.response
+      ?.trim()
+      .replace(/^["'„]|["'“]$/g, '')
+      .split('\n')[0]
+      ?.trim();
     if (!text) throw new Error('Cloudflare: keine Beschreibung erhalten');
     return text.slice(0, 200);
   }

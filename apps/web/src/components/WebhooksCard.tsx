@@ -54,8 +54,7 @@ export function WebhooksCard() {
       <h2>Webhooks</h2>
       <p className="muted">
         Für eigene Automationen, z. B. in n8n: Jede Änderung an deinen Listen wird als JSON an die Adresse geschickt, signiert im Header{' '}
-        <code>X-Shopping-Signature</code> (<code>t=…,v1=</code> HMAC-SHA256 über <code>t.body</code>). Ist das Ziel nicht erreichbar, wird
-        nachgeliefert.
+        <code>X-Shopping-Signature</code> (<code>t=…,v1=</code> HMAC-SHA256 über <code>t.body</code>). Ist das Ziel nicht erreichbar, wird nachgeliefert.
       </p>
       {message && <p className={message.kind === 'ok' ? 'success' : 'error'}>{message.text}</p>}
 
@@ -138,7 +137,9 @@ export function WebhooksCard() {
                 <button
                   type="button"
                   className="link"
-                  onClick={() => void run(async () => void (await api(`/api/v1/webhooks/${h.id}`, { method: 'PATCH', body: JSON.stringify({ active: !h.active }) })))}
+                  onClick={() =>
+                    void run(async () => void (await api(`/api/v1/webhooks/${h.id}`, { method: 'PATCH', body: JSON.stringify({ active: !h.active }) })))
+                  }
                 >
                   {h.active ? 'pausieren' : 'fortsetzen'}
                 </button>

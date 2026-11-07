@@ -44,7 +44,9 @@ describe('recipes from the web', () => {
   });
 
   it('scales to other servings', async () => {
-    const r = (await t.app.inject({ method: 'GET', url: `/api/v1/recipes/from-url?url=${encodeURIComponent('http://93.184.216.34/r')}&servings=2`, headers: { cookie } })).json();
+    const r = (
+      await t.app.inject({ method: 'GET', url: `/api/v1/recipes/from-url?url=${encodeURIComponent('http://93.184.216.34/r')}&servings=2`, headers: { cookie } })
+    ).json();
     expect(r.servings).toBe(2);
     expect(r.items.find((i: { name: string }) => i.name.startsWith('Sp')).amounts).toEqual([{ q: 250, u: 'g' }]);
   });

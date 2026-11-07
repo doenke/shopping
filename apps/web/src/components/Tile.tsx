@@ -19,7 +19,17 @@ export function ItemIcon({ name, categoryId, catalogItemId, entry, size = 'md' }
   const url = iconUrl(useIconIndex(), catalogItemId, categoryId, entry);
   const [broken, setBroken] = useState<string | null>(null);
   if (url && broken !== url) {
-    return <img className={`item-icon item-icon--img item-icon--${size}`} src={url} alt="" loading="lazy" decoding="async" draggable={false} onError={() => setBroken(url)} />;
+    return (
+      <img
+        className={`item-icon item-icon--img item-icon--${size}`}
+        src={url}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        draggable={false}
+        onError={() => setBroken(url)}
+      />
+    );
   }
   return (
     <span className={`item-icon item-icon--${size}`} style={{ '--cat': cat.color } as React.CSSProperties} aria-hidden>

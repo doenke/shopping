@@ -161,7 +161,8 @@ describe('icon pipeline', () => {
   it('describes items without a built-in subject with a text model', async () => {
     const [row] = await t.db.execute<{ id: string }>(
       // A Mealie food without English description.
-      (await import('drizzle-orm')).sql`INSERT INTO catalog_items (id, name, category_id, source) VALUES (gen_random_uuid(), 'Rote-Bete-Salat', 'fertig-tk', 'mealie') RETURNING id`,
+      (await import('drizzle-orm'))
+        .sql`INSERT INTO catalog_items (id, name, category_id, source) VALUES (gen_random_uuid(), 'Rote-Bete-Salat', 'fertig-tk', 'mealie') RETURNING id`,
     );
     calls.length = 0;
     await req('POST', '/api/v1/icons/generate', { targetType: 'item', targetId: row!.id, candidates: 1, hint: 'only one jar' });

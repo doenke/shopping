@@ -28,7 +28,10 @@ async function listWith(type: string, n: number, extra: Record<string, unknown> 
 }
 
 const done = async (listId: string) =>
-  (await as(anna, 'GET', `/api/v1/lists/${listId}?items=done`)).json().items.filter((i: { checked: boolean }) => i.checked).map((i: { name: string }) => i.name);
+  (await as(anna, 'GET', `/api/v1/lists/${listId}?items=done`))
+    .json()
+    .items.filter((i: { checked: boolean }) => i.checked)
+    .map((i: { name: string }) => i.name);
 
 describe('cleaning up checked entries', () => {
   it('keeps only the newest checked entries of shopping and todo lists', async () => {
@@ -43,7 +46,12 @@ describe('cleaning up checked entries', () => {
 
     // Clients learn about it through the normal sync.
     const delta = await t.sync.pull(anna.id, before.seq);
-    expect(delta.items.filter((i) => i.deleted).map((i) => i.name).sort()).toEqual(['Ding 1', 'Ding 1', 'Ding 2']);
+    expect(
+      delta.items
+        .filter((i) => i.deleted)
+        .map((i) => i.name)
+        .sort(),
+    ).toEqual(['Ding 1', 'Ding 1', 'Ding 2']);
 
     // Nothing left to do.
     expect((await t.sync.pruneDone(3)).size).toBe(0);

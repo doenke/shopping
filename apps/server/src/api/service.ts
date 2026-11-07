@@ -173,7 +173,12 @@ export class ShoppingApi {
   }
 
   private async itemsOf(listId: string) {
-    return (await this.db.select().from(listItems).where(and(eq(listItems.listId, listId), eq(listItems.deleted, false)))).map(toItemRow);
+    return (
+      await this.db
+        .select()
+        .from(listItems)
+        .where(and(eq(listItems.listId, listId), eq(listItems.deleted, false)))
+    ).map(toItemRow);
   }
 
   /** An item by id, or by name within a list. */
@@ -227,11 +232,7 @@ export class ShoppingApi {
 
   // ---- reads ---------------------------------------------------------------
 
-  async lists(
-    userId: string,
-    templates: 'exclude' | 'include' | 'only' = 'exclude',
-    opts: { type?: ListType; archived?: boolean } = {},
-  ): Promise<ApiList[]> {
+  async lists(userId: string, templates: 'exclude' | 'include' | 'only' = 'exclude', opts: { type?: ListType; archived?: boolean } = {}): Promise<ApiList[]> {
     const all = (await this.accessibleLists(userId)).filter(
       (l) =>
         (templates === 'include' ? true : templates === 'only' ? l.isTemplate : !l.isTemplate) &&
@@ -244,7 +245,16 @@ export class ShoppingApi {
       const items = await this.db
         .select({ listId: listItems.listId })
         .from(listItems)
-        .where(and(inArray(listItems.listId, all.map((l) => l.id)), eq(listItems.deleted, false), eq(listItems.checked, false)));
+        .where(
+          and(
+            inArray(
+              listItems.listId,
+              all.map((l) => l.id),
+            ),
+            eq(listItems.deleted, false),
+            eq(listItems.checked, false),
+          ),
+        );
       for (const i of items) counts.set(i.listId, (counts.get(i.listId) ?? 0) + 1);
     }
     const order = await this.userOrder(userId);
@@ -276,7 +286,9 @@ export class ShoppingApi {
     const shown = items
       .filter((i) => (filter === 'all' ? true : filter === 'open' ? !i.checked : i.checked))
       .sort((a, b) =>
-        list.listType === 'todo' ? byDue(a, b) || a.position.localeCompare(b.position) : rank(a.categoryId) - rank(b.categoryId) || a.position.localeCompare(b.position),
+        list.listType === 'todo'
+          ? byDue(a, b) || a.position.localeCompare(b.position)
+          : rank(a.categoryId) - rank(b.categoryId) || a.position.localeCompare(b.position),
       );
     return {
       ...toApiList(list, userId, await this.mainListId(userId), items.filter((i) => !i.checked).length),
@@ -423,7 +435,9 @@ export class ShoppingApi {
     }
     if (input.category !== undefined) {
       const list = (await this.accessibleLists(userId)).find((l) => l.id === item.listId);
-      const cat = categoriesFor(list?.listType ?? 'shopping', await this.sync.visibleCategories(userId)).find((c) => c.id === input.category || c.name.toLowerCase() === input.category?.toLowerCase());
+      const cat = categoriesFor(list?.listType ?? 'shopping', await this.sync.visibleCategories(userId)).find(
+        (c) => c.id === input.category || c.name.toLowerCase() === input.category?.toLowerCase(),
+      );
       if (!cat) throw new ApiError(400, 'unknown_category', `Unbekannte Kategorie „${input.category}“`);
       patch.categoryId = cat.id;
     }
@@ -435,7 +449,11 @@ export class ShoppingApi {
   async setChecked(userId: string, refs: string[], checked: boolean, listRef?: string): Promise<ApiItem[]> {
     const items = [];
     for (const ref of refs) items.push(await this.resolveItem(userId, ref, listRef));
-    await this.mutate(userId, 'item', items.map((i) => ({ id: i.id, patch: { checked } })));
+    await this.mutate(
+      userId,
+      'item',
+      items.map((i) => ({ id: i.id, patch: { checked } })),
+    );
     const names = await this.userNames();
     return Promise.all(items.map(async (i) => toApiItem((await this.resolveItem(userId, i.id)) ?? i, names)));
   }
@@ -443,14 +461,22 @@ export class ShoppingApi {
   async removeItems(userId: string, refs: string[], listRef?: string): Promise<number> {
     const items = [];
     for (const ref of refs) items.push(await this.resolveItem(userId, ref, listRef));
-    await this.mutate(userId, 'item', items.map((i) => ({ id: i.id, patch: { deleted: true } })));
+    await this.mutate(
+      userId,
+      'item',
+      items.map((i) => ({ id: i.id, patch: { deleted: true } })),
+    );
     return items.length;
   }
 
   async clearChecked(userId: string, listRef: string | undefined): Promise<number> {
     const list = await this.resolveList(userId, listRef);
     const done = (await this.itemsOf(list.id)).filter((i) => i.checked);
-    await this.mutate(userId, 'item', done.map((i) => ({ id: i.id, patch: { deleted: true } })));
+    await this.mutate(
+      userId,
+      'item',
+      done.map((i) => ({ id: i.id, patch: { deleted: true } })),
+    );
     return done.length;
   }
 
