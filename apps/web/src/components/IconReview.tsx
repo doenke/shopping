@@ -129,7 +129,8 @@ function Preview({ src, categoryId }: { src: string; categoryId: string }) {
   );
 }
 
-export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
+/** `admin`: may change the server-wide settings (image AI, budget, automatic generation); everyone may review. */
+export function IconReview({ catalog, admin }: { catalog: CatalogItem[]; admin: boolean }) {
   const custom = useCustomCategories();
   const [status, setStatus] = useState<Status | null>(null);
   const [targets, setTargets] = useState<ReviewTarget[]>([]);
@@ -206,9 +207,6 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
 
   return (
     <div className="settings icons-page">
-      <a className="link" href="#/settings">
-        ← Einstellungen
-      </a>
       <section className="card">
         <h2>Stand</h2>
         {status.phase === 'style' ? (
@@ -242,6 +240,8 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
             Pausiert bis {paused.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}: {status.settings.pauseReason}
           </p>
         )}
+        {!admin && <p className="muted">Bild-KI, Budget und Automatik gelten für alle auf diesem Server und werden von den Admins eingestellt. Prüfen und freigeben kannst du trotzdem.</p>}
+        {admin && (
         <div className="row">
           <button type="button" className="btn btn--primary" disabled={busy || !configured} onClick={() => void runNow()}>
             {busy ? 'Erzeuge …' : 'Nächsten Auftrag jetzt erzeugen'}
@@ -264,10 +264,11 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
             Automatisch freigeben (was alle Prüfungen besteht)
           </label>
         </div>
+        )}
         {message && <p className={message.kind === 'ok' ? 'success' : 'error'}>{message.text}</p>}
       </section>
 
-      <SettingsForm status={status} open={!configured} onSaved={() => void load()} />
+      {admin && <SettingsForm status={status} open={!configured} onSaved={() => void load()} />}
 
       <section>
         <h2 className="section-title">
@@ -305,7 +306,7 @@ export function IconReview({ catalog }: { catalog: CatalogItem[] }) {
               </li>
             ))}
           </ul>
-          <button type="button" className="btn" disabled={busy} onClick={() => void run(async () => void (await post('/api/v1/icons/retry-failed')))}>
+          <button type="button" className="btn" style={admin ? undefined : { display: 'none' }} disabled={busy} onClick={() => void run(async () => void (await post('/api/v1/icons/retry-failed')))}>
             Noch einmal versuchen
           </button>
         </section>

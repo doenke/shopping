@@ -177,8 +177,8 @@ function AdminHelp({ setup }: { setup?: HelpInfo['setup'] }) {
         <li>Ein neuer Haushalt heißt wie der Nachname seines ersten Mitglieds; umbenennen darf jedes Mitglied.</li>
         <li>Umzüge (andere Gruppe, anderer Claim) wirken bei der nächsten Anmeldung – die eigenen Listen ziehen mit.</li>
         <li>
-          Admin ist, wer in <code>{setup?.adminGroup ?? 'admins'}</code> ist. Du wirst Gästen als Ansprechpartner genannt, wenn sie einen eigenen Zugang
-          möchten.
+          Admin ist, wer in <code>{setup?.adminGroup ?? 'admins'}</code> ist. Du stellst die Bild-KI für alle ein (Einstellungen → Icons) und wirst Gästen
+          als Ansprechpartner genannt, wenn sie einen eigenen Zugang möchten.
         </li>
         <li>Gast → richtiger Zugang: in Pocket ID anlegen, fertig. Die Regeln oben machen den Rest.</li>
       </ul>

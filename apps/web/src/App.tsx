@@ -313,7 +313,7 @@ function Shell({ me }: { me: Me }) {
               <a className="settings-back" href="#/settings">
                 ‹ Einstellungen
               </a>
-              <IconReview catalog={catalog.items} />
+              <IconReview catalog={catalog.items} admin={me.isAdmin} />
             </>
           ) : list && items ? (
             <ListView

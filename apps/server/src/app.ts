@@ -104,7 +104,13 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   };
 
   await app.register(tokenRoutes, { db, requireAccount });
-  await app.register(iconRoutes, { icons, requireAccount });
+  /** Server-wide settings (image AI, budget) are for the admin group only. */
+  const requireAdmin = async (request: FastifyRequest, reply: import('fastify').FastifyReply) => {
+    await requireAccount(request, reply);
+    const [u] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, request.userId));
+    if (!u?.isAdmin) throw new ApiError(403, 'admin_only', 'Das dürfen nur Admins – sie gelten für alle auf diesem Server');
+  };
+  await app.register(iconRoutes, { icons, requireAccount, requireAdmin });
   await app.register(sharingRoutes, { config, db, sync, hub, secrets, requireUser, requireAccount });
 
   // ---- Sync ---------------------------------------------------------------

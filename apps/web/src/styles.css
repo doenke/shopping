@@ -2018,3 +2018,8 @@ img.avatar {
 .help__callout p {
   margin: 4px 0 0;
 }
+
+.admin-badge {
+  background: color-mix(in srgb, var(--muted, #69716c) 16%, transparent);
+  color: var(--text);
+}

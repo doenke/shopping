@@ -26,7 +26,7 @@ const req = (method: 'GET' | 'POST' | 'PUT' | 'PATCH', url: string, payload?: un
 beforeAll(async () => {
   t = await createTestApp({ fetchImpl: fakeFetch });
   t.icons.delayMs = 0;
-  ({ cookie } = await t.login('Anna'));
+  ({ cookie } = await t.login('Anna', '', ['admins']));
 });
 afterAll(async () => t?.close());
 

@@ -7,9 +7,12 @@ Artikel, jede Kategorie, jeder Merklisten-Eintrag und jede Liste ein eigenes Ico
 
 ## Einrichten
 
+Die Bild-KI gilt für alle auf dem Server und wird von **Admins** eingerichtet (Mitglieder von
+`OIDC_ADMIN_GROUP`). Prüfen, freigeben und neu erzeugen einzelner Icons darf jeder mit Konto.
+
 1. Kostenloses Cloudflare-Konto anlegen, unter *AI → Workers AI → REST API* die Account-ID ablesen und ein
    API-Token (Vorlage „Workers AI“) erstellen.
-2. In der App *⚙ Einstellungen → 🖼 Icons verwalten → Bild-KI einrichten*: Account-ID und Token eintragen,
+2. In der App *⚙ Einstellungen → 🖼 Icons → Bild-KI einrichten*: Account-ID und Token eintragen,
    speichern.
 3. „Automatisch im Hintergrund“ einschalten.
 

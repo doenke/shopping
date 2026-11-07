@@ -188,7 +188,7 @@ export async function authRoutes(
         email: null,
         displayName: name,
         avatarUrl: null,
-        isAdmin: false,
+        isAdmin: groups.includes(config.OIDC_ADMIN_GROUP),
       });
       await joinHousehold(userId, name, household, groups);
       await createSession(db, userId, reply, secure);

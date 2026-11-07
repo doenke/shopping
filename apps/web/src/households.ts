@@ -4,6 +4,7 @@ export interface HouseholdPerson {
   id: string;
   displayName: string;
   avatarUrl: string | null;
+  isAdmin?: boolean;
 }
 
 export interface Household {

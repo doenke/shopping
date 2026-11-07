@@ -324,6 +324,11 @@ export function Settings({ me, section, onSort }: { me: Me; section?: SettingsSe
         <Avatar user={me} size="md" />
         <p className="spacer">
           <strong>{me.displayName}</strong>
+          {me.isAdmin && (
+            <span className="owner-badge admin-badge" title="Admin dieses Servers">
+              🛠 Admin
+            </span>
+          )}
           {me.email && (
             <>
               <br />
@@ -369,7 +374,11 @@ export function Settings({ me, section, onSort }: { me: Me; section?: SettingsSe
               href="#/settings/categories"
             />
             <SettingsRow icon="🍲" title="Mealie" text={mealieStatus} href="#/settings/mealie" />
-            <SettingsRow icon="🖼" title="Icons" text="Bild-KI, Prüfung, Budget" href="#/icons" />
+          </div>
+
+          <h2 className="settings-heading">Für alle auf diesem Server</h2>
+          <div className="settings-group">
+            <SettingsRow icon="🖼" title="Icons" text={me.isAdmin ? 'Bild-KI, Prüfung, Budget' : 'Prüfen und freigeben (Einstellungen: Admins)'} href="#/icons" />
           </div>
 
           <h2 className="settings-heading">Verbindungen</h2>
@@ -442,6 +451,7 @@ function HouseholdMembers({ name }: { name: string | null }) {
         {own.members.map((m) => (
           <li key={m.id}>
             <Avatar user={m} size="xs" /> {m.displayName}
+            {m.isAdmin && <span className="owner-badge admin-badge">🛠 Admin</span>}
           </li>
         ))}
       </ul>

@@ -8,6 +8,7 @@ import type { IconService } from './service.js';
 interface Options {
   icons: IconService;
   requireAccount: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  requireAdmin: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 }
 
 const Target = z.object({
@@ -53,7 +54,7 @@ const SettingsBody = z.object({
 
 const IdParam = z.object({ id: z.string().uuid() });
 
-export async function iconRoutes(app: FastifyInstance, { icons, requireAccount }: Options): Promise<void> {
+export async function iconRoutes(app: FastifyInstance, { icons, requireAccount, requireAdmin }: Options): Promise<void> {
   // ---- public: approved icons --------------------------------------------------
   // Not secret, and needed before login, by guests and by the service worker. The
   // version in the query string changes with every new icon, so caching forever is safe.
@@ -79,7 +80,8 @@ export async function iconRoutes(app: FastifyInstance, { icons, requireAccount }
 
     api.get('/api/v1/icons/status', async () => icons.status());
 
-    api.put('/api/v1/icons/settings', async (request) => {
+    // Image AI keys, budget, automatic generation: the same for everyone on the server – admins only.
+    api.put('/api/v1/icons/settings', { preHandler: requireAdmin }, async (request) => {
       await icons.updateSettings(SettingsBody.parse(request.body));
       return icons.publicSettings();
     });
@@ -137,13 +139,13 @@ export async function iconRoutes(app: FastifyInstance, { icons, requireAccount }
     });
 
     /** Runs the next job right away (also while automatic generation is off, e.g. to find the style). */
-    api.post('/api/v1/icons/run', async () => {
+    api.post('/api/v1/icons/run', { preHandler: requireAdmin }, async () => {
       if ((await icons.settings()).autoApprove) await icons.autoApprovePending();
       await icons.enqueueMissing();
       return { result: await icons.runNext() };
     });
 
-    api.post('/api/v1/icons/retry-failed', async () => {
+    api.post('/api/v1/icons/retry-failed', { preHandler: requireAdmin }, async () => {
       await icons.retryFailed();
       return { ok: true };
     });

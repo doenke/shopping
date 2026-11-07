@@ -105,7 +105,7 @@ export async function sharingRoutes(app: FastifyInstance, opts: Options): Promis
   app.get('/api/v1/households', { preHandler: requireAccount }, async (request) => {
     const [me] = await db.select({ householdId: users.householdId }).from(users).where(eq(users.id, request.userId));
     const rows = await db
-      .select({ id: users.id, displayName: users.displayName, avatarVersion: users.avatarVersion, householdId: users.householdId })
+      .select({ id: users.id, displayName: users.displayName, avatarVersion: users.avatarVersion, householdId: users.householdId, isAdmin: users.isAdmin })
       .from(users)
       .where(eq(users.isGuest, false))
       .orderBy(asc(users.displayName));
@@ -117,7 +117,9 @@ export async function sharingRoutes(app: FastifyInstance, opts: Options): Promis
         name: h.name,
         own: h.id === me?.householdId,
         owner: h.id === ownerId,
-        members: rows.filter((u) => u.householdId === h.id).map((u) => ({ id: u.id, displayName: u.displayName, avatarUrl: avatarPath(u.id, u.avatarVersion) })),
+        members: rows
+          .filter((u) => u.householdId === h.id)
+          .map((u) => ({ id: u.id, displayName: u.displayName, avatarUrl: avatarPath(u.id, u.avatarVersion), isAdmin: u.isAdmin })),
       }))
       .filter((h) => h.members.length > 0)
       .sort((a, b) => Number(b.own) - Number(a.own));

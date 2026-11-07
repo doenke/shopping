@@ -53,7 +53,7 @@ const seedId = (name: string) => stableUuid('shopping-seed', name.toLowerCase())
 beforeAll(async () => {
   t = await createTestApp({ fetchImpl: fakeFetch });
   t.icons.delayMs = 0;
-  cookie = (await t.login('Anna')).cookie;
+  cookie = (await t.login('Anna', '', ['admins'])).cookie;
 });
 afterAll(async () => t?.close());
 
@@ -333,5 +333,15 @@ describe('icon pipeline', () => {
 
   it('is for logged-in accounts only, too', async () => {
     expect((await t.app.inject({ method: 'GET', url: '/api/v1/icons/review' })).statusCode).toBe(401);
+  });
+});
+
+describe('icon settings are for admins', () => {
+  it('lets other people review icons but not change the server-wide settings', async () => {
+    const ben = await t.login('Ben');
+    const put = await t.app.inject({ method: 'PUT', url: '/api/v1/icons/settings', headers: { cookie: ben.cookie }, payload: { dailyBudget: 99 } });
+    expect(put.statusCode).toBe(403);
+    expect((await t.app.inject({ method: 'POST', url: '/api/v1/icons/run', headers: { cookie: ben.cookie } })).statusCode).toBe(403);
+    expect((await t.app.inject({ method: 'GET', url: '/api/v1/icons/review', headers: { cookie: ben.cookie } })).statusCode).toBe(200);
   });
 });

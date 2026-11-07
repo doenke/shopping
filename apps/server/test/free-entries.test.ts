@@ -29,7 +29,7 @@ const jobsFor = (id: string) => t.db.select().from(iconJobs).where(and(eq(iconJo
 beforeAll(async () => {
   t = await createTestApp({ fetchImpl: fakeFetch });
   t.icons.delayMs = 0;
-  ({ cookie } = await t.login('Anna'));
+  ({ cookie } = await t.login('Anna', '', ['admins']));
   await req('PUT', '/api/v1/icons/settings', { autoApprove: true, cloudflare: { accountId: 'a', token: 't' } });
   // The style has been found: four anchors.
   const image = await sharp({ create: { width: 512, height: 512, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).webp().toBuffer();
