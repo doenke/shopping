@@ -14,7 +14,6 @@ interface ListMenuProps {
   membersSeen: number;
   hasTemplates: boolean;
   onClose: () => void;
-  onImport: () => void;
   onApplyTemplate: () => void;
   onMembers: () => void;
   onEdit: () => void;
@@ -22,20 +21,7 @@ interface ListMenuProps {
   onNotice: (text: string) => void;
 }
 
-export function ListMenu({
-  list,
-  me,
-  compact,
-  membersSeen,
-  hasTemplates,
-  onClose,
-  onImport,
-  onApplyTemplate,
-  onMembers,
-  onEdit,
-  onCopied,
-  onNotice,
-}: ListMenuProps) {
+export function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose, onApplyTemplate, onMembers, onEdit, onCopied, onNotice }: ListMenuProps) {
   const guest = me.isGuest;
   const isOwner = list.ownerId === me.id;
 
@@ -85,18 +71,6 @@ export function ListMenu({
       >
         📋 Als Text teilen …
       </button>
-      {!list.isTemplate && list.listType === 'shopping' && !guest && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            onImport();
-            onClose();
-          }}
-        >
-          Aus Mealie hinzufügen …
-        </button>
-      )}
       {!list.isTemplate && hasTemplates && !guest && (
         <button
           type="button"

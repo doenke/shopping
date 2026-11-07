@@ -62,8 +62,6 @@ describe('packing lists', () => {
     const res = await call('POST', '/api/v1/lists/Ostsee/apply-template', { template: 'Grillabend' });
     expect(res.statusCode).toBe(409);
     expect(res.json().code).toBe('type_mismatch');
-    const mealie = await call('POST', '/api/v1/lists/Ostsee/import/mealie', { recipe: 'chili' });
-    expect(mealie.statusCode).toBe(409);
     // "default" stays the grocery list.
     expect((await call('GET', '/api/v1/lists/default')).json().type).toBe('shopping');
   });

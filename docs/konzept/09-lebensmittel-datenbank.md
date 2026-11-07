@@ -13,7 +13,7 @@ und Standard-Einheit und macht aus „kartofeln“ den Artikel **Kartoffeln**.
 | `category_id` | `obst-gemuese` |
 | `default_unit` | kg |
 | `aliases` | Erdapfel, Grumbeere; Paradeiser → Tomaten |
-| `pantry` | Salz, Öl = `true` → beim Rezeptimport vorab abgewählt |
+| `pantry` | Salz, Öl = `true` → beim Rezept aus dem Web vorab abgewählt |
 | `kind` | `shopping` (Lebensmittel, Drogerie, Haushalt) oder `packing` (Dinge zum Einpacken) |
 | `source` | `seed` (Grundkatalog), `mealie`, `user` (von Hand eingetragen) |
 | `mealie_food_id` | Verknüpfung zu Mealie |

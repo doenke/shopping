@@ -26,8 +26,6 @@ const SettingsSchema = z.object({
     .optional(),
 });
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-
 interface Options {
   config: Config;
   db: Db;
@@ -149,32 +147,6 @@ export async function mealieRoutes(app: FastifyInstance, opts: Options): Promise
         const row = await mealie.load(request.userId);
         if (!row || !mealie.config(row).inbox?.enabled) throw new MealieError('Der Eingangskorb ist nicht eingeschaltet');
         return mealie.runInbox(row.id);
-      }),
-    );
-
-    api.get(
-      '/api/v1/integrations/mealie/recipes',
-      guarded(async (request) => {
-        const { q } = z.object({ q: z.string().max(100).default('') }).parse(request.query);
-        const { client } = await mealie.clientFor(request.userId);
-        return (await client.searchRecipes(q)).map((r) => ({ slug: r.slug, name: r.name ?? r.slug, servings: r.recipeServings || null }));
-      }),
-    );
-
-    api.get(
-      '/api/v1/integrations/mealie/recipes/:slug',
-      guarded(async (request) => {
-        const { slug } = z.object({ slug: z.string().min(1).max(200) }).parse(request.params);
-        const { servings } = z.object({ servings: z.coerce.number().positive().max(100).optional() }).parse(request.query);
-        return mealie.recipeCandidates(request.userId, slug, servings);
-      }),
-    );
-
-    api.get(
-      '/api/v1/integrations/mealie/mealplan',
-      guarded(async (request) => {
-        const { from, to } = z.object({ from: isoDate, to: isoDate }).parse(request.query);
-        return mealie.mealplanCandidates(request.userId, from, to);
       }),
     );
   });

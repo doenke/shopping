@@ -35,7 +35,6 @@ POST   /api/v1/lists/{id}/items               {text:"2 kg Kartoffeln, Milch"} un
                                                                  person, container, tipFrom, where, due, assignee, area}]}
 POST   /api/v1/lists/{id}/clear-checked
 POST   /api/v1/lists/{id}/apply-template      {template, includeOptional?}
-POST   /api/v1/lists/{id}/import/mealie       {recipe, servings?, includePantry?} | {from, to, includePantry?}
 
 GET    /api/v1/items/{id}
 PATCH  /api/v1/items/{id}                     {name?, quantity?, unit?, properties?, note?, category?, checked?, …}
@@ -75,8 +74,8 @@ GitHub-Releases (`shopping.zip`).
   - Neue Einträge laufen durch den Parser: „2 Liter Milch“ wird Milch · 2 l.
 - **Push statt Polling:** ein SSE-Stream hält Home Assistant aktuell (`local_push`); Abfrage alle
   15 Minuten nur als Sicherheitsnetz.
-- **Aktionen:** `shopping.add_items`, `shopping.apply_template`, `shopping.import_mealie_recipe`,
-  `shopping.import_mealie_mealplan`, `shopping.clear_checked` (Liste per Name, leer = Hauptliste).
+- **Aktionen:** `shopping.add_items`, `shopping.apply_template`, `shopping.clear_checked` (Liste per
+  Name, leer = Hauptliste).
 - **Sprache:** Assist versteht für To-do-Entitäten „Füge Milch zur Einkaufsliste hinzu“.
 - **Icon:** liegt im Integrationsordner (`brand/`), angezeigt ab Home Assistant 2026.3.
 

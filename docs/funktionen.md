@@ -116,6 +116,6 @@
 
 ## Anbindungen
 
-- **Mealie**: Eingangskorb, Rezepte, Wochenplan – siehe [mealie.md](mealie.md).
+- **Mealie**: Eingangskorb (auch für Rezepte und Wochenplan) und Katalog – siehe [mealie.md](mealie.md).
 - **Home Assistant**: To-do-Listen, Sensoren, Aktionen – siehe [home-assistant.md](home-assistant.md).
 - **REST-API, MCP-Server, Webhooks**: siehe [api-und-ki.md](api-und-ki.md).

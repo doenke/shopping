@@ -118,12 +118,10 @@ describe('OAuth for MCP clients', () => {
     expect(list.json().find((x: { kind: string }) => x.kind === 'oauth')).toMatchObject({ name: 'Claude', scopes: ['read', 'write'] });
   });
 
-  it('serves MCP with the OAuth token, but without Mealie scope', async () => {
+  it('serves MCP with the OAuth token', async () => {
     const client = await mcpClient(accessToken);
-    await client.callTool({ name: 'create_list', arguments: { name: 'Einkauf' } });
-    const r = await client.callTool({ name: 'search_mealie_recipes', arguments: { query: 'chili' } });
-    expect(r.isError).toBe(true);
-    expect(textOf(r)).toContain('mealie');
+    const r = await client.callTool({ name: 'create_list', arguments: { name: 'Einkauf' } });
+    expect(r.isError).toBeFalsy();
     await client.close();
   });
 });
@@ -141,9 +139,9 @@ describe('MCP tools', () => {
 
   it('lists its tools', async () => {
     const { tools } = await client.listTools();
-    expect(tools.map((x) => x.name)).toEqual(
-      expect.arrayContaining(['list_lists', 'get_list', 'add_items', 'check_items', 'remove_items', 'apply_template', 'import_mealie_recipe']),
-    );
+    expect(tools.map((x) => x.name)).toEqual(expect.arrayContaining(['list_lists', 'get_list', 'add_items', 'check_items', 'remove_items', 'apply_template']));
+    // Recipes come from Mealie's own shopping list (the inbox), not through Claude.
+    expect(tools.some((x) => x.name.includes('mealie'))).toBe(false);
   });
 
   it('adds, reads and checks items by name', async () => {

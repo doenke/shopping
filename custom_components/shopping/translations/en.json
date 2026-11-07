@@ -101,58 +101,6 @@
         }
       }
     },
-    "import_mealie_recipe": {
-      "name": "Recipe from Mealie",
-      "description": "Puts the ingredients of a Mealie recipe on the list.",
-      "fields": {
-        "recipe": {
-          "name": "Recipe",
-          "description": "Recipe slug in Mealie"
-        },
-        "servings": {
-          "name": "Servings",
-          "description": ""
-        },
-        "include_pantry": {
-          "name": "Pantry",
-          "description": "Also add salt, oil & co."
-        },
-        "list": {
-          "name": "List",
-          "description": "Name or id, empty = main list"
-        },
-        "config_entry_id": {
-          "name": "Account",
-          "description": "Only needed with several Shopping accounts"
-        }
-      }
-    },
-    "import_mealie_mealplan": {
-      "name": "Meal plan from Mealie",
-      "description": "Puts the ingredients of all recipes in the period on the list.",
-      "fields": {
-        "from": {
-          "name": "From",
-          "description": ""
-        },
-        "to": {
-          "name": "To",
-          "description": ""
-        },
-        "include_pantry": {
-          "name": "Pantry",
-          "description": "Also add salt, oil & co."
-        },
-        "list": {
-          "name": "List",
-          "description": "Name or id, empty = main list"
-        },
-        "config_entry_id": {
-          "name": "Account",
-          "description": "Only needed with several Shopping accounts"
-        }
-      }
-    },
     "clear_checked": {
       "name": "Clear bought items",
       "description": "Empties the recently bought items.",

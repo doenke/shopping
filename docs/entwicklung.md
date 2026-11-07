@@ -66,7 +66,7 @@ Wie es gebaut ist und warum (Stand Oktober 2026):
 | 03 | [Datenmodell](konzept/03-datenmodell.md) | Haushalte, Zugriff, Listentypen, Einträge, Zusammenführen |
 | 04 | [Sync & Offline](konzept/04-sync-und-offline.md) | Offline-first, Konflikte, Echtzeit, schlechtes Netz, Protokoll |
 | 05 | [Login, Haushalte & Teilen](konzept/05-auth-und-teilen.md) | Pocket ID, Haushalte, Link, Gäste, Rechte |
-| 06 | [Mealie-Integration](konzept/06-mealie-integration.md) | Eingangskorb, Rezepte, Wochenplan |
+| 06 | [Mealie-Integration](konzept/06-mealie-integration.md) | Eingangskorb, Katalog |
 | 07 | [API & Home Assistant](konzept/07-api-und-home-assistant.md) | REST, SSE, Webhooks, HA-Integration |
 | 08 | [MCP-Server](konzept/08-mcp-server.md) | Transport, OAuth, Tools |
 | 09 | [Katalog & Eingabe-Parser](konzept/09-lebensmittel-datenbank.md) | Katalog, Kategorien, Parser |

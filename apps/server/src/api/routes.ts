@@ -47,19 +47,6 @@ const AddItemsBody = z
 
 const ItemPatchBody = ItemObject.partial().extend({ checked: z.boolean().optional() });
 
-const ImportBody = z.union([
-  z.object({
-    recipe: z.string().min(1).describe('Mealie-Rezept (Slug)'),
-    servings: z.number().positive().max(100).optional(),
-    includePantry: z.boolean().default(false).describe('Auch Vorräte wie Salz/Öl übernehmen'),
-  }),
-  z.object({
-    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    includePantry: z.boolean().default(false),
-  }),
-]);
-
 interface Options {
   config: Config;
   db: Db;
@@ -228,16 +215,6 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
       body: z.object({ template: z.string().min(1).describe('Vorlagen-ID oder -Name'), includeOptional: z.boolean().default(false) }),
     },
     ({ userId, params, body }) => api.applyTemplate(userId, params.id, body.template, body.includeOptional),
-  );
-
-  route(
-    'POST',
-    '/api/v1/lists/:id/import/mealie',
-    { summary: 'Rezept oder Wochenplan aus Mealie übernehmen', tag: 'Mealie', params: ListRef, body: ImportBody },
-    ({ userId, params, body }) =>
-      'recipe' in body
-        ? api.importRecipe(userId, params.id, body.recipe, body.servings, body.includePantry)
-        : api.importMealplan(userId, params.id, body.from, body.to, body.includePantry),
   );
 
   // ---- items ---------------------------------------------------------------

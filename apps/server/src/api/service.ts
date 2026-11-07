@@ -23,8 +23,6 @@ import {
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/index.js';
 import { catalogItems, listItems, listMembers, lists, users } from '../db/schema.js';
-import type { ImportCandidate } from '../mealie/convert.js';
-import type { MealieService } from '../mealie/service.js';
 import type { SyncHub } from '../sync/hub.js';
 import { toCatalogItem, toItemRow, toListRow } from '../sync/rows.js';
 import type { SyncService } from '../sync/service.js';
@@ -82,7 +80,6 @@ export class ShoppingApi {
     private readonly db: Db,
     private readonly sync: SyncService,
     private readonly hub: SyncHub,
-    private readonly mealie: MealieService,
   ) {
     hub.onCatalogChange(() => this.invalidateCatalog());
   }
@@ -499,36 +496,5 @@ export class ShoppingApi {
       }));
     if (items.length === 0) return { added: [] };
     return this.addItems(userId, listRef, items, true);
-  }
-
-  private candidatesToItems(items: ImportCandidate[], includePantry: boolean, type: 'mealie_recipe' | 'mealie_mealplan'): NewItem[] {
-    return items
-      .filter((c) => includePantry || !c.pantry)
-      .map(({ pantry: _p, sources, ...rest }) => ({ ...rest, sources: sources.map((label) => ({ type, label })) }));
-  }
-
-  private async shoppingOnly(userId: string, listRef: string | undefined): Promise<void> {
-    const list = await this.resolveList(userId, listRef);
-    if (list.listType !== 'shopping') throw new ApiError(409, 'type_mismatch', 'Mealie-Rezepte gehören auf eine Einkaufsliste');
-  }
-
-  async importRecipe(userId: string, listRef: string | undefined, slug: string, servings: number | undefined, includePantry: boolean) {
-    await this.shoppingOnly(userId, listRef);
-    const r = await this.mealie.recipeCandidates(userId, slug, servings);
-    const res = await this.addItems(userId, listRef, this.candidatesToItems(r.items, includePantry, 'mealie_recipe'), true);
-    return { recipe: r.name, servings: r.servings, ...res };
-  }
-
-  async importMealplan(userId: string, listRef: string | undefined, from: string, to: string, includePantry: boolean) {
-    await this.shoppingOnly(userId, listRef);
-    const r = await this.mealie.mealplanCandidates(userId, from, to);
-    if (r.items.length === 0) return { recipes: r.recipes, added: [] };
-    const res = await this.addItems(userId, listRef, this.candidatesToItems(r.items, includePantry, 'mealie_mealplan'), true);
-    return { recipes: r.recipes, ...res };
-  }
-
-  async searchRecipes(userId: string, q: string) {
-    const { client } = await this.mealie.clientFor(userId);
-    return (await client.searchRecipes(q)).map((r) => ({ slug: r.slug, name: r.name ?? r.slug, servings: r.recipeServings || null }));
   }
 }

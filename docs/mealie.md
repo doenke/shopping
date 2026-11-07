@@ -54,9 +54,8 @@ Benachrichtigungen direkt entgegen.
 
 ## Rezepte und Wochenplan
 
-*⋮ → Aus Mealie hinzufügen …*: ein Rezept oder den Wochenplan eines Zeitraums. Portionen lassen sich
-anpassen, die Zutaten kommen als Checkliste; Vorrat (Salz, Öl …) ist vorab abgewählt, gleiche Zutaten werden
-zusammengefasst.
+Gibt es nur über den Eingangskorb: In Mealie ein Rezept oder den Wochenplan auf die Mealie-Einkaufsliste
+setzen (Portionen und Zutaten wählt man dort aus) – der Eingangskorb holt es herüber.
 
 ## Katalog
 

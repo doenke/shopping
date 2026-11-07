@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { addItems, setCategoryOrder, setListOrder, setSectionOrder } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
-import { ImportDialog } from './components/ImportDialog';
 import { startShopping, stopShopping, useShopping, useWakeLock } from './shopMode';
 import { Help } from './components/Help';
 import { ListIcon } from './components/ListIcon';
@@ -68,7 +67,6 @@ function Shell({ me }: { me: Me }) {
   const [drawer, setDrawer] = useState(false);
   const syncState = useSyncInfo(me.isGuest).state;
   const [menu, setMenu] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
   /** Bumped when the members dialog closes, so the avatars in the title bar reload. */
   const [membersSeen, setMembersSeen] = useState(0);
@@ -309,7 +307,6 @@ function Shell({ me }: { me: Me }) {
                       membersSeen={membersSeen}
                       hasTemplates={templates.some((t) => t.listType === list.listType)}
                       onClose={() => setMenu(false)}
-                      onImport={() => setImporting(true)}
                       onApplyTemplate={() => setSyncDialog(true)}
                       onMembers={() => setShowMembers(true)}
                       onEdit={() => setEditing(true)}
@@ -434,7 +431,6 @@ function Shell({ me }: { me: Me }) {
               }}
             />
           )}
-          {importing && list && <ImportDialog listId={list.id} onClose={() => setImporting(false)} />}
           {extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' && (
             <CatalogPanel key={list.listType} listId={list.id} listType={list.listType} catalog={catalog.items} items={items ?? []} />
           )}

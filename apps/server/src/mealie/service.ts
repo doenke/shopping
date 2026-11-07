@@ -10,7 +10,7 @@ import type { SyncHub } from '../sync/hub.js';
 import { toCatalogItem } from '../sync/rows.js';
 import type { SyncService } from '../sync/service.js';
 import { MealieClient, MealieError, type MealieShoppingItem } from './client.js';
-import { Converter, mergeCandidates, type ImportCandidate } from './convert.js';
+import { Converter } from './convert.js';
 
 export interface InboxConfig {
   enabled: boolean;
@@ -274,36 +274,5 @@ export class MealieService {
 
   stop(): void {
     clearInterval(this.timer);
-  }
-
-  // ---- recipes & meal plan -------------------------------------------------
-
-  async recipeCandidates(userId: string, slug: string, servings?: number) {
-    const { client, cfg } = await this.clientFor(userId);
-    const recipe = await client.recipe(slug);
-    const base = recipe.recipeServings || recipe.recipeYieldQuantity || 0;
-    const scale = servings && base ? servings / base : 1;
-    const converter = await this.converter(cfg);
-    const name = recipe.name ?? slug;
-    const items = recipe.recipeIngredient
-      .map((ing) => converter.convert(ing, ing.originalText ?? ing.display, { keepNote: false, scale }))
-      .filter((c): c is ImportCandidate => !!c)
-      .map((c) => ({ ...c, sources: [name] }));
-    return { name, slug: recipe.slug, servings: servings ?? (base || null), items: mergeCandidates(items) };
-  }
-
-  async mealplanCandidates(userId: string, from: string, to: string) {
-    const { client } = await this.clientFor(userId);
-    const entries = (await client.mealplan(from, to)).filter((e) => e.recipe?.slug);
-    const all: ImportCandidate[] = [];
-    const recipes: { date: string; name: string }[] = [];
-    for (const e of entries) {
-      const base = e.recipe!.recipeServings || 0;
-      const scale = e.recipeScale && e.recipeScale > 0 ? e.recipeScale : 1;
-      const r = await this.recipeCandidates(userId, e.recipe!.slug, base ? base * scale : undefined);
-      recipes.push({ date: e.date, name: r.name });
-      all.push(...r.items);
-    }
-    return { recipes, items: mergeCandidates(all) };
   }
 }

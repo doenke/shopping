@@ -24,7 +24,7 @@ Unterbau: Einkauf, Packliste, Merkliste, ToDo.
 | A5 | Abhaken ist nahezu sofort bei allen anderen sichtbar | [04](04-sync-und-offline.md) |
 | A6 | Voll offline-fähig, robust bei schlechtem Netz | [04](04-sync-und-offline.md) |
 | A7 | PWA, gut am Handy **und** am Laptop | [02](02-architektur-und-technologie.md), [12](12-ux-und-oberflaeche.md) |
-| A8 | Mealie-Anbindung: Eingangskorb, Rezepte, Wochenplan (ersetzt einen n8n-Flow) | [06](06-mealie-integration.md) |
+| A8 | Mealie-Anbindung: Eingangskorb (auch für Rezepte und Wochenplan), Katalog (ersetzt einen n8n-Flow) | [06](06-mealie-integration.md) |
 | A9 | Lebensmittel-Katalog: Grundkatalog plus Zutaten aus Mealie | [09](09-lebensmittel-datenbank.md) |
 | A10 | Jeder Nutzer hat eine **Hauptliste** – Standard für Mealie, Home Assistant, MCP und den Start der App | [03](03-datenmodell.md) |
 | A11 | Vorlagen (nicht abhakbar, füllen Listen vor, Abgleich in beide Richtungen) | [03](03-datenmodell.md), [12](12-ux-und-oberflaeche.md) |

@@ -6,7 +6,6 @@ import { ApiError } from '../api/errors.js';
 import type { ApiItem } from '../api/format.js';
 import { actorContext, type ShoppingApi } from '../api/service.js';
 import type { Principal, Scope } from '../auth/principal.js';
-import { MealieError } from '../mealie/client.js';
 
 const listParam = z.string().optional().describe('Liste: Name, ID oder weglassen für die Hauptliste');
 
@@ -68,7 +67,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         // New items remember the assistant ("hinzugefügt über Claude").
         return await actorContext.run({ via: principal.tokenName ?? (principal.via === 'token' ? 'KI-Assistent' : null) }, () => fn(args));
       } catch (err) {
-        if (err instanceof ApiError || err instanceof MealieError) {
+        if (err instanceof ApiError) {
           const candidates = err instanceof ApiError && err.extra.candidates ? `\nKandidaten: ${JSON.stringify(err.extra.candidates)}` : '';
           return { ...text(`${err.message}${candidates}`), isError: true };
         }
@@ -304,64 +303,6 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     ),
   );
 
-  // ---- Mealie --------------------------------------------------------------------
-
-  server.registerTool(
-    'search_mealie_recipes',
-    {
-      title: 'Rezepte in Mealie suchen',
-      description: 'Sucht Rezepte in Mealie. Liefert Slugs für import_mealie_recipe.',
-      inputSchema: { query: z.string() },
-      annotations: { readOnlyHint: true },
-    },
-    guard('mealie', async ({ query }: { query: string }) => {
-      const hits = await api.searchRecipes(userId, query);
-      return text(hits.map((h) => `- ${h.name} (slug: ${h.slug}${h.servings ? `, ${h.servings} Portionen` : ''})`).join('\n') || 'Kein Rezept gefunden.');
-    }),
-  );
-
-  server.registerTool(
-    'import_mealie_recipe',
-    {
-      title: 'Rezept einkaufen',
-      description: 'Setzt die Zutaten eines Mealie-Rezepts auf die Liste. Vorräte (Salz, Öl …) nur mit include_pantry.',
-      inputSchema: {
-        recipe: z.string().describe('Rezept-Slug aus search_mealie_recipes'),
-        servings: z.number().positive().max(100).optional(),
-        list: listParam,
-        include_pantry: z.boolean().default(false),
-      },
-    },
-    guard('mealie', async (a: { recipe: string; servings?: number; list?: string; include_pantry: boolean }) => {
-      const r = await api.importRecipe(userId, a.list, a.recipe, a.servings, a.include_pantry);
-      return text(`${r.recipe}${r.servings ? ` (${r.servings} Portionen)` : ''}:\n${added(r)}`);
-    }),
-  );
-
-  server.registerTool(
-    'import_mealie_mealplan',
-    {
-      title: 'Wochenplan einkaufen',
-      description: 'Setzt die Zutaten aller Rezepte aus dem Mealie-Wochenplan im Zeitraum auf die Liste (gleiche Zutaten zusammengefasst).',
-      inputSchema: {
-        from: z
-          .string()
-          .regex(/^\d{4}-\d{2}-\d{2}$/)
-          .describe('YYYY-MM-DD'),
-        to: z
-          .string()
-          .regex(/^\d{4}-\d{2}-\d{2}$/)
-          .describe('YYYY-MM-DD'),
-        list: listParam,
-        include_pantry: z.boolean().default(false),
-      },
-    },
-    guard('mealie', async (a: { from: string; to: string; list?: string; include_pantry: boolean }) => {
-      const r = await api.importMealplan(userId, a.list, a.from, a.to, a.include_pantry);
-      return text(`Rezepte: ${r.recipes.map((x) => x.name).join(', ') || 'keine'}\n${added(r)}`);
-    }),
-  );
-
   // ---- resources & prompts ----------------------------------------------------------
 
   server.registerResource(
@@ -381,7 +322,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     'wocheneinkauf',
     {
       title: 'Wocheneinkauf planen',
-      description: 'Wochenplan aus Mealie, Basis-Vorlage und Verlauf zu einer Einkaufsliste zusammenführen',
+      description: 'Hauptliste, Basis-Vorlage und Verlauf zu einem Wocheneinkauf zusammenführen',
     },
     () => ({
       messages: [
@@ -389,7 +330,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
           role: 'user',
           content: {
             type: 'text',
-            text: 'Plane unseren Wocheneinkauf: Schau dir mit get_list die Hauptliste an, übernimm mit import_mealie_mealplan den Wochenplan für die kommende Woche (Montag bis Sonntag), prüfe mit list_lists, ob es eine Basis-Vorlage gibt, und schlag mir anhand von get_history vor, was sonst noch fehlen könnte. Frag nach, bevor du etwas anderes als den Wochenplan hinzufügst.',
+            text: 'Plane unseren Wocheneinkauf: Schau dir mit get_list die Hauptliste an, prüfe mit list_lists, ob es eine Basis-Vorlage gibt, und schlag mir anhand von get_history vor, was sonst noch fehlen könnte. Frag nach, bevor du etwas hinzufügst.',
           },
         },
       ],

@@ -38,8 +38,6 @@ Reihenfolge.
 | --- | --- |
 | `shopping.add_items` | Artikel als freien Text hinzufügen („2 l Milch“) |
 | `shopping.apply_template` | Eine Vorlage auf eine Liste übernehmen |
-| `shopping.import_mealie_recipe` | Zutaten eines Mealie-Rezepts auf die Liste |
-| `shopping.import_mealie_mealplan` | Zutaten aller Rezepte eines Zeitraums |
 | `shopping.clear_checked` | „Zuletzt verwendet“ leeren |
 
 Die Liste wird per Name oder ID angegeben, leer heißt Hauptliste.

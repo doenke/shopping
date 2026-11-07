@@ -753,11 +753,6 @@ a {
   border: 1px solid var(--border);
   background: var(--surface);
 }
-.input--date {
-  width: auto;
-  flex: 1;
-  min-width: 130px;
-}
 .row--center {
   align-items: center;
   margin: 10px 0;
@@ -774,41 +769,10 @@ a {
 .sheet__header h2 {
   margin: 0;
 }
-.tabs {
-  display: flex;
-  gap: 4px;
-  margin: 8px 0 12px;
-  padding: 4px;
-  border-radius: 12px;
-  background: var(--surface-2);
-}
-.tab {
-  flex: 1;
-  min-height: 40px;
-  border: none;
-  border-radius: 9px;
-  background: transparent;
-  cursor: pointer;
-}
-.tab--on {
-  background: var(--surface);
-  font-weight: 600;
-  box-shadow: var(--shadow);
-}
-.pick-list,
 .checklist {
   list-style: none;
   margin: 10px 0;
   padding: 0;
-}
-.pick-list button {
-  width: 100%;
-  padding: 12px 8px;
-  border: none;
-  border-bottom: 1px solid var(--border);
-  background: none;
-  text-align: left;
-  cursor: pointer;
 }
 .checklist label {
   display: flex;

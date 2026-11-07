@@ -13,7 +13,7 @@ interface Token {
 const SCOPES: [string, string][] = [
   ['read', 'Lesen'],
   ['write', 'Ändern'],
-  ['mealie', 'Mealie-Import'],
+  ['mealie', 'Mealie-Einstellungen'],
 ];
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {

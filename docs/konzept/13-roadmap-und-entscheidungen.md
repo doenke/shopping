@@ -18,7 +18,7 @@
 | Hauptliste | je Nutzer, immer eine Einkaufsliste; Standard für Home Assistant, MCP, API, Teilen, Start |
 | Kategorien | eingebaut je Listentyp, dazu eigene für Einkauf und Packliste, geteilt im Haushalt |
 | Reihenfolgen | Kategorien, Listen und Abschnitte je Nutzer, auf allen Geräten; keine Ladenprofile |
-| Mealie | **v2**; Mealie-Liste bleibt Eingangskorb (übernehmen + in Mealie abhaken, kein Rückkanal); dazu Rezept- und Wochenplan-Import |
+| Mealie | **v2**; Mealie-Liste bleibt Eingangskorb (übernehmen + in Mealie abhaken, kein Rückkanal); der Rezept- und Wochenplan-Import kam in Phase 2 dazu und wurde im November 2026 wieder entfernt (ein Weg: über die Mealie-Einkaufsliste) |
 | Icons | keine GPU → Cloudflare-Gratiskontingent mit Tageslimit; Claude (SVG, Vorprüfung) und OpenAI optional mit Monatsgrenze; automatische Freigabe |
 | Daten anderer Listen-Apps | werden **nicht** übernommen |
 | Benachrichtigungen | **keine** – kein Push, keine Mails, keine Chat-Meldungen |

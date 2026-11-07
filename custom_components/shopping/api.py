@@ -96,10 +96,6 @@ class ShoppingClient:
             {"template": template, "includeOptional": include_optional},
         )
 
-    async def import_mealie(self, list_ref: str, body: dict[str, Any]) -> dict[str, Any]:
-        """Import a Mealie recipe or meal plan."""
-        return await self._request("POST", f"/api/v1/lists/{list_ref}/import/mealie", body)
-
     async def events(self) -> AsyncIterator[tuple[str, Any]]:
         """Server-sent events: yields (event, data) until the connection ends."""
         try:

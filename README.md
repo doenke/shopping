@@ -33,8 +33,8 @@ wo es hingehört.
   Liste lässt sich jederzeit mit ihrer Vorlage abgleichen – in beide Richtungen.
 - **Für den ganzen Haushalt** – Listen gehören automatisch allen im Haushalt, auf Wunsch sind
   sie privat. Gäste kommen ohne Konto über einen Link dazu.
-- **Mit Mealie** – was in Mealie auf der Einkaufsliste landet, kommt sauber sortiert an;
-  Rezepte und Wochenplan holst du mit passenden Portionen herüber.
+- **Mit Mealie** – was in Mealie auf der Einkaufsliste landet, auch Rezepte und der Wochenplan, kommt
+  sauber sortiert an.
 - **Mit Home Assistant und KI-Assistenten** – „Füge Milch zur Einkaufsliste hinzu“ über Assist,
   Listen in Claude & Co. über den eingebauten MCP-Server.
 - **Eigene Icons** – auf Wunsch zeichnet eine Bild-KI jedem Artikel und jeder Liste ein Icon im

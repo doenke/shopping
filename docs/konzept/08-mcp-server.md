@@ -34,7 +34,6 @@ bearbeiten.
 | `apply_template` | Vorlage in eine Liste übernehmen |
 | `search_catalog` | Lebensmittel nachschlagen |
 | `get_history` | zuletzt gekaufte Artikel |
-| `search_mealie_recipes`, `import_mealie_recipe`, `import_mealie_mealplan` | Mealie |
 
 Ohne Angabe einer Liste arbeiten alle Tools mit der **Hauptliste**. Listen und Artikel dürfen per
 Name statt ID angesprochen werden; Mehrdeutigkeiten kommen als Fehler mit Kandidaten zurück. Die
@@ -43,8 +42,8 @@ Server-Anweisungen erklären die Listentypen (`@…`, `#…`, `!morgen`).
 ## Ressourcen & Prompts
 
 - Ressource `shopping://lists/{id}`: eine Liste als Markdown.
-- Prompt „Wocheneinkauf planen“: Wochenplan aus Mealie, Basis-Vorlage und Verlauf zu einer
-  Einkaufsliste zusammenführen.
+- Prompt „Wocheneinkauf planen“: Hauptliste, Basis-Vorlage und Verlauf zu einem Wocheneinkauf
+  zusammenführen.
 
 ## Sicherheit
 

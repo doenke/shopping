@@ -35,37 +35,6 @@ export interface MealieShoppingList {
   recipeReferences?: { recipeId: string; recipe?: { id?: string | null; name?: string | null } }[];
 }
 
-export interface MealieRecipeSummary {
-  id: string | null;
-  slug: string;
-  name: string | null;
-  recipeServings: number;
-  recipeYieldQuantity?: number;
-}
-
-export interface MealieIngredient {
-  quantity: number | null;
-  unit: MealieUnit | null;
-  food: MealieFood | null;
-  note: string | null;
-  display: string;
-  title?: string | null;
-  originalText?: string | null;
-}
-
-export interface MealieRecipe extends MealieRecipeSummary {
-  recipeIngredient: MealieIngredient[];
-}
-
-export interface MealiePlanEntry {
-  date: string;
-  entryType: string;
-  title: string;
-  recipeId: string | null;
-  recipeScale?: number;
-  recipe: MealieRecipeSummary | null;
-}
-
 interface Page<T> {
   items: T[];
   total_pages?: number;
@@ -153,18 +122,5 @@ export class MealieClient {
   /** Bulk update (used to tick items off after taking them over). */
   updateShoppingItems(items: MealieShoppingItem[]): Promise<unknown> {
     return this.request('PUT', '/api/households/shopping/items', items);
-  }
-
-  async searchRecipes(search: string): Promise<MealieRecipeSummary[]> {
-    const q = new URLSearchParams({ search, perPage: '20', page: '1', orderBy: 'name', orderDirection: 'asc' });
-    return (await this.get<Page<MealieRecipeSummary>>(`/api/recipes?${q}`)).items;
-  }
-
-  recipe(slug: string): Promise<MealieRecipe> {
-    return this.get(`/api/recipes/${encodeURIComponent(slug)}`);
-  }
-
-  mealplan(from: string, to: string): Promise<MealiePlanEntry[]> {
-    return this.all(`/api/households/mealplans?start_date=${from}&end_date=${to}&orderBy=date&orderDirection=asc`);
   }
 }

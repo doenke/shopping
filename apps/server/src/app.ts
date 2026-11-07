@@ -233,7 +233,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   });
 
   const mealie = new MealieService(db, secrets, sync, hub, app.log, fetchImpl);
-  const api = new ShoppingApi(db, sync, hub, mealie);
+  const api = new ShoppingApi(db, sync, hub);
   await app.register(apiRoutes, { config, db, api, sync, hub, requireUser });
   const webhooks = new WebhookService(db, secrets, hub, app.log, fetchImpl);
   await app.register(webhookRoutes, { webhooks, requireAccount });

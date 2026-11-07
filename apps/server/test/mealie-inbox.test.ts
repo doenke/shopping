@@ -168,34 +168,6 @@ describe('mealie inbox', () => {
   });
 });
 
-describe('recipes and meal plan', () => {
-  it('searches recipes', async () => {
-    const res = await t.app.inject({ method: 'GET', url: '/api/v1/integrations/mealie/recipes?q=chi', headers: { cookie } });
-    expect(res.json()).toEqual([{ slug: 'chili', name: 'Chili con Carne', servings: 4 }]);
-  });
-
-  it('scales ingredients, marks pantry items and parses unstructured lines', async () => {
-    const res = await t.app.inject({ method: 'GET', url: '/api/v1/integrations/mealie/recipes/chili?servings=2', headers: { cookie } });
-    const r = res.json();
-    expect(r.name).toBe('Chili con Carne');
-    const byName = Object.fromEntries(r.items.map((i: { name: string }) => [i.name, i]));
-    expect(byName.Hackfleisch).toMatchObject({ amounts: [{ q: 250, u: 'g' }], note: null, sources: ['Chili con Carne'] });
-    expect(byName.Salz).toMatchObject({ pantry: true });
-    // Half a can is still one can to buy.
-    expect(byName.Kidneybohnen).toMatchObject({ amounts: [{ q: 1, u: 'dose' }] });
-    expect(byName.Zwiebeln).toMatchObject({ amounts: [{ q: 1, u: null }] });
-  });
-
-  it('combines the meal plan and skips entries without recipe', async () => {
-    const res = await t.app.inject({ method: 'GET', url: '/api/v1/integrations/mealie/mealplan?from=2026-10-26&to=2026-11-01', headers: { cookie } });
-    const r = res.json();
-    expect(r.recipes.map((x: { name: string }) => x.name)).toEqual(['Chili con Carne', 'Salat']);
-    const zw = r.items.find((i: { name: string }) => i.name === 'Zwiebeln');
-    // 2 (Chili) + 1 × scale 2 (Salat)
-    expect(zw).toMatchObject({ amounts: [{ q: 4, u: null }], sources: ['Chili con Carne', 'Salat'] });
-  });
-});
-
 async function waitFor(cond: () => Promise<boolean>, timeout = 3000): Promise<void> {
   const start = Date.now();
   while (!(await cond())) {

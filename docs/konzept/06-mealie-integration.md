@@ -33,14 +33,9 @@ Einkaufsliste wandern.
 
 ## Rezept und Wochenplan
 
-- *⋮ → Aus Mealie hinzufügen …* → Rezept suchen → Portionen anpassen → Zutaten-Checkliste
-  („Salz hab ich“) → übernehmen.
-- Zutaten kommen strukturiert; Rezepte ohne geparste Zutaten laufen durch den eigenen Parser.
-- Vorratsartikel (Salz, Pfeffer, Öl … – im Katalog als `pantry` markiert) sind vorab abgewählt.
-- Beim Skalieren werden Stück und Packungen aufgerundet (¾ Dose → 1 Dose).
-- Wochenplan: Zeitraum wählen → alle Rezepte des Mealie-Mealplans, Zutaten über alle Rezepte
-  zusammengeführt.
-- Dasselbe geht über REST, MCP und Home Assistant (`import_mealie_recipe`, `import_mealie_mealplan`).
+Kein eigener Import (früher *⋮ → Aus Mealie hinzufügen …*, über REST, MCP und HA; im November 2026
+entfernt): Rezepte und Wochenplan kommen nur über die Mealie-Einkaufsliste und den Eingangskorb. Portionen
+und Auswahl der Zutaten macht Mealie selbst – ein Weg statt zwei.
 
 ## Kein Rückkanal
 
