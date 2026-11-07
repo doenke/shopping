@@ -82,7 +82,7 @@
   (montags) oder monatlich (am 1.), einstellbar beim Anlegen oder unter *⋮ → Bearbeiten …*. Der Server setzt
   um Mitternacht (deutsche Zeit) zurück, was vor Beginn des Zeitraums abgehakt wurde.
 - **Reihenfolge der Listen und Abschnitte** in der Seitenleiste (z. B. Merklisten ganz nach unten):
-  *↕ Listen sortieren*, je Benutzer. Sortiert wird per Ziehen am Griff ⠿, mit der Tastatur über die
+  *Einstellungen → Reihenfolge*, je Benutzer. Sortiert wird per Ziehen am Griff ⠿, mit der Tastatur über die
   Pfeiltasten.
 - **⋮ → Bearbeiten …**: Name, Beschreibung, Kategorie (ToDo-Listen) und Icon an einem Ort.
 - **⋮ → Berechtigungen …**: sichtbar für den Haushalt oder nur für dich, **mit anderen Haushalten oder einzelnen

@@ -215,18 +215,6 @@ function Shell({ me }: { me: Me }) {
         </details>
       )}
       <span className="spacer" />
-      {lists.length > 1 && (
-        <button
-          type="button"
-          className="link sidebar__sort"
-          onClick={() => {
-            setDrawer(false);
-            setSorting('lists');
-          }}
-        >
-          ↕ Listen sortieren
-        </button>
-      )}
       <a href="#/settings" className={route.page === 'settings' || route.page === 'icons' ? 'active' : ''} onClick={() => setDrawer(false)}>
         ⚙ Einstellungen
       </a>

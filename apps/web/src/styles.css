@@ -1372,11 +1372,6 @@ img.avatar {
   flex-wrap: wrap;
   gap: 8px;
 }
-.sidebar__sort {
-  align-self: flex-start;
-  margin: 0 12px 4px;
-  font-size: 0.9rem;
-}
 .sidebar__subsection {
   margin: 8px 12px 2px;
   font-size: 0.78rem;

@@ -61,7 +61,6 @@ Laptop-Ansicht.
 │ TODO         │                                  │                      │
 │  Arbeit      │                                  │                      │
 │ ✅ Projekt X  │                                  │                      │
-│ ↕ Listen sortieren                              │                      │
 │ ⚙ Einstellungen                                 │                      │
 └──────────────┴──────────────────────────────────┴──────────────────────┘
 ```
