@@ -5,7 +5,7 @@ import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import websocket from '@fastify/websocket';
 import { ALL_CATEGORIES, CATEGORIES } from '@shopping/shared';
-import { eq, gt, sql } from 'drizzle-orm';
+import { and, eq, gt, sql } from 'drizzle-orm';
 import Fastify, { type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { AvatarService } from './auth/avatar.js';
@@ -129,6 +129,18 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
       const [u] = await db.select().from(users).where(eq(users.id, request.userId));
       const h = await sync.householdInfo(u?.householdId ?? null);
       return toMe(u!, h.name, h.owner);
+    });
+
+    /** For the help page: who the admins are (guests ask them for an account) and, for admins, the household setup. */
+    api.get('/api/v1/help', async (request) => {
+      const admins = await db.select({ displayName: users.displayName }).from(users).where(and(eq(users.isAdmin, true), eq(users.isGuest, false))).orderBy(users.displayName);
+      const [me] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, request.userId));
+      return {
+        admins: admins.map((a) => a.displayName),
+        ...(me?.isAdmin
+          ? { setup: { ownerGroup: config.OIDC_OWNER_GROUP ?? null, adminGroup: config.OIDC_ADMIN_GROUP, householdClaim: config.OIDC_HOUSEHOLD_CLAIM } }
+          : {}),
+      };
     });
 
     /** Anyone in a household may rename it; all members get the new name. */

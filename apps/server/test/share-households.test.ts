@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { sql } from 'drizzle-orm';
 import { createTestApp } from './helpers.js';
 
 type User = { cookie: string; id: string };
@@ -97,5 +98,15 @@ describe('sharing badge', () => {
     expect(await sharing()).toBe('link');
     await as(soenke, 'DELETE', `/api/v1/lists/${id}/members/${paul.id}`);
     expect(await sharing()).toBeNull();
+  });
+});
+
+describe('help', () => {
+  it('names the admins for everyone and shows the setup only to admins', async () => {
+    await t.db.execute(sql`UPDATE users SET is_admin = true WHERE id = ${ina.id}`);
+    const forTom = (await as(tom, 'GET', '/api/v1/help')).json();
+    expect(forTom).toEqual({ admins: ['Ina Jacobs'] });
+    const forIna = (await as(ina, 'GET', '/api/v1/help')).json();
+    expect(forIna.setup).toEqual({ ownerGroup: 'familie', adminGroup: 'admins', householdClaim: 'household' });
   });
 });

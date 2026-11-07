@@ -1976,3 +1976,45 @@ img.avatar {
   font-weight: 600;
   vertical-align: 1px;
 }
+
+/* Help page */
+.help {
+  max-width: 680px;
+  line-height: 1.5;
+}
+.help h2 {
+  margin: 20px 0 6px;
+}
+.help h3 {
+  margin: 18px 0 4px;
+}
+.help ul,
+.help ol {
+  padding-left: 20px;
+}
+.help li {
+  margin: 4px 0;
+}
+.help code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-size: 0.9em;
+}
+.help__examples {
+  list-style: none;
+  padding-left: 0 !important;
+}
+.help__rules li {
+  margin-bottom: 10px;
+}
+.help__callout {
+  margin-top: 20px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+}
+.help__callout p {
+  margin: 4px 0 0;
+}

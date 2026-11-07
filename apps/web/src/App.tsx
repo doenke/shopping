@@ -5,6 +5,7 @@ import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { ImportDialog } from './components/ImportDialog';
 import { startShopping, stopShopping, useShopping, useWakeLock } from './shopMode';
+import { Help } from './components/Help';
 import { ListIcon } from './components/ListIcon';
 import { ListEditDialog } from './components/ListEditDialog';
 import { InstallButton } from './components/InstallButton';
@@ -224,6 +225,9 @@ function Shell({ me }: { me: Me }) {
         </details>
       )}
       <span className="spacer" />
+      <a href="#/help" className={route.page === 'help' ? 'active' : ''} onClick={() => setDrawer(false)}>
+        ❓ Hilfe
+      </a>
       <a href="#/settings" className={route.page === 'settings' || route.page === 'icons' ? 'active' : ''} onClick={() => setDrawer(false)}>
         ⚙ Einstellungen
       </a>
@@ -258,7 +262,7 @@ function Shell({ me }: { me: Me }) {
           )}
           <h1 className="topbar__title">
             {route.page === 'list' && list && <ListIcon list={list} size="md" />}
-            {route.page === 'settings' ? (route.section ? SECTION_TITLE[route.section] : 'Einstellungen') : route.page === 'icons' ? 'Icons' : (list?.name ?? 'Shopping')}
+            {route.page === 'settings' ? (route.section ? SECTION_TITLE[route.section] : 'Einstellungen') : route.page === 'icons' ? 'Icons' : route.page === 'help' ? 'Hilfe' : (list?.name ?? 'Shopping')}
           </h1>
           {shopList &&
             (shopping ? (
@@ -300,7 +304,9 @@ function Shell({ me }: { me: Me }) {
         </header>
 
         <main className="content">
-          {route.page === 'settings' ? (
+          {route.page === 'help' ? (
+            <Help me={me} />
+          ) : route.page === 'settings' ? (
             <Settings key={route.section ?? 'overview'} me={me} section={route.section} onSort={setSorting} />
           ) : route.page === 'icons' && !guest ? (
             <>

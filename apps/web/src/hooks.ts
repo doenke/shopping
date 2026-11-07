@@ -101,7 +101,7 @@ export function useRemoteChecks(ttl = 2500): Map<string, RemoteCheck> {
 export const SETTINGS_SECTIONS = ['order', 'categories', 'mealie', 'api', 'webhooks'] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
-export type Route = { page: 'list'; listId?: string } | { page: 'settings'; section?: SettingsSection } | { page: 'icons' };
+export type Route = { page: 'list'; listId?: string } | { page: 'settings'; section?: SettingsSection } | { page: 'icons' } | { page: 'help' };
 
 function parseRoute(): Route {
   const hash = location.hash.replace(/^#\/?/, '');
@@ -109,6 +109,7 @@ function parseRoute(): Route {
   const section = /^settings\/(\w+)$/.exec(hash)?.[1] as SettingsSection | undefined;
   if (section && SETTINGS_SECTIONS.includes(section)) return { page: 'settings', section };
   if (hash === 'icons') return { page: 'icons' };
+  if (hash === 'help') return { page: 'help' };
   const m = /^list\/([0-9a-f-]{36})$/.exec(hash);
   return { page: 'list', listId: m?.[1] };
 }
