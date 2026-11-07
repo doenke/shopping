@@ -9,6 +9,10 @@ updates:
       day: monday
       timezone: Europe/Berlin
     open-pull-requests-limit: 5
+    ignore:
+      # Types follow the Node version the app runs on (22), not the newest Node.
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
     groups:
       # Everything that should not break anything in one PR; major versions come one by one.
       minor-and-patch:

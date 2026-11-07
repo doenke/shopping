@@ -112,7 +112,7 @@ jobs:
       - run: pnpm --filter @shopping/server build
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.14'
       - run: pip install -r ha-tests/requirements.txt
       - run: python -m pytest -q
         working-directory: ha-tests
