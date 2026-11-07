@@ -76,6 +76,8 @@ export interface Me extends UserInfo {
   defaultListId: string | null;
   /** Name of the user's household (null for guests). */
   household: string | null;
+  /** The household is the owner household (members of OIDC_OWNER_GROUP). */
+  householdIsOwner?: boolean;
   /** Own order of the categories (ids, all list types together); empty = the built-in order. */
   categoryOrder: string[];
   /** Own order of the lists in the sidebar (ids); lists not in it follow in their usual order. */

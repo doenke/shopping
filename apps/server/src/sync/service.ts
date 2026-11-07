@@ -67,7 +67,11 @@ export class SyncService {
   readonly mutex = new Mutex();
   readonly clock = new Hlc('server');
 
-  constructor(private readonly db: Db) {}
+  constructor(
+    private readonly db: Db,
+    /** With an owner group, the shared household ('') is the owner household. */
+    private readonly ownerGroup = false,
+  ) {}
 
   /** Runs any other write that must be ordered with sync writes (e.g. catalog import). */
   exclusive<T>(fn: () => Promise<T>): Promise<T> {
@@ -745,10 +749,23 @@ export class SyncService {
     });
   }
 
-  private async householdName(id: string | null): Promise<string | null> {
-    if (!id) return null;
-    const [h] = await this.db.select({ name: households.name }).from(households).where(eq(households.id, id));
-    return h?.name ?? null;
+  /** Name of a household and whether it is the owner household. */
+  async householdInfo(id: string | null): Promise<{ name: string | null; owner: boolean }> {
+    if (!id) return { name: null, owner: false };
+    const [h] = await this.db.select({ name: households.name, key: households.key }).from(households).where(eq(households.id, id));
+    return { name: h?.name ?? null, owner: this.ownerGroup && h?.key === '' };
+  }
+
+  private async meOf(me: typeof users.$inferSelect) {
+    const h = await this.householdInfo(me.householdId);
+    return toMe(me, h.name, h.owner);
+  }
+
+  /** The owner household's id (only with an owner group). */
+  async ownerHouseholdId(): Promise<string | null> {
+    if (!this.ownerGroup) return null;
+    const [h] = await this.db.select({ id: households.id }).from(households).where(eq(households.key, ''));
+    return h?.id ?? null;
   }
 
   async pullUnlocked(userId: string, since: number): Promise<ChangeSet> {
@@ -815,7 +832,7 @@ export class SyncService {
       users: userRows.map(toUserInfo),
       categories: categoryRows.map(toCategoryRow),
       ...(categoriesFull ? { categoriesFull: true } : {}),
-      me: me && (since === 0 || me.seq > since) ? toMe(me, await this.householdName(me.householdId)) : undefined,
+      me: me && (since === 0 || me.seq > since) ? await this.meOf(me) : undefined,
       seq,
     };
   }

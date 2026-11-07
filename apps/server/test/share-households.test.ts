@@ -23,7 +23,8 @@ afterAll(async () => t?.close());
 
 describe('households overview', () => {
   it('lists every household with its people, the own one first', async () => {
-    const all = (await as(paul, 'GET', '/api/v1/households')).json() as { name: string; own: boolean; members: { displayName: string }[] }[];
+    const all = (await as(paul, 'GET', '/api/v1/households')).json() as { name: string; own: boolean; owner: boolean; members: { displayName: string }[] }[];
+    expect(all.filter((h) => h.owner).map((h) => h.name)).toEqual(['Jacobs']);
     expect(all.map((h) => [h.name, h.own, h.members.map((m) => m.displayName)])).toEqual([
       ['Meier', true, ['Paul Meier']],
       ['Jacobs', false, ['Ina Jacobs', 'Sönke Jacobs']],

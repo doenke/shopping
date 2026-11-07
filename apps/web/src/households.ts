@@ -11,6 +11,8 @@ export interface Household {
   name: string;
   /** The user's own household (comes first). */
   own: boolean;
+  /** The owner household (members of the owner group). */
+  owner: boolean;
   members: HouseholdPerson[];
 }
 

@@ -1958,3 +1958,16 @@ img.avatar {
 .share-picker__household li {
   gap: 8px;
 }
+
+/* Marks the owner household */
+.owner-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: 1px;
+}

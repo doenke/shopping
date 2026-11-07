@@ -15,7 +15,7 @@ import { resolvePrincipal, requiredScope, type Principal } from './auth/principa
 import type { Config } from './config.js';
 import { SecretBox } from './crypto.js';
 import type { Db } from './db/index.js';
-import { catalogItems, households, users } from './db/schema.js';
+import { catalogItems, users } from './db/schema.js';
 import { currentSeq } from './db/seed.js';
 import { ApiError, problemHandler } from './api/errors.js';
 import { apiRoutes } from './api/routes.js';
@@ -57,7 +57,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   });
   const secure = config.PUBLIC_URL.startsWith('https://');
   const secrets = new SecretBox(config.SECRET_KEY);
-  const sync = new SyncService(db);
+  const sync = new SyncService(db, !!config.OIDC_OWNER_GROUP);
   const hub = new SyncHub(sync, app.log);
   app.addHook('onClose', async () => hub.close());
   const icons = new IconService(db, secrets, sync, hub, app.log, fetchImpl);
@@ -127,8 +127,8 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
 
     api.get('/api/v1/me', async (request) => {
       const [u] = await db.select().from(users).where(eq(users.id, request.userId));
-      const [h] = u?.householdId ? await db.select({ name: households.name }).from(households).where(eq(households.id, u.householdId)) : [];
-      return toMe(u!, h?.name ?? null);
+      const h = await sync.householdInfo(u?.householdId ?? null);
+      return toMe(u!, h.name, h.owner);
     });
 
     /** Anyone in a household may rename it; all members get the new name. */

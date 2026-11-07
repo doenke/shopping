@@ -110,11 +110,13 @@ export async function sharingRoutes(app: FastifyInstance, opts: Options): Promis
       .where(eq(users.isGuest, false))
       .orderBy(asc(users.displayName));
     const all = await db.select({ id: households.id, name: households.name }).from(households).orderBy(asc(households.name));
+    const ownerId = await sync.ownerHouseholdId();
     return all
       .map((h) => ({
         id: h.id,
         name: h.name,
         own: h.id === me?.householdId,
+        owner: h.id === ownerId,
         members: rows.filter((u) => u.householdId === h.id).map((u) => ({ id: u.id, displayName: u.displayName, avatarUrl: avatarPath(u.id, u.avatarVersion) })),
       }))
       .filter((h) => h.members.length > 0)

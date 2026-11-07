@@ -139,7 +139,10 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
                 {candidates.map((h) => (
                   <div key={h.id} className="share-picker__household">
                     <div className="row row--center">
-                      <strong className="spacer">🏠 {h.name}</strong>
+                      <strong className="spacer">
+                        🏠 {h.name}
+                        {h.owner && <span className="owner-badge">👑 Owner</span>}
+                      </strong>
                       {!h.own && (
                         <button type="button" className="btn" onClick={() => void act(`/api/v1/lists/${list.id}/households`, 'POST', { householdId: h.id })}>
                           Ganzen Haushalt

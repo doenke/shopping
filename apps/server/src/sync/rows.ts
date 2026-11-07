@@ -62,8 +62,8 @@ export function toUserInfo(r: UserRecord): UserInfo {
   return { id: r.id, displayName: r.displayName, avatarUrl: avatarPath(r.id, r.avatarVersion), isGuest: r.isGuest };
 }
 
-export function toMe(r: UserRecord, household: string | null = null): Me {
-  return { ...toUserInfo(r), email: r.email, isAdmin: r.isAdmin, defaultListId: r.defaultListId, household, categoryOrder: r.categoryOrder, listOrder: r.listOrder, sectionOrder: r.sectionOrder };
+export function toMe(r: UserRecord, household: string | null = null, householdIsOwner = false): Me {
+  return { ...toUserInfo(r), email: r.email, isAdmin: r.isAdmin, defaultListId: r.defaultListId, household, householdIsOwner, categoryOrder: r.categoryOrder, listOrder: r.listOrder, sectionOrder: r.sectionOrder };
 }
 
 export function toCatalogItem(r: CatalogRecord): CatalogItem {

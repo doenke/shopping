@@ -23,6 +23,8 @@ describe('households', () => {
   it('know their name: the claim, or the last name of the first member', async () => {
     expect((await as(anna, 'GET', '/api/v1/me')).json().household).toBe('Anna');
     expect((await as(carla, 'GET', '/api/v1/me')).json().household).toBe('Müller');
+    // Without an owner group there is no owner household.
+    expect((await as(anna, 'GET', '/api/v1/me')).json().householdIsOwner).toBe(false);
   });
 
   it('share new lists with the whole household, and only with it', async () => {
@@ -98,6 +100,8 @@ describe('owner group', () => {
     expect((await me(ina)).household).toBe('Jacobs');
     expect((await me(gast)).household).toBe('Meier');
     expect((await me(tom)).household).toBe('Schulz');
+    expect((await me(soenke)).householdIsOwner).toBe(true);
+    expect((await me(tom)).householdIsOwner).toBe(false);
 
     await o.app.inject({ method: 'POST', url: '/api/v1/lists', headers: { cookie: soenke.cookie }, payload: { name: 'Wocheneinkauf' } });
     await o.app.inject({ method: 'POST', url: '/api/v1/lists', headers: { cookie: gast.cookie }, payload: { name: 'Pauls Liste' } });

@@ -329,7 +329,14 @@ export function Settings({ me, section, onSort }: { me: Me; section?: SettingsSe
           {me.household && (
             <>
               <br />
-              <small className="muted">Haushalt: {me.household}</small>
+              <small className="muted">
+                Haushalt: {me.household}
+                {me.householdIsOwner && (
+                  <span className="owner-badge" title="Haushalt der Owner-Gruppe">
+                    👑 Owner
+                  </span>
+                )}
+              </small>
             </>
           )}
         </p>
