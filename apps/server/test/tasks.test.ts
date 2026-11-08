@@ -49,9 +49,20 @@ const items = async () =>
 
 describe('CalDAV', () => {
   it('is found from the server address and asks for a token', async () => {
-    const wk = await t.app.inject({ method: 'PROPFIND', url: '/.well-known/caldav' });
-    expect(wk.statusCode).toBe(301);
-    expect(wk.headers.location).toBe('/dav/');
+    // Exactly what DAVx⁵ sends first: the bare address and /.well-known/caldav, with an XML body.
+    const davx5 =
+      '<?xml version=\'1.0\' encoding=\'UTF-8\' ?><propfind xmlns="DAV:" xmlns:CAL="urn:ietf:params:xml:ns:caldav" xmlns:CARD="urn:ietf:params:xml:ns:carddav"><prop><current-user-principal /></prop></propfind>';
+    for (const url of ['/', '/.well-known/caldav']) {
+      const res = await t.app.inject({
+        method: 'PROPFIND',
+        url,
+        headers: { authorization: basic(token), 'content-type': 'application/xml; charset=UTF-8', depth: '0' },
+        payload: davx5,
+      });
+      expect(res.statusCode).toBe(207);
+      expect(res.body).toContain('<d:current-user-principal><d:href>/dav/principal/</d:href>');
+    }
+    expect((await t.app.inject({ method: 'GET', url: '/.well-known/caldav', headers: { authorization: basic(token) } })).headers.location).toBe('/dav/');
     const anon = await t.app.inject({ method: 'PROPFIND', url: '/dav/' });
     expect(anon.statusCode).toBe(401);
     expect(anon.headers['www-authenticate']).toContain('Basic');

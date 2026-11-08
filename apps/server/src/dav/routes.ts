@@ -61,9 +61,6 @@ export async function davRoutes(app: FastifyInstance, opts: { config: Config; db
   }
 
   // Calendar apps look here first.
-  app.route({ method: [...METHODS], url: '/.well-known/caldav', handler: (_req, reply) => reply.redirect(`${BASE}/`, 301) });
-  // Some apps ask the bare server address first.
-  app.route({ method: ['PROPFIND', 'REPORT'], url: '/', handler: (_req, reply) => reply.redirect(`${BASE}/`, 301) });
 
   await app.register(async (dav) => {
     // XML and iCalendar bodies arrive as text.
@@ -94,11 +91,21 @@ export async function davRoutes(app: FastifyInstance, opts: { config: Config; db
       const principal = await auth(request, reply);
       if (!principal) return reply;
       const path = decodeURIComponent(request.url.split('?')[0]!);
-      const parts = path.slice(BASE.length).split('/').filter(Boolean);
+      // The bare server address and /.well-known/caldav answer like /dav/ (apps start there).
+      const parts = path === BASE || path.startsWith(`${BASE}/`) ? path.slice(BASE.length).split('/').filter(Boolean) : [];
       const body = typeof request.body === 'string' ? request.body : '';
       return actorContext.run({ via: principal.tokenName ?? 'Kalender-App' }, () => dispatch(request, reply, principal.userId, parts, body));
     };
     dav.route({ method: [...METHODS], url: BASE, handler });
+    // Calendar apps look here first: PROPFIND is answered right here (no need to follow a redirect),
+    // anything else is sent on to /dav/.
+    dav.route({
+      method: [...METHODS],
+      url: '/.well-known/caldav',
+      handler: (request, reply) => (['PROPFIND', 'OPTIONS'].includes(request.method) ? handler(request, reply) : reply.redirect(`${BASE}/`, 301)),
+    });
+    // Some apps ask the bare server address first (GET stays the app itself).
+    dav.route({ method: ['PROPFIND'], url: '/', handler });
     dav.route({ method: [...METHODS], url: `${BASE}/*`, handler });
   });
 
