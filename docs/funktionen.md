@@ -89,6 +89,15 @@
   gezogen, bekommt er den Link (hat er schon einen, fragt die App vor dem Ersetzen); auf freie Fläche
   gezogen, entsteht ein neuer Eintrag – benannt nach dem Linktext bzw. dem Titel der Seite. In die
   Eingabezeile gezogen landet der Link wie gewohnt als Text.
+- **Arbeitsmodus** 💼 (Desktop, *Arbeitsmodus* unten in der Seitenleiste oder Strg+Shift+A): nur ToDo-Listen –
+  standardmäßig die der Kategorie „Arbeit“, umstellbar auf alle – in einem sachlichen Design (Grau mit
+  gedecktem Blau, Segoe UI, hell/dunkel nach System): links die Listen, in der Mitte die Aufgaben als Tabelle
+  (Fällig, Wer, Bereich, Link), rechts die Details zum direkten Bearbeiten. Pro Gerät gemerkt; auf dem Handy
+  bleibt die normale Ansicht. Die installierte App bietet per Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“
+  und „Einkaufslisten“ als Sprungziele.
+- **Tastatur** (in jedem Modus): N neuer Eintrag, Pfeiltasten zwischen Einträgen (auch im Kachelraster),
+  Leertaste abhaken, Enter öffnen, Entf löschen mit „Rückgängig“, Strg+K Listen und Einträge suchen,
+  Strg+Shift+A Arbeitsmodus, ? zeigt alle Kürzel.
 - **In Erinnerungen & Co.** (CalDAV, JMAP): alle Listen als Aufgabenlisten in Apple Erinnerungen,
   Thunderbird oder DAVx⁵ + Tasks.org – Abhaken, Ändern und Neues in beide Richtungen. Einrichtung:
   [api-und-ki.md](api-und-ki.md#aufgaben-apps-caldav-und-jmap).

@@ -145,6 +145,17 @@ function UserHelp({ me }: { me: Me }) {
         <li>🔗 per Link – auch für Leute ohne Konto (als Gast)</li>
       </ul>
       <p className="muted">Alles unter ⋮ → Berechtigungen. Den Namen deines Haushalts kann jeder darin ändern: Einstellungen → Haushalt.</p>
+
+      <h3>Am Rechner</h3>
+      <p>
+        <kbd>N</kbd> neuer Eintrag, <kbd>↑</kbd>
+        <kbd>↓</kbd> wechseln, <kbd>Leertaste</kbd> abhaken, <kbd>Entf</kbd> löschen (mit Rückgängig), <kbd>Strg</kbd>+<kbd>K</kbd> suchen, <kbd>?</kbd> alle
+        Kürzel.
+      </p>
+      <p>
+        <strong>💼 Arbeitsmodus</strong> (unten in der Seitenleiste oder <kbd>Strg</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd>): nur die ToDo-Listen der Kategorie
+        „Arbeit“, sachlich und kompakt – Listen, Aufgaben als Tabelle, Details rechts. Kein Einkaufszettel weit und breit.
+      </p>
     </>
   );
 }

@@ -26,6 +26,12 @@ import { navigate, useCatalog, useCategoryRows, useIcons, useItems, useLists, us
 import { sync } from './sync/engine';
 
 import { ListMenu } from './components/ListMenu';
+import { CommandPalette } from './components/CommandPalette';
+import { ShortcutHelp } from './components/ShortcutHelp';
+import { Toast } from './components/Toast';
+import { WorkShell } from './components/work/WorkShell';
+import { useShortcuts } from './keyboard';
+import { applyModeFromUrl, isWorkList, isWorkMode, setWorkMode, useWorkModeSetting, useWorkScope } from './workMode';
 import { ListBadges, OpenCount } from './components/ListBadges';
 
 export function App() {
@@ -56,6 +62,7 @@ export function App() {
 }
 
 function Shell({ me }: { me: Me }) {
+  useState(applyModeFromUrl);
   const route = useRoute();
   const lists = useLists();
   const catalog = useCatalog();
@@ -153,16 +160,22 @@ function Shell({ me }: { me: Me }) {
     }
   }, []);
 
+  // Arbeitsmodus (desktop only) and the keyboard, in every mode.
+  const work = useWorkModeSetting() && wide;
+  const scope = useWorkScope();
+  const [palette, setPalette] = useState(false);
+  const [shortcutHelp, setShortcutHelp] = useState(false);
+  const [workEdit, setWorkEdit] = useState<ListRow | null>(null);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        addRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+    document.documentElement.classList.toggle('work', work);
+  }, [work]);
+  useShortcuts({
+    onSearch: () => setPalette(true),
+    onHelp: () => setShortcutHelp(true),
+    onToggleWork: () => {
+      if (wide) setWorkMode(!isWorkMode());
+    },
+  });
 
   const newList = () => {
     setNewDialog(true);
@@ -223,6 +236,11 @@ function Shell({ me }: { me: Me }) {
         </details>
       )}
       <span className="spacer" />
+      {wide && !guest && (
+        <button type="button" className="sidebar__work" onClick={() => setWorkMode(true)} title="Nur ToDo-Listen, sachliches Design – Strg+Shift+A">
+          💼 Arbeitsmodus
+        </button>
+      )}
       <a href="#/help" className={route.page === 'help' ? 'active' : ''} onClick={() => setDrawer(false)}>
         ❓ Hilfe
       </a>
@@ -231,6 +249,54 @@ function Shell({ me }: { me: Me }) {
       </a>
     </nav>
   );
+
+  const todoGroups = [...new Set(todoLists.map(listGroup).filter((g): g is string => !!g))];
+  const overlays = (
+    <>
+      {palette && <CommandPalette lists={work ? ordered.filter((l) => isWorkList(l, scope)) : ordered} onClose={() => setPalette(false)} />}
+      {shortcutHelp && <ShortcutHelp onClose={() => setShortcutHelp(false)} />}
+      <Toast />
+    </>
+  );
+
+  if (work) {
+    return (
+      <IconContext.Provider value={icons}>
+        <CategoryContext.Provider value={customCategories}>
+          <WorkShell
+            me={me}
+            route={route}
+            lists={ordered}
+            users={users}
+            index={catalog.emptyIndex}
+            onNewList={() => setNewDialog(true)}
+            onSearch={() => setPalette(true)}
+            onShortcuts={() => setShortcutHelp(true)}
+            onEditList={setWorkEdit}
+          />
+          {newDialog && (
+            <NewListDialog
+              templates={templates}
+              groups={todoGroups}
+              initialType="todo"
+              initialGroup={scope === 'arbeit' ? 'Arbeit' : ''}
+              onClose={() => setNewDialog(false)}
+            />
+          )}
+          {workEdit && (
+            <ListEditDialog
+              list={lists.find((l) => l.id === workEdit.id) ?? workEdit}
+              me={me}
+              groups={todoGroups}
+              onClose={() => setWorkEdit(null)}
+              onSortCategories={() => setWorkEdit(null)}
+            />
+          )}
+          {overlays}
+        </CategoryContext.Provider>
+      </IconContext.Provider>
+    );
+  }
 
   return (
     <IconContext.Provider value={icons}>
@@ -435,6 +501,7 @@ function Shell({ me }: { me: Me }) {
           {extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' && (
             <CatalogPanel key={list.listType} listId={list.id} listType={list.listType} catalog={catalog.items} items={items ?? []} />
           )}
+          {overlays}
         </div>
       </CategoryContext.Provider>
     </IconContext.Provider>

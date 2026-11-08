@@ -3,6 +3,7 @@ import { getCategory, itemSpecification, type ItemRow } from '@shopping/shared';
 import { useRef, useState } from 'react';
 import { iconUrl, useIconIndex } from '../icons';
 import { Avatar } from './Avatar';
+import { entryKeys } from '../keyboard';
 
 interface ItemIconProps {
   name: string;
@@ -55,12 +56,14 @@ interface TileProps {
   url?: string | null;
   onTap: () => void;
   onLongPress?: () => void;
+  /** Keyboard: Space ticks off (Enter opens via onLongPress). */
+  onToggle?: () => void;
 }
 
 const isOffer = (p: string) => p.trim().toLowerCase() === 'angebot';
 
 /** Tile: tap to check (or add), long press / right click for details. */
-export function Tile({ item, variant = 'open', badge, badgeUser, fading = false, extra, people, url, onTap, onLongPress }: TileProps) {
+export function Tile({ item, variant = 'open', badge, badgeUser, fading = false, extra, people, url, onTap, onLongPress, onToggle }: TileProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressed = useRef(false);
   // "Angebot" is not written out but shown as a % badge.
@@ -87,6 +90,7 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
       type="button"
       className={`tile tile--${variant}${fading ? ' tile--remote' : ''}`}
       data-item-id={item.id}
+      {...entryKeys(onToggle, onLongPress)}
       style={{ '--cat': cat.color } as React.CSSProperties}
       onPointerDown={start}
       onPointerUp={cancel}

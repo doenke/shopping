@@ -95,6 +95,15 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
     return (c: CatalogItem) => (used.get(c.id) ?? 0) * 5;
   }, [items]);
 
+  /** Tick off (tap while shopping, Space everywhere); for several people: ask for whom. */
+  const check = (item: ItemRow, remote: boolean) => {
+    if (remote || list.isTemplate) return;
+    if (itemPersons(item).length) return setChecking(item.id);
+    void setChecked(item, true);
+    setUndo(item);
+    afterCheck(item.id, true);
+  };
+
   /** The last item: shopping is over. */
   const afterCheck = (id: string, allDone: boolean) => {
     if (allDone && open.every((i) => i.id === id || remoteChecks.has(i.id))) {
@@ -166,16 +175,9 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
                   badgeUser={remote ? users.get(remote.by) : undefined}
                   extra={[itemPersons(item).length ? null : peopleLabel(item), packingInfo(item).container].filter(Boolean).join(' · ') || undefined}
                   people={itemPersons(item).length ? <PeopleDots item={item} /> : undefined}
-                  onTap={() => {
-                    if (!shopping) return setEditing(item.id);
-                    if (remote) return;
-                    // For several people: ask for whom.
-                    if (itemPersons(item).length) return setChecking(item.id);
-                    void setChecked(item, true);
-                    setUndo(item);
-                    afterCheck(item.id, true);
-                  }}
+                  onTap={() => (shopping ? check(item, !!remote) : setEditing(item.id))}
                   onLongPress={() => setEditing(item.id)}
+                  onToggle={() => check(item, !!remote)}
                 />
               );
             })}

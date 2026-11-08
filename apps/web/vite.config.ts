@@ -32,6 +32,11 @@ export default defineConfig({
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Right click on the taskbar icon / long press on the app icon.
+        shortcuts: [
+          { name: 'Arbeitsmodus', short_name: 'Arbeit', url: '/?mode=work', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
+          { name: 'Einkaufslisten', short_name: 'Einkauf', url: '/?mode=home', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
+        ],
         share_target: {
           action: '/',
           method: 'GET',

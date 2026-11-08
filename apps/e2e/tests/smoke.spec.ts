@@ -147,3 +147,52 @@ test('links dropped onto an entry or onto free space', async ({ page }, info) =>
   await drop('section.listview', 'https://example.org/muehle', '<a href="https://example.org/muehle">Kaffeemühle</a>');
   await expect(tile(page, 'Kaffeemühle').locator('.tile__link')).toBeVisible();
 });
+
+test('keyboard: arrows, space and delete with undo on a shopping list', async ({ page }, info) => {
+  test.skip(phone(page), 'keyboard on the desktop');
+  await login(page, `Gerd ${info.project.name}`);
+  await page.goto('/');
+  await newList(page, 'Tastatur');
+  const input = page.getByRole('searchbox', { name: 'Artikel hinzufügen' });
+  await input.fill('Milch, Brot, Käse');
+  await input.press('Enter');
+  await expect(tile(page, 'Käse')).toBeVisible();
+  await input.blur();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator(':focus')).toHaveAttribute('data-item-id', /.+/);
+  const first = (await page.locator(':focus .tile__name').textContent())!;
+  await page.keyboard.press(' ');
+  await expect(page.getByText(/Zuletzt verwendet \(1\)/)).toBeVisible();
+  await page.keyboard.press('ArrowDown');
+  const next = (await page.locator(':focus .tile__name').textContent())!;
+  expect(next).not.toBe(first);
+  await page.keyboard.press('Delete');
+  await expect(tile(page, next)).toHaveCount(0);
+  await page.locator('.snackbar--toast').getByRole('button', { name: 'Rückgängig' }).click();
+  await expect(tile(page, next)).toBeVisible();
+});
+
+test('Arbeitsmodus: only work lists, tasks by keyboard', async ({ page }, info) => {
+  test.skip(phone(page), 'the Arbeitsmodus is for the desktop');
+  await login(page, `Hanna ${info.project.name}`);
+  const work = await (await page.request.post('/api/v1/lists', { data: { name: 'Projekt X', type: 'todo', group: 'Arbeit' } })).json();
+  await page.request.post('/api/v1/lists', { data: { name: 'Wocheneinkauf' } });
+  await page.request.post(`/api/v1/lists/${work.id}/items`, { data: { items: ['Angebot schicken'] } });
+  await page.goto('/');
+  await page.getByRole('button', { name: /Arbeitsmodus/ }).click();
+  await expect(page.locator('.work-nav')).toContainText('Projekt X');
+  await expect(page.locator('.work-nav')).not.toContainText('Wocheneinkauf');
+  await page.locator('.work-nav a', { hasText: 'Projekt X' }).click();
+  await page.keyboard.press('n');
+  await page.keyboard.type('Vertrag senden !morgen');
+  await page.keyboard.press('Enter');
+  const row = page.locator('.work-row', { hasText: 'Vertrag senden' });
+  await expect(row).toContainText('Morgen');
+  await row.click();
+  await expect(page.getByRole('textbox', { name: 'Titel' })).toHaveValue('Vertrag senden');
+  await page.keyboard.press(' ');
+  await expect(page.locator('.work-table')).toContainText('Erledigt (1)');
+  // Back to the normal app.
+  await page.keyboard.press('Control+Shift+A');
+  await expect(page.locator('.sidebar')).toContainText('Wocheneinkauf');
+});

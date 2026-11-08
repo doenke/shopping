@@ -246,6 +246,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
                     badgeUser={remote ? users.get(remote.by) : undefined}
                     onTap={() => tap(e)}
                     onLongPress={() => setEditing(e.item.id)}
+                    onToggle={() => tap(e)}
                   />
                 );
               })}

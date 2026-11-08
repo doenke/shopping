@@ -37,11 +37,13 @@ interface Props {
   /** Kategorien already used by ToDo lists (suggestions). */
   groups?: string[];
   initialType?: ListType;
+  /** ToDo lists: preset Kategorie (Arbeitsmodus: "Arbeit"). */
+  initialGroup?: string;
   onClose: () => void;
 }
 
 /** One dialog for everything new: name, type, template, "as template", private, description. */
-export function NewListDialog({ templates: allTemplates, groups = [], initialType = 'shopping', onClose }: Props) {
+export function NewListDialog({ templates: allTemplates, groups = [], initialType = 'shopping', initialGroup = '', onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [type, setType] = useState<ListType>(initialType);
   const [asTemplate, setAsTemplate] = useState(false);
@@ -49,7 +51,7 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
   const [nameTouched, setNameTouched] = useState(false);
   const [isPrivate, setIsPrivate] = useState(defaultVisibility(initialType) === 'private');
   const [description, setDescription] = useState('');
-  const [group, setGroup] = useState('');
+  const [group, setGroup] = useState(initialGroup);
   const [reset, setReset] = useState<ResetEvery | null>(null);
   const resettable = canAutoReset({ listType: type, isTemplate: asTemplate });
   const templates = allTemplates.filter((t) => t.listType === type);

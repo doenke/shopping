@@ -21,6 +21,7 @@ import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { useLinkDrop } from '../linkDrop';
 import { ItemEditor } from './ItemEditor';
+import { entryKeys } from '../keyboard';
 import { PeopleDots, PersonCheckDialog } from './People';
 
 type GroupBy = 'none' | 'due' | 'area' | 'who';
@@ -159,7 +160,15 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
         >
           {item.checked ? '✓' : ''}
         </button>
-        <button type="button" className="task__body" onClick={() => setEditing(item.id)}>
+        <button
+          type="button"
+          className="task__body"
+          onClick={() => setEditing(item.id)}
+          {...entryKeys(
+            () => toggle(entry),
+            () => setEditing(item.id),
+          )}
+        >
           <span className="task__title">{item.name}</span>
           <span className="task__meta">
             {fmt && <span className={`due${fmt.overdue && !item.checked ? ' due--overdue' : fmt.today ? ' due--today' : ''}`}>{fmt.label}</span>}

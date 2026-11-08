@@ -141,6 +141,11 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
                     setUndo(item);
                   }}
                   onLongPress={() => setEditing(item.id)}
+                  onToggle={() => {
+                    if (remote) return;
+                    void setChecked(item, true);
+                    setUndo(item);
+                  }}
                 />
               );
             })}
@@ -166,6 +171,7 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
                   extra={extraOf(item)}
                   onTap={() => void setChecked(item, false)}
                   onLongPress={() => setEditing(item.id)}
+                  onToggle={() => void setChecked(item, false)}
                 />
               ))}
             </div>

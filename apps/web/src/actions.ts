@@ -90,6 +90,24 @@ export async function deleteItem(id: string): Promise<void> {
   await sync.mutateItem(id, { deleted: true });
 }
 
+/** "Rückgängig" after deleting: the item comes back with all its fields (the local copy may be gone already). */
+export async function restoreItem(item: ItemRow): Promise<void> {
+  await sync.mutateItem(item.id, {
+    listId: item.listId,
+    name: item.name,
+    catalogItemId: item.catalogItemId,
+    categoryId: item.categoryId,
+    amounts: item.amounts,
+    properties: item.properties,
+    note: item.note,
+    position: item.position,
+    optional: item.optional,
+    attributes: item.attributes,
+    checked: item.checked,
+    deleted: false,
+  });
+}
+
 export async function createList(
   name: string,
   isTemplate = false,
