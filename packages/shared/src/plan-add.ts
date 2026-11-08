@@ -1,7 +1,8 @@
 import { generateKeyBetween } from 'fractional-indexing';
 import { mergeAmounts } from './amounts.js';
 import type { ItemPatch, ItemRow, ItemSource } from './model.js';
-import { packingInfo, samePacking, withPacking } from './packing.js';
+import { packingInfo, withPacking } from './packing.js';
+import { isForEach, peopleAttributes, peopleOf, withPeople } from './people.js';
 import type { ParsedItem } from './parser.js';
 
 /** A parsed item plus where it came from (recipe, template …). */
@@ -15,15 +16,35 @@ export interface PlannedChange {
 
 type ExistingItem = Pick<ItemRow, 'id' | 'catalogItemId' | 'name' | 'checked' | 'deleted' | 'amounts' | 'properties' | 'note' | 'attributes' | 'position'>;
 
-function sameItem(item: ExistingItem, p: NewItem): boolean {
-  // Packing lists: Annas T-Shirts and Bens T-Shirts (or the ones in another Packstück) stay apart.
-  if (!samePacking(packingInfo(item), { person: p.person ?? null, container: p.container ?? null })) return false;
+function sameName(item: ExistingItem, p: NewItem): boolean {
   if (p.catalogItemId) return item.catalogItemId === p.catalogItemId;
   return !item.catalogItemId && item.name.toLowerCase() === p.name.toLowerCase();
 }
 
-function packingOf(p: NewItem) {
-  return { person: p.person ?? null, container: p.container ?? null };
+/** Everyone a new item is for ("@Sönke @Ulli" or "@Anna"). */
+function newPeople(p: NewItem): string[] {
+  return p.persons?.length ? p.persons : p.person ? [p.person] : [];
+}
+
+const lower = (xs: string[]) => xs.map((x) => x.toLowerCase());
+
+/**
+ * Same thing for the same people and Packstück. Annas T-Shirts and Bens T-Shirts stay apart; but an entry
+ * for several people takes in more people ("Sonnenbrille" for Sönke + Ulli, then "Sonnenbrille @Anna").
+ */
+function sameItem(item: ExistingItem, p: NewItem): boolean {
+  if ((packingInfo(item).container ?? '').toLowerCase() !== (p.container ?? '').toLowerCase()) return false;
+  if (isForEach(item) !== !!p.forEach) return false;
+  const a = lower(peopleOf(item));
+  const b = lower(newPeople(p));
+  const samePeople = a.length === b.length && a.every((x) => b.includes(x));
+  if (!samePeople && a.length < 2 && b.length < 2) return false;
+  return sameName(item, p);
+}
+
+function attributesOf(p: NewItem): Record<string, unknown> {
+  const base = withPacking({ ...(p.sources?.length ? { sources: p.sources } : {}), ...(p.due ? { due: p.due } : {}) }, { container: p.container ?? null });
+  return { ...base, ...peopleAttributes(p) };
 }
 
 function withSources(attributes: Record<string, unknown>, add: ItemSource[] | undefined): Record<string, unknown> | null {
@@ -49,12 +70,19 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
     const open = items.find((i) => !i.checked && sameItem(i, p));
     if (open) {
       const patch: ItemPatch = {};
-      if (p.amounts.length) open.amounts = patch.amounts = mergeAmounts(open.amounts, p.amounts);
+      // A multi-person entry takes in more people; its amount is per person, so it stays.
+      const have = peopleOf(open);
+      const more = newPeople(p).filter((n) => !lower(have).includes(n.toLowerCase()));
+      if (p.amounts.length && !(have.length >= 2 && newPeople(p).length)) open.amounts = patch.amounts = mergeAmounts(open.amounts, p.amounts);
       const props = [...new Set([...open.properties, ...p.properties])];
       if (props.length !== open.properties.length) open.properties = patch.properties = props;
       if (p.note && p.note !== open.note) open.note = patch.note = open.note ? `${open.note}, ${p.note}` : p.note;
-      const attributes = withSources(open.attributes, p.sources);
+      let attributes = withSources(open.attributes, p.sources);
+      if (more.length) attributes = withPeople(attributes ?? open.attributes, [...have, ...more]);
       if (attributes) open.attributes = patch.attributes = attributes;
+      // Someone already ticked off needs it again: open for them.
+      const again = have.length >= 2 ? newPeople(p).filter((n) => lower(have).includes(n.toLowerCase())) : [];
+      if (again.length) patch.personChecks = Object.fromEntries(again.map((n) => [n, false]));
       if (Object.keys(patch).length) changes.push({ id: open.id, patch, kind: 'merged' });
       continue;
     }
@@ -71,7 +99,13 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
           amounts: p.amounts,
           properties: p.properties,
           note: p.note,
-          attributes: withPacking({ ...done.attributes, sources: p.sources ?? [], ...(p.due ? { due: p.due } : {}) }, packingOf(p)),
+          attributes: {
+            ...withPeople(
+              withPacking({ ...done.attributes, sources: p.sources ?? [], ...(p.due ? { due: p.due } : {}) }, { container: p.container ?? null }),
+              [],
+            ),
+            ...peopleAttributes(p),
+          },
         },
         kind: 'restored',
       });
@@ -88,9 +122,7 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
       properties: p.properties,
       note: p.note,
       position,
-      ...(p.sources?.length || p.person || p.container || p.due
-        ? { attributes: withPacking({ ...(p.sources?.length ? { sources: p.sources } : {}), ...(p.due ? { due: p.due } : {}) }, packingOf(p)) }
-        : {}),
+      ...(Object.keys(attributesOf(p)).length ? { attributes: attributesOf(p) } : {}),
       ...(p.optional ? { optional: true } : {}),
     };
     changes.push({ id, patch, kind: 'created' });

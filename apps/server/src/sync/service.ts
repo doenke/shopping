@@ -1,5 +1,6 @@
 import {
   Hlc,
+  applyItemPatch,
   applyPatch,
   defaultVisibility,
   nextCategoryColor,
@@ -466,12 +467,23 @@ export class SyncService {
       if (list?.isTemplate) throw new Rejection('template_not_checkable');
     }
 
-    const { listId: _l, ...rest } = patch;
-    const effective: Partial<ItemRow> = { ...rest };
+    const { listId: _l, personChecks, ...rest } = patch;
+    if (personChecks && Object.values(personChecks).some(Boolean)) {
+      const [list] = await tx.select({ isTemplate: lists.isTemplate }).from(lists).where(eq(lists.id, listId));
+      if (list?.isTemplate) throw new Rejection('template_not_checkable');
+    }
+    const effective: Partial<ItemRow> & { personChecks?: Record<string, boolean> } = { ...rest, ...(personChecks ? { personChecks } : {}) };
     if (patch.checked !== undefined) {
       effective.checkedBy = patch.checked ? userId : null;
       effective.checkedAt = patch.checked ? new Date().toISOString() : null;
     }
+    /** Ticking the last person (or untick one) changes `checked` on its own: who and when then too. */
+    const stampChecked = (row: ItemRow, was: boolean) => {
+      if (patch.checked !== undefined || row.checked === was) return;
+      row.checkedBy = row.checked ? userId : null;
+      row.checkedAt = row.checked ? new Date().toISOString() : null;
+      row.hlc.checkedBy = row.hlc.checkedAt = row.hlc.checked!;
+    };
 
     if (!existing) {
       if (!patch.name) throw new Rejection('missing_name');
@@ -497,7 +509,8 @@ export class SyncService {
         hlc: {},
         seq: 0,
       };
-      applyPatch(row, { listId, ...effective }, ts);
+      applyItemPatch(row, { listId, ...effective }, ts);
+      stampChecked(row, false);
 
       // Two people added the same thing while offline: merge instead of duplicating.
       if (!row.checked && !row.deleted) {
@@ -519,8 +532,10 @@ export class SyncService {
     }
 
     const row = toItemRow(existing);
-    const applied = applyPatch(row, effective, ts);
+    const was = row.checked;
+    const applied = applyItemPatch(row, effective, ts);
     if (applied.length === 0) return [];
+    stampChecked(row, was);
     const { id: _id, seq: _seq, createdAt: _c, ...fields } = row;
     await tx
       .update(listItems)
@@ -646,15 +661,23 @@ export class SyncService {
         if (!every) continue;
         const ts = this.clock.tick();
         const stamp = { checked: ts, checkedAt: ts, checkedBy: ts };
+        const start = resetPeriodStart(every, now).toISOString();
         const rows = await this.db
           .update(listItems)
-          .set({ checked: false, checkedAt: null, checkedBy: null, hlc: sql`${listItems.hlc} || ${JSON.stringify(stamp)}::jsonb`, seq: nextSeq })
+          .set({
+            checked: false,
+            checkedAt: null,
+            checkedBy: null,
+            // Multi-person items: everyone open again (their clocks move on, so older ticks do not come back).
+            attributes: sql`${listItems.attributes} - 'done' - 'doneAt'`,
+            hlc: sql`${listItems.hlc} || ${JSON.stringify(stamp)}::jsonb || coalesce((SELECT jsonb_object_agg('done:' || lower(p), ${ts}::text) FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(${listItems.attributes} -> 'persons') = 'array' THEN ${listItems.attributes} -> 'persons' ELSE '[]'::jsonb END) AS p), '{}'::jsonb)`,
+            seq: nextSeq,
+          })
           .where(
             and(
               eq(listItems.listId, list.id),
-              eq(listItems.checked, true),
               eq(listItems.deleted, false),
-              sql`${listItems.checkedAt} < ${resetPeriodStart(every, now).toISOString()}`,
+              sql`((${listItems.checked} AND ${listItems.checkedAt} < ${start}) OR (NOT ${listItems.checked} AND ${listItems.attributes} ->> 'doneAt' < ${start}))`,
             ),
           )
           .returning({ id: listItems.id });

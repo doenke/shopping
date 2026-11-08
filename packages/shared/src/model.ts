@@ -149,6 +149,8 @@ export interface ItemPatch {
   optional?: boolean;
   attributes?: Record<string, unknown>;
   deleted?: boolean;
+  /** Multi-person items: tick off (true) or untick single persons ("Sönke": true). */
+  personChecks?: Record<string, boolean>;
 }
 
 export interface CategoryPatch {

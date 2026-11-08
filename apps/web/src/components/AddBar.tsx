@@ -85,7 +85,15 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
 
   const pick = async (c: CatalogItem) => {
     setText('');
-    await add([{ ...catalogToParsed(c), person: packing.person, container: packing.container }]);
+    await add([
+      {
+        ...catalogToParsed(c),
+        person: packing.person,
+        container: packing.container,
+        ...(listType !== 'memo' && packing.persons.length >= 2 ? { persons: packing.persons } : {}),
+        ...(listType !== 'memo' && packing.forEach ? { forEach: true } : {}),
+      },
+    ]);
   };
 
   // Voice input (Chrome/Android, Safari; not Firefox): what is said lands in the field, Enter or a tap adds it.

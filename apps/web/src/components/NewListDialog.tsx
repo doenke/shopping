@@ -5,6 +5,10 @@ import {
   itemSpecification,
   SUGGESTED_LIST_GROUPS,
   packingInfo,
+  hasPeople,
+  isForEach,
+  peopleKey,
+  peopleLabel,
   type ItemRow,
   type ListRow,
   type ListType,
@@ -16,6 +20,7 @@ import { db } from '../db';
 import { navigate } from '../hooks';
 import { ResetSelect } from './ListEditDialog';
 import { ItemIcon } from './Tile';
+import { PeoplePicker, useHouseholdNames, usePeopleSuggestions } from './People';
 
 export const LIST_TYPE_LABEL: Record<ListType, string> = {
   shopping: '🛒 Einkauf',
@@ -63,7 +68,7 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
       const own = (items ?? []).filter((i) => i.listId === t.id && !i.deleted).sort((a, b) => a.position.localeCompare(b.position));
       for (const i of own) {
         const p = packingInfo(i);
-        const key = [i.catalogItemId ?? i.name.trim().toLowerCase(), p.person?.toLowerCase() ?? '', p.container?.toLowerCase() ?? ''].join('|');
+        const key = [i.catalogItemId ?? i.name.trim().toLowerCase(), peopleKey(i), p.container?.toLowerCase() ?? ''].join('|');
         const hit = seen.get(key);
         if (hit) hit.from.push(t.name);
         else seen.set(key, { item: i, from: [t.name] });
@@ -72,6 +77,16 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
     return [...seen.values()];
   }, [items, templateIds.join(',')]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // "für jeden" in the templates: who is this list for? Starts with my household.
+  const forEachChosen = !asTemplate && hasPeople(type) && sorted.some((e) => selected.has(e.item.id) && isForEach(e.item));
+  const household = useHouseholdNames();
+  const suggestions = usePeopleSuggestions(
+    undefined,
+    (items ?? []).filter((i) => templateIds.includes(i.listId)),
+  );
+  const [persons, setPersons] = useState<string[] | null>(null);
+  const chosenPersons = persons ?? household ?? [];
 
   useEffect(() => ref.current?.showModal(), []);
   // Optional template items (e.g. sun cream) start deselected.
@@ -102,6 +117,7 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
       templateIds.filter((id) => chosenTemplates.some((t) => t.id === id)),
       type === 'todo' ? group : undefined,
       resettable ? reset : null,
+      forEachChosen ? chosenPersons : [],
     );
     const chosen = sorted.filter((e) => selected.has(e.item.id));
     if (chosen.length) {
@@ -216,6 +232,16 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
           sie)
         </label>
 
+        {forEachChosen && (
+          <div className="field">
+            <span>
+              Für wen {type === 'packing' ? 'packen wir' : type === 'todo' ? 'ist das' : 'kaufen wir ein'}?{' '}
+              <small className="muted">– „für jeden“-Einträge gibt es dann einmal, abgehakt wird pro Person</small>
+            </span>
+            <PeoplePicker value={chosenPersons} onChange={setPersons} suggestions={suggestions} />
+          </div>
+        )}
+
         {template && (
           <ul className="checklist">
             {sorted.map(({ item: i, from }) => {
@@ -227,7 +253,7 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
                     <ItemIcon name={i.name} categoryId={i.categoryId} catalogItemId={i.catalogItemId} size="sm" />
                     <span className="spacer">
                       {i.name}
-                      <small className="muted"> {[itemSpecification(i), p.person, p.container].filter(Boolean).join(' · ')}</small>
+                      <small className="muted"> {[itemSpecification(i), peopleLabel(i), p.container].filter(Boolean).join(' · ')}</small>
                       {i.optional && <small className="muted"> · optional</small>}
                       {chosenTemplates.length > 1 && <small className="muted"> · {from.join(', ')}</small>}
                     </span>

@@ -67,6 +67,17 @@
   bleibt durchgestrichen stehen (Schalter „Eingepackte ausblenden“, pro Liste gemerkt), Fortschritt „12 von 30 eingepackt“, gruppiert nach Kategorie, **Packstück**
   oder **Person**. Beim Tippen ordnen „@Anna“ und „#Koffer“ zu („3 T-Shirts @Anna #Koffer“). Neue Packlisten
   entstehen aus Packvorlagen, erledigte kommen ins Archiv.
+- **Ein Ding für mehrere Personen** 👥 (Packliste, Einkauf, ToDo): „Sonnenbrille @Sönke @Ulli“ ist *ein*
+  Eintrag mit den Initialen beider; abgehakt wird pro Person. Ein Tipp darauf fragt „Für wen eingepackt?“
+  (bzw. gekauft/erledigt), „Alle“ hakt alle auf einmal ab. Erledigt ist der Eintrag, wenn alle abgehakt sind;
+  auf Packlisten zählt er im Fortschritt pro Person. Gruppiert nach **Person** steht er bei jeder Person
+  einzeln und wird dort direkt für sie abgehakt. Kommt jemand dazu („Sonnenbrille @Anna“), wird der Eintrag
+  erweitert statt verdoppelt. Im Editor wählt man die Personen aus dem eigenen Haushalt (Vornamen) oder
+  trägt andere ein. In **Vorlagen** steht stattdessen „für jeden“ („Sonnenbrille @alle“): Beim Anlegen einer
+  Liste aus der Vorlage fragt „+ Neu“, für wen die Liste ist (vorausgewählt: der eigene Haushalt), und macht
+  daraus die Einträge für diese Personen; „@alle“ in der Liste selbst meint dieselben Leute. Gleichzeitiges
+  Abhaken von zwei Handys überschreibt sich nicht. Wiederkehrende ToDo-Listen öffnen auch teilweise
+  abgehakte Einträge wieder.
 - **Von der Packliste auf die Einkaufsliste** (oder auf eine Vorlage): im Editor eines Eintrags
   *🛒 Auf Einkaufsliste setzen …* bzw. *◇ Auf Vorlage setzen …* – Liste wählen, übernehmen. Auf der
   Einkaufsliste mit der passenden Lebensmittel-Kategorie und dem Vermerk, für welche Packliste.

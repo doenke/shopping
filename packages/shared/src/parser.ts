@@ -14,6 +14,10 @@ export interface ParsedItem {
   note: string | null;
   /** Packing lists: "@Anna" and "#Koffer" in the typed text. */
   person?: string | null;
+  /** "@Sönke @Ulli": one entry for several people (ticked off per person). */
+  persons?: string[];
+  /** "@alle" (templates: "für jeden"). */
+  forEach?: boolean;
   container?: string | null;
   /** ToDo lists: "!morgen", "!12.11." → YYYY-MM-DD. */
   due?: string | null;
@@ -174,6 +178,8 @@ export function parseItem(text: string, catalog?: CatalogIndex, listType: ListTy
     properties,
     note: notes.length ? notes.join(', ') : null,
     ...(packing.person ? { person: packing.person } : {}),
+    ...(listType !== 'memo' && packing.persons.length >= 2 ? { persons: packing.persons } : {}),
+    ...(listType !== 'memo' && packing.forEach ? { forEach: true } : {}),
     ...(packing.container ? { container: packing.container } : {}),
     ...(dated.due ? { due: dated.due } : {}),
   };

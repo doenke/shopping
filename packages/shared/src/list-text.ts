@@ -3,6 +3,7 @@ import { categoriesInOrder, categoryInList, type CustomCategories } from './cate
 import { dueOf, formatDue } from './due.js';
 import type { ItemRow, ListRow } from './model.js';
 import { listDescription, packingInfo } from './packing.js';
+import { peopleLabel } from './people.js';
 
 /**
  * A list as plain text, for a messenger or the clipboard ("Liste als Text teilen"): the open items
@@ -23,7 +24,7 @@ export function listAsText(
     const p = packingInfo(i);
     const spec = itemSpecification(i);
     const due = list.listType === 'todo' ? dueOf(i) : null;
-    const extra = list.listType === 'memo' ? [p.person ? `Tipp von ${p.person}` : null, p.container] : [p.person, p.container];
+    const extra = list.listType === 'memo' ? [p.person ? `Tipp von ${p.person}` : null, p.container] : [peopleLabel(i), p.container];
     const parts = [due ? formatDue(due, now).label : null, spec || null].filter(Boolean).join(' · ');
     const tail = extra.filter(Boolean).join(', ');
     return `• ${i.name}${parts ? ` – ${parts}` : ''}${tail ? ` (${tail})` : ''}${list.isTemplate && i.optional ? ' (optional)' : ''}`;

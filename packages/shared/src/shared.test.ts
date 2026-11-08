@@ -10,6 +10,7 @@ import { isOwnName } from './catalog-index.js';
 import { extractDue, formatDue, parseDue } from './due.js';
 import { defaultVisibility } from './packing.js';
 import { planAdd } from './plan-add.js';
+import { applyItemPatch, itemDone, mergeItem, peopleLabel, resolvePeople, withPeople } from './people.js';
 import { suggestedProperties } from './properties.js';
 import { listAsText } from './list-text.js';
 import type { ItemRow } from './model.js';
@@ -397,5 +398,91 @@ describe('recurring checklists', () => {
     expect(listReset({ listType: 'packing', isTemplate: false, settings: { reset: 'daily' } })).toBeNull();
     expect(listReset({ listType: 'todo', isTemplate: true, settings: { reset: 'daily' } })).toBeNull();
     expect(listReset({ listType: 'packing', isTemplate: false, settings: { reset: 'yearly' } })).toBeNull();
+  });
+});
+
+describe('things for several people', () => {
+  const item = (attributes: Record<string, unknown>, checked = false): ItemRow => ({
+    id: 'i',
+    listId: 'l',
+    catalogItemId: null,
+    name: 'Sonnenbrille',
+    amounts: [],
+    properties: [],
+    note: null,
+    categoryId: null,
+    checked,
+    checkedAt: null,
+    checkedBy: null,
+    position: 'a0',
+    optional: false,
+    attributes,
+    createdBy: null,
+    createdAt: '',
+    deleted: false,
+    mergedInto: null,
+    hlc: {},
+    seq: 0,
+  });
+
+  it('reads several people and "@alle" from the input', () => {
+    expect(parseItem('Sonnenbrille @sönke @Ulli')).toMatchObject({ person: 'Sönke', persons: ['Sönke', 'Ulli'] });
+    expect(parseItem('Sonnenbrille @alle')).toMatchObject({ forEach: true });
+    expect(parseItem('Sonnenbrille @alle')).not.toHaveProperty('person');
+    expect(parseItem('Dune @Anna @Ben', undefined, 'memo')).not.toHaveProperty('persons');
+  });
+
+  it('ticks off per person; the item is done when everyone is', () => {
+    const row = item({ persons: ['Sönke', 'Ulli'] });
+    expect(applyItemPatch(row, { personChecks: { sönke: true } }, '0000000000001:0000:a')).toContain('attributes');
+    expect(itemDone(row)).toEqual(['Sönke']);
+    expect(row.checked).toBe(false);
+    expect(applyItemPatch(row, { personChecks: { Ulli: true } }, '0000000000002:0000:b')).toContain('checked');
+    expect(row.checked).toBe(true);
+    // Unticking the whole item opens it for everyone.
+    applyItemPatch(row, { checked: false }, '0000000000003:0000:a');
+    expect(itemDone(row)).toEqual([]);
+    expect(row.checked).toBe(false);
+    // Checking the whole item ticks everyone.
+    applyItemPatch(row, { checked: true }, '0000000000004:0000:a');
+    expect(itemDone(row)).toEqual(['Sönke', 'Ulli']);
+  });
+
+  it('two people ticking at the same time do not overwrite each other', () => {
+    const server = item({ persons: ['Sönke', 'Ulli'] });
+    applyItemPatch(server, { personChecks: { Ulli: true } }, '0000000000005:0000:b');
+    applyItemPatch(server, { personChecks: { Sönke: true } }, '0000000000004:0000:a');
+    expect(server.checked).toBe(true);
+    // An older edit of the attributes does not take ticks away.
+    applyItemPatch(server, { attributes: { persons: ['Sönke', 'Ulli'], note: 'x' } }, '0000000000006:0000:c');
+    expect(itemDone(server)).toEqual(['Sönke', 'Ulli']);
+    // The app keeps its own newer tick when the server's copy arrives.
+    const local = item({ persons: ['Sönke', 'Ulli'] });
+    applyItemPatch(local, { personChecks: { Sönke: true } }, '0000000000007:0000:a');
+    const incoming = item({ persons: ['Sönke', 'Ulli'], done: ['Ulli'] });
+    incoming.hlc = { 'done:ulli': '0000000000005:0000:b', attributes: '0000000000006:0000:c' };
+    const merged = mergeItem(local, incoming, ITEM_FIELDS);
+    expect(itemDone(merged)).toEqual(['Sönke', 'Ulli']);
+    expect(merged.checked).toBe(true);
+  });
+
+  it('merges more people into one entry instead of a second one', () => {
+    const existing = [{ ...item({ persons: ['Sönke', 'Ulli'], done: ['Ulli'] }), amounts: [{ q: 1, u: null }] }];
+    const plan = planAdd('l', existing, parseInput('Sonnenbrille @Anna, 2 Sonnenbrille @Ulli'), () => 'new');
+    expect(plan).toHaveLength(2);
+    expect(plan[0]).toMatchObject({ id: 'i', kind: 'merged', patch: { attributes: { persons: ['Sönke', 'Ulli', 'Anna'], done: ['Ulli'] } } });
+    expect(plan[1]).toMatchObject({ id: 'i', patch: { personChecks: { Ulli: false } } });
+    expect(plan[1]!.patch.amounts).toBeUndefined();
+    // Single people stay apart as before.
+    expect(planAdd('l', [item({ person: 'Anna' })], parseInput('Sonnenbrille @Ben'), () => 'n')[0]!.kind).toBe('created');
+  });
+
+  it('turns "für jeden" into the people of the list and back', () => {
+    expect(resolvePeople({ name: 'x', forEach: true }, { isTemplate: false, persons: ['Sönke', 'Ulli'] })).toEqual({ name: 'x', persons: ['Sönke', 'Ulli'] });
+    expect(resolvePeople({ name: 'x', forEach: true }, { isTemplate: false, persons: ['Anna'] })).toEqual({ name: 'x', person: 'Anna' });
+    expect(resolvePeople({ name: 'x', persons: ['A', 'B'], person: 'A' }, { isTemplate: true, persons: [] })).toEqual({ name: 'x', forEach: true });
+    expect(peopleLabel(item({ forEach: true }))).toBe('für jeden');
+    expect(peopleLabel(item({ persons: ['Sönke', 'Ulli'] }))).toBe('Sönke + Ulli');
+    expect(withPeople({ persons: ['A', 'B'], done: ['A', 'B'] }, ['A', 'C'])).toEqual({ persons: ['A', 'C'], done: ['A'] });
   });
 });

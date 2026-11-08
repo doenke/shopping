@@ -18,7 +18,9 @@ function itemLine(i: ApiItem, type = 'shopping'): string {
       : type === 'todo'
         ? [i.due && `fällig ${i.due}`, i.assignee && `@${i.assignee}`, i.area && `#${i.area}`, i.note].filter(Boolean).join(', ')
         : [i.person && `@${i.person}`, i.container && `#${i.container}`].filter(Boolean).join(' ');
-  return `- ${i.checked ? '~~' : ''}${i.name}${spec}${i.checked ? '~~' : ''}${packing ? ` ${packing}` : ''}${from}`;
+  // Several people: who is done already ("✓ Ulli").
+  const partly = !i.checked && i.donePersons.length ? ` (✓ ${i.donePersons.join(', ')})` : '';
+  return `- ${i.checked ? '~~' : ''}${i.name}${spec}${i.checked ? '~~' : ''}${packing ? ` ${packing}` : ''}${partly}${from}`;
 }
 
 /** A list as Markdown, grouped by category – easy to read for models and people. */
@@ -190,7 +192,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         properties: z.array(z.string()).optional(),
         note: z.string().nullable().optional(),
         category: z.string().optional().describe('z. B. „Milch & Käse“'),
-        person: z.string().nullable().optional().describe('Packliste: für wen (leer = niemand)'),
+        person: z.string().nullable().optional().describe('Für wen (leer = niemand); mehrere mit „+“, z. B. „Sönke + Ulli“'),
         container: z.string().nullable().optional().describe('Packliste: Packstück, z. B. „Koffer“'),
         tipFrom: z.string().nullable().optional().describe('Merkliste: von wem der Tipp kommt'),
         where: z.string().nullable().optional().describe('Merkliste: wo es das gibt, z. B. „Netflix“'),

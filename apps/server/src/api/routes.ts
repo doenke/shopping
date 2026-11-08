@@ -16,7 +16,7 @@ const ItemObject = z.object({
   properties: z.array(z.string().max(40)).max(20).optional().describe('Eigenschaften, z. B. ["bio", "laktosefrei"]'),
   note: z.string().max(500).nullable().optional(),
   category: z.string().max(40).nullable().optional().describe('Kategorie-ID oder -Name, z. B. „Milch & Käse“'),
-  person: z.string().max(40).nullable().optional().describe('Packliste: für wen, z. B. „Anna“'),
+  person: z.string().max(40).nullable().optional().describe('Für wen, z. B. „Anna“; mehrere mit „+“: „Sönke + Ulli“ (wird pro Person abgehakt)'),
   container: z.string().max(40).nullable().optional().describe('Packliste: Packstück, z. B. „Koffer“'),
   tipFrom: z.string().max(40).nullable().optional().describe('Merkliste: von wem der Tipp kommt'),
   where: z.string().max(80).nullable().optional().describe('Merkliste: wo es das gibt, z. B. „Netflix“'),

@@ -1995,3 +1995,70 @@ img.avatar {
 .household-members .settings-row__icon {
   background: none;
 }
+
+/* ---- Things for several people: initials on the tile, "Für wen abhaken?" ---- */
+
+.people-dots {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+}
+.people-dot {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 11px;
+  border: 1.5px solid var(--primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--primary);
+  background: var(--surface);
+}
+.people-dot--done {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+.listview--rows .group .tile .people-dots {
+  justify-content: flex-start;
+}
+.person-checks {
+  display: grid;
+  gap: 8px;
+}
+.person-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.person-check__box {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  color: var(--primary-text);
+}
+.person-check--done {
+  background: var(--surface-2);
+}
+.person-check--done .person-check__box {
+  background: var(--primary);
+}
+.task__meta .people-dots {
+  justify-content: flex-start;
+}

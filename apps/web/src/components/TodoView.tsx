@@ -5,19 +5,29 @@ import {
   formatDue,
   isoDate,
   listDescription,
+  itemDone,
+  itemPersons,
   packingInfo,
+  peopleLabel,
   type CatalogIndex,
   type ItemRow,
   type ListRow,
   type UserInfo,
 } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
-import { setChecked } from '../actions';
+import { setChecked, setPersonChecked } from '../actions';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
+import { PeopleDots, PersonCheckDialog } from './People';
 
 type GroupBy = 'none' | 'due' | 'area' | 'who';
+
+/** A row: a task, or – grouped by "Wer" – one person's part of a task for several people. */
+interface Entry {
+  item: ItemRow;
+  person?: string;
+}
 
 const GROUP_LABEL: Record<GroupBy, string> = { none: 'Alle', due: 'Fällig', area: 'Bereich', who: 'Wer' };
 
@@ -53,6 +63,8 @@ function dueBucket(due: string | null, today: string, weekEnd: string): { key: s
 /** ToDo list: tasks as a checklist, sorted by due date; done ones move to "Erledigt". */
 export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ list, items, index, users, remoteChecks }, addRef) {
   const [editing, setEditing] = useState<string | null>(null);
+  /** Multi-person task being ticked off ("Für wen?"). */
+  const [checking, setChecking] = useState<string | null>(null);
   const [undo, setUndo] = useState<ItemRow | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupBy>(() => loadGroupBy(list.id));
@@ -86,18 +98,31 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
     const today = isoDate(now);
     const weekEnd = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + ((7 - now.getDay()) % 7)));
     const sorted = [...open].sort((a, b) => (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || a.position.localeCompare(b.position));
-    if (shown === 'none') return [{ key: 'all', title: null as string | null, order: 0, items: sorted }];
-    const byKey = new Map<string, { title: string | null; order: number; items: ItemRow[] }>();
-    for (const i of sorted) {
+    if (shown === 'none') return [{ key: 'all', title: null as string | null, order: 0, items: sorted.map((i) => ({ item: i }) as Entry) }];
+    const byKey = new Map<string, { title: string | null; order: number; items: Entry[] }>();
+    // "Wer": a task for several people shows up with each of them who still has to do it.
+    const entries: Entry[] =
+      shown === 'who'
+        ? sorted.flatMap((i) =>
+            itemPersons(i).length
+              ? itemPersons(i)
+                  .filter((person) => !itemDone(i).includes(person))
+                  .map((person) => ({ item: i, person }))
+              : [{ item: i }],
+          )
+        : sorted.map((i) => ({ item: i }));
+    for (const e of entries) {
+      const i = e.item;
       const p = packingInfo(i);
+      const who = e.person ?? p.person;
       const g =
         shown === 'due'
           ? dueBucket(dueOf(i), today, weekEnd)
           : shown === 'area'
             ? { key: p.container ?? '', title: p.container ?? 'Ohne Bereich', order: p.container ? 0 : 1 }
-            : { key: p.person ?? '', title: p.person ?? 'Ohne Zuständigkeit', order: p.person ? 0 : 1 };
+            : { key: who ?? '', title: who ?? 'Ohne Zuständigkeit', order: who ? 0 : 1 };
       const entry = byKey.get(g.key) ?? { title: g.title, order: g.order, items: [] };
-      entry.items.push(i);
+      entry.items.push(e);
       byKey.set(g.key, entry);
     }
     return [...byKey.entries()]
@@ -105,24 +130,28 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
       .map(([key, g]) => ({ key, ...g }));
   }, [open, shown]);
 
-  const toggle = (item: ItemRow) => {
+  const toggle = ({ item, person }: Entry) => {
+    if (person) return void setPersonChecked(item, { [person]: !itemDone(item).includes(person) });
+    if (itemPersons(item).length && !item.checked) return setChecking(item.id);
     void setChecked(item, !item.checked);
     if (!item.checked) setUndo(item);
   };
 
-  const row = (item: ItemRow) => {
+  const row = (entry: Entry) => {
+    const { item, person } = entry;
     const p = packingInfo(item);
+    const many = itemPersons(item).length > 0 && !person;
     const due = dueOf(item);
     const fmt = due ? formatDue(due) : null;
     const remote = remoteChecks.get(item.id);
     return (
-      <li key={item.id} className={`task${item.checked ? ' task--done' : ''}${remote ? ' tile--remote' : ''}`}>
+      <li key={`${item.id}:${person ?? ''}`} className={`task${item.checked ? ' task--done' : ''}${remote ? ' tile--remote' : ''}`}>
         <button
           type="button"
           className="task__check"
           aria-label={item.checked ? 'Wieder offen' : 'Erledigt'}
           aria-pressed={item.checked}
-          onClick={() => toggle(item)}
+          onClick={() => toggle(entry)}
         >
           {item.checked ? '✓' : ''}
         </button>
@@ -130,7 +159,8 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
           <span className="task__title">{item.name}</span>
           <span className="task__meta">
             {fmt && <span className={`due${fmt.overdue && !item.checked ? ' due--overdue' : fmt.today ? ' due--today' : ''}`}>{fmt.label}</span>}
-            {p.person && shown !== 'who' && <span>@{p.person}</span>}
+            {!many && !itemPersons(item).length && p.person && shown !== 'who' && <span>@{peopleLabel(item)}</span>}
+            {many && <PeopleDots item={item} />}
             {p.container && shown !== 'area' && <span>#{p.container}</span>}
             {item.note && <span className="muted">{item.note}</span>}
             {remote && <span>✓ {users.get(remote.by)?.displayName}</span>}
@@ -141,6 +171,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
   };
 
   const editItem = items.find((i) => i.id === editing);
+  const checkItem = items.find((i) => i.id === checking);
 
   return (
     <section className="listview">
@@ -207,7 +238,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
               {showDone ? '▾' : '▸'} Erledigt ({done.length})
             </button>
           </div>
-          {showDone && <ul className="tasks">{done.map(row)}</ul>}
+          {showDone && <ul className="tasks">{done.map((i) => row({ item: i }))}</ul>}
         </div>
       )}
 
@@ -227,6 +258,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
       )}
 
       {editItem && <ItemEditor key={editItem.id} item={editItem} list={list} items={items} users={users} onClose={() => setEditing(null)} />}
+      {checkItem && <PersonCheckDialog key={checkItem.id} item={checkItem} verb="erledigt" onClose={() => setChecking(null)} />}
     </section>
   );
 });

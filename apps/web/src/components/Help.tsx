@@ -107,6 +107,8 @@ function UserHelp({ me }: { me: Me }) {
         <Example then="Menge, Einheit und Eigenschaft erkannt">2 kg Kartoffeln festkochend</Example>
         <Example then="mehrere auf einmal">Milch, Butter, 6 Eier</Example>
         <Example then="Packliste: für Anna, in den Koffer">3 T-Shirts @Anna #Koffer</Example>
+        <Example then="einmal auf der Liste, abgehakt wird pro Person">Sonnenbrille @Sönke @Ulli</Example>
+        <Example then="in einer Vorlage: für jeden, der mitfährt">Badehose @alle</Example>
         <Example then="Merkliste: Tipp von Ben, gibt's bei Netflix">Dune @Ben #Netflix</Example>
         <Example then="ToDo: Freitag fällig, Ben macht's">Reifen wechseln !Fr @Ben #Auto</Example>
       </ul>

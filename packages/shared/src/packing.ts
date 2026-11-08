@@ -39,21 +39,41 @@ export function withPacking(attributes: Record<string, unknown>, info: Partial<P
  * Pulls "@Anna" (person) and "#Koffer" (Packstück) out of a typed line.
  * Underscores stand for spaces: "#Blaue_Tasche" → "Blaue Tasche".
  */
-export function extractPackingTokens(text: string): { text: string; person: string | null; container: string | null } {
-  let person: string | null = null;
+export function extractPackingTokens(text: string): {
+  text: string;
+  person: string | null;
+  container: string | null;
+  /** All "@…" people ("@Sönke @Ulli"), in order. */
+  persons: string[];
+  /** "@alle" / "@jeden": for everyone. */
+  forEach: boolean;
+} {
   let container: string | null = null;
+  const persons: string[] = [];
+  let forEach = false;
   const rest = text.replace(/(^|\s)([@#])([\p{L}\p{N}_-]+)/gu, (_, pre: string, sign: string, word: string) => {
     const value = word.replace(/_/g, ' ');
     const nice = value.charAt(0).toUpperCase() + value.slice(1);
-    if (sign === '@') person ??= nice;
-    else container ??= nice;
+    if (sign === '@') {
+      if (EVERYONE.has(value.toLowerCase())) forEach = true;
+      else if (!persons.some((p) => p.toLowerCase() === nice.toLowerCase())) persons.push(nice);
+    } else container ??= nice;
     return pre;
   });
-  return { text: rest.replace(/\s+/g, ' ').trim(), person, container };
+  return { text: rest.replace(/\s+/g, ' ').trim(), person: persons[0] ?? null, container, persons, forEach };
+}
+
+/** "@alle" means: for each person (see people.ts). */
+const EVERYONE = new Set(['alle', 'jeden', 'jede', 'jeder']);
+
+/** List types where one entry can be for several people, ticked off per person (not Merklisten: there "@" is "Tipp von"). */
+export function hasPeople(listType: string): boolean {
+  return listType === 'shopping' || listType === 'packing' || listType === 'todo';
 }
 
 /** What the two fields are called in a list type (null: not used). */
-export function attributeLabels(listType: string): { person: string; container: string } | null {
+export function attributeLabels(listType: string): { person: string; container: string | null } | null {
+  if (listType === 'shopping') return { person: 'Für wen', container: null };
   if (listType === 'packing') return { person: 'Für wen', container: 'Packstück' };
   if (listType === 'memo') return { person: 'Tipp von', container: 'Wo' };
   if (listType === 'todo') return { person: 'Wer', container: 'Bereich' };

@@ -40,6 +40,7 @@ export const ItemPatchSchema = z
     optional: z.boolean(),
     attributes: z.record(z.string(), z.unknown()),
     deleted: z.boolean(),
+    personChecks: z.record(z.string().trim().min(1).max(60), z.boolean()),
   })
   .partial()
   .strict();

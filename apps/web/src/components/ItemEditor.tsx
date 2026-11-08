@@ -9,6 +9,10 @@ import {
   suggestedProperties,
   UNITS,
   withPacking,
+  hasPeople,
+  isForEach,
+  peopleOf,
+  withPeople,
   type Amount,
   type ItemRow,
   type ItemSource,
@@ -24,6 +28,7 @@ import { db } from '../db';
 import { useCatalog, useLists, useMe } from '../hooks';
 import { Avatar } from './Avatar';
 import { IconCheck } from './IconCheck';
+import { PeoplePicker, usePeopleSuggestions } from './People';
 import { sync } from '../sync/engine';
 
 interface Props {
@@ -80,6 +85,11 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const [note, setNote] = useState(item.note ?? '');
   const [categoryId, setCategoryId] = useState(categoryInList(item.categoryId, list.listType, customCategories).id);
   const [person, setPerson] = useState(packingInfo(item).person ?? '');
+  // Shopping, packing, ToDo: one or several people (ticked off per person); templates: also "für jeden".
+  const multi = hasPeople(list.listType);
+  const [people, setPeople] = useState<string[]>(peopleOf(item));
+  const [forEach, setForEach] = useState(isForEach(item));
+  const suggestions = usePeopleSuggestions(list, items);
   const [container, setContainer] = useState(packingInfo(item).container ?? '');
   const [due, setDue] = useState(dueOf(item) ?? '');
   // The date field only shows once a task has (or gets) a due date.
@@ -199,7 +209,16 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
       note: note.trim() || null,
       categoryId,
       ...(isTemplate ? { optional } : {}),
-      ...(labels ? { attributes: withDue(withPacking(item.attributes, { person, container }), todo ? due : undefined) } : {}),
+      ...(labels
+        ? {
+            attributes: withDue(
+              multi
+                ? withPeople(withPacking(item.attributes, labels.container ? { container } : {}), people, isTemplate && forEach)
+                : withPacking(item.attributes, { person, container }),
+              todo ? due : undefined,
+            ),
+          }
+        : {}),
     });
     if (forAll && item.catalogItemId && categoryId !== item.categoryId) {
       await fetch(`/api/v1/catalog/${item.catalogItemId}`, {
@@ -317,26 +336,39 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
           </label>
         )}
 
-        {labels && (
+        {labels && multi && (
+          <div className="field">
+            <span>
+              {labels.person}
+              {people.length >= 2 && !forEach ? <small className="muted"> – wird pro Person abgehakt</small> : null}
+            </span>
+            <PeoplePicker
+              value={people}
+              onChange={setPeople}
+              suggestions={suggestions}
+              forEach={isTemplate ? { on: forEach, onChange: setForEach } : undefined}
+            />
+          </div>
+        )}
+        {labels && (!multi || labels.container) && (
           <div className="field__row">
-            <label className="field">
-              <span>{labels.person}</span>
-              <input
-                value={person}
-                onChange={(e) => setPerson(e.target.value)}
-                list="packing-people"
-                placeholder={todo ? 'z. B. Anna' : memo ? 'z. B. Ben' : 'alle'}
-              />
-            </label>
-            <label className="field">
-              <span>{labels.container}</span>
-              <input
-                value={container}
-                onChange={(e) => setContainer(e.target.value)}
-                list="packing-containers"
-                placeholder={todo ? 'z. B. Garten' : memo ? 'z. B. Netflix' : 'z. B. Koffer'}
-              />
-            </label>
+            {!multi && (
+              <label className="field">
+                <span>{labels.person}</span>
+                <input value={person} onChange={(e) => setPerson(e.target.value)} list="packing-people" placeholder="z. B. Ben" />
+              </label>
+            )}
+            {labels.container && (
+              <label className="field">
+                <span>{labels.container}</span>
+                <input
+                  value={container}
+                  onChange={(e) => setContainer(e.target.value)}
+                  list="packing-containers"
+                  placeholder={todo ? 'z. B. Garten' : memo ? 'z. B. Netflix' : 'z. B. Koffer'}
+                />
+              </label>
+            )}
             <datalist id="packing-people">
               {[...new Set(items.map((i) => packingInfo(i).person).filter(Boolean))].map((p) => (
                 <option key={p} value={p!} />

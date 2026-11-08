@@ -8,6 +8,9 @@ import {
   listDescription,
   listGroup,
   packingInfo,
+  itemDone,
+  itemPersons,
+  peopleLabel,
   type ItemRow,
   type ItemSource,
   type ListRow,
@@ -35,6 +38,9 @@ export interface ApiItem {
   /** Packing lists: for whom, and in which Packstück. */
   person: string | null;
   container: string | null;
+  /** One entry for several people ("Sonnenbrille" for Sönke and Ulli): everyone, and who is ticked off already. */
+  persons: string[];
+  donePersons: string[];
   /** Merklisten: who the tip is from, and where to find it (same values as person/container). */
   tipFrom: string | null;
   where: string | null;
@@ -84,12 +90,14 @@ export function toApiItem(i: ItemRow, userNames: Map<string, string>, listType?:
     optional: i.optional,
     sources,
     catalogItemId: i.catalogItemId,
-    person: packing.person,
+    person: itemPersons(i).length ? peopleLabel(i) : packing.person,
     container: packing.container,
+    persons: itemPersons(i),
+    donePersons: itemDone(i),
     tipFrom: packing.person,
     where: packing.container,
     due: dueOf(i),
-    assignee: packing.person,
+    assignee: itemPersons(i).length ? peopleLabel(i) : packing.person,
     area: packing.container,
     addedVia: typeof i.attributes.via === 'string' ? i.attributes.via : null,
   };

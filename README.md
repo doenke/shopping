@@ -85,7 +85,7 @@ einer Vorlage. Die erste Einkaufsliste wird deine Hauptliste ⭐.
 
 Oben in die Zeile: „2 kg Kartoffeln festkochend“ – Menge, Einheit und Eigenschaft werden
 erkannt, der Artikel landet in seiner Kategorie. Mehrere auf einmal gehen mit Komma. Auf
-Packlisten ordnen „@Anna“ und „#Koffer“ zu, auf ToDo-Listen setzt „!morgen“ die Fälligkeit.
+Packlisten ordnen „@Anna“ und „#Koffer“ zu („Sonnenbrille @Sönke @Ulli“: ein Eintrag, pro Person abgehakt), auf ToDo-Listen setzt „!morgen“ die Fälligkeit.
 
 ### 3. Einkaufen
 

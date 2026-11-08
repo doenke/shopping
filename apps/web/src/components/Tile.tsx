@@ -49,6 +49,8 @@ interface TileProps {
   fading?: boolean;
   /** Extra line, e.g. person and Packstück on packing lists. */
   extra?: string;
+  /** Multi-person items: who is ticked off already (initials). */
+  people?: React.ReactNode;
   onTap: () => void;
   onLongPress?: () => void;
 }
@@ -56,7 +58,7 @@ interface TileProps {
 const isOffer = (p: string) => p.trim().toLowerCase() === 'angebot';
 
 /** Tile: tap to check (or add), long press / right click for details. */
-export function Tile({ item, variant = 'open', badge, badgeUser, fading = false, extra, onTap, onLongPress }: TileProps) {
+export function Tile({ item, variant = 'open', badge, badgeUser, fading = false, extra, people, onTap, onLongPress }: TileProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressed = useRef(false);
   // "Angebot" is not written out but shown as a % badge.
@@ -107,6 +109,7 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
       <span className="tile__name">{item.name}</span>
       {spec && <span className="tile__spec">{spec}</span>}
       {extra && <span className="tile__spec tile__extra">{extra}</span>}
+      {people && <span className="tile__spec tile__people">{people}</span>}
       {unreviewed && (
         <span className="tile__unreviewed" title="Neues Icon wartet auf Prüfung – lange drücken bzw. öffnen" aria-hidden>
           🖼

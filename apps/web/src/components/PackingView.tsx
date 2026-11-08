@@ -2,7 +2,10 @@ import { useCustomCategories } from '../categories';
 import {
   categoriesInOrder,
   categoryInList,
+  itemDone,
+  itemPersons,
   packingInfo,
+  peopleLabel,
   type CatalogIndex,
   type CatalogItem,
   type ItemRow,
@@ -10,14 +13,23 @@ import {
   type UserInfo,
 } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
-import { archiveList, setChecked } from '../actions';
+import { archiveList, setChecked, setPersonChecked } from '../actions';
 import { navigate, useMe, useTileView } from '../hooks';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
 import { ItemEditor } from './ItemEditor';
 import { Tile } from './Tile';
+import { PeopleDots, PersonCheckDialog } from './People';
 
 type GroupBy = 'category' | 'container' | 'person';
+
+/** A tile: an item, or – grouped by person – one person's share of a multi-person item. */
+interface Entry {
+  item: ItemRow;
+  person?: string;
+}
+
+const entryPacked = (e: Entry) => (e.person ? itemDone(e.item).includes(e.person) : e.item.checked);
 
 const GROUP_LABEL: Record<GroupBy, string> = { category: 'Kategorie', container: 'Packstück', person: 'Person' };
 
@@ -62,7 +74,9 @@ function saveFlag(key: string, on: boolean): void {
  */
 export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingView({ list, items, index, users, remoteChecks }, addRef) {
   const [editing, setEditing] = useState<string | null>(null);
-  const [undo, setUndo] = useState<ItemRow | null>(null);
+  /** Multi-person item being ticked off ("Für wen?"). */
+  const [checking, setChecking] = useState<string | null>(null);
+  const [undo, setUndo] = useState<Entry | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>(() => loadGroupBy(list.id));
   const [hidePacked, setHidePacked] = useState(() => loadFlag(`packing-hide:${list.id}`));
 
@@ -82,31 +96,38 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
     return () => clearTimeout(t);
   }, [undo]);
 
-  const packed = items.filter((i) => i.checked).length;
-  const allPacked = items.length > 0 && packed === items.length;
+  // Sonnenbrille for Sönke and Ulli counts twice: two of them go into the bag.
+  const total = items.reduce((n, i) => n + Math.max(1, itemPersons(i).length), 0);
+  const packed = items.reduce((n, i) => n + (itemPersons(i).length ? itemDone(i).length : i.checked ? 1 : 0), 0);
+  const allPacked = items.length > 0 && packed === total;
 
   const me = useMe();
   const custom = useCustomCategories();
   const [tileView] = useTileView();
   const groups = useMemo(() => {
-    const keyOf = (i: ItemRow): string => {
-      const p = packingInfo(i);
-      if (groupBy === 'person') return p.person ?? '';
+    // Grouped by person, a multi-person item shows up with each of them – ticked off there just for them.
+    const entries: Entry[] =
+      groupBy === 'person'
+        ? items.flatMap((i) => (itemPersons(i).length ? itemPersons(i).map((person) => ({ item: i, person })) : [{ item: i }]))
+        : items.map((i) => ({ item: i }));
+    const keyOf = (e: Entry): string => {
+      const p = packingInfo(e.item);
+      if (groupBy === 'person') return e.person ?? p.person ?? '';
       if (groupBy === 'container') return p.container ?? '';
-      return categoryInList(i.categoryId, 'packing', custom).id;
+      return categoryInList(e.item.categoryId, 'packing', custom).id;
     };
-    const byKey = new Map<string, ItemRow[]>();
-    for (const i of items) byKey.set(keyOf(i), [...(byKey.get(keyOf(i)) ?? []), i]);
-    const sortItems = (rows: ItemRow[]) => rows.sort((a, b) => a.position.localeCompare(b.position));
+    const byKey = new Map<string, Entry[]>();
+    for (const e of entries) byKey.set(keyOf(e), [...(byKey.get(keyOf(e)) ?? []), e]);
+    const sortEntries = (rows: Entry[]) => rows.sort((a, b) => a.item.position.localeCompare(b.item.position));
     if (groupBy === 'category') {
       return categoriesInOrder('packing', me?.categoryOrder, custom)
         .filter((c) => byKey.has(c.id))
-        .map((c) => ({ key: c.id, title: c.name, items: sortItems(byKey.get(c.id)!) }));
+        .map((c) => ({ key: c.id, title: c.name, entries: sortEntries(byKey.get(c.id)!) }));
     }
     const empty = groupBy === 'person' ? 'Alle / ohne Person' : 'Ohne Packstück';
     return [...byKey.keys()]
       .sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, 'de')))
-      .map((k) => ({ key: k || '-', title: k || empty, items: sortItems(byKey.get(k)!) }));
+      .map((k) => ({ key: k || '-', title: k || empty, entries: sortEntries(byKey.get(k)!) }));
   }, [items, groupBy, me?.categoryOrder, custom]);
 
   const boost = useMemo(() => {
@@ -115,12 +136,27 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
   }, [items]);
 
   /** What the tile shows besides the grouping (no need to repeat the group). */
-  const extraOf = (i: ItemRow) => {
-    const p = packingInfo(i);
-    return [groupBy !== 'person' ? p.person : null, groupBy !== 'container' ? p.container : null].filter(Boolean).join(' · ') || undefined;
+  const extraOf = (e: Entry) => {
+    const p = packingInfo(e.item);
+    const who = groupBy !== 'person' && !itemPersons(e.item).length ? peopleLabel(e.item) : null;
+    return [who, groupBy !== 'container' ? p.container : null].filter(Boolean).join(' · ') || undefined;
+  };
+
+  const tap = (e: Entry) => {
+    const persons = itemPersons(e.item);
+    if (e.person) {
+      const on = !itemDone(e.item).includes(e.person);
+      void setPersonChecked(e.item, { [e.person]: on });
+      if (on) setUndo(e);
+      return;
+    }
+    if (persons.length) return setChecking(e.item.id);
+    void setChecked(e.item, !e.item.checked);
+    if (!e.item.checked) setUndo(e);
   };
 
   const editItem = items.find((i) => i.id === editing);
+  const checkItem = items.find((i) => i.id === checking);
 
   return (
     <section className={`listview${tileView === 'rows' ? ' listview--rows' : ''}`}>
@@ -138,9 +174,9 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
       {items.length > 0 && (
         <div className="packing-head">
           <div className="packing-progress">
-            <progress max={items.length} value={packed} />
+            <progress max={total} value={packed} />
             <span>
-              {packed} von {items.length} eingepackt
+              {packed} von {total} eingepackt
             </span>
           </div>
           {packed > 0 && (
@@ -182,31 +218,29 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
       )}
 
       {groups.map((g) => {
-        const done = g.items.filter((i) => i.checked).length;
+        const done = g.entries.filter(entryPacked).length;
         // Hidden: packed ones go (someone else's tick shows for a moment first); fully packed groups too.
-        const shown = hidePacked ? g.items.filter((i) => !i.checked || remoteChecks.has(i.id)) : g.items;
+        const shown = hidePacked ? g.entries.filter((e) => !entryPacked(e) || remoteChecks.has(e.item.id)) : g.entries;
         if (shown.length === 0) return null;
         return (
           <div key={g.key} className="group">
             <h2 className="group__title">
-              {g.title} <span className="group__count">{done === g.items.length ? '✓' : `${done}/${g.items.length}`}</span>
+              {g.title} <span className="group__count">{done === g.entries.length ? '✓' : `${done}/${g.entries.length}`}</span>
             </h2>
             <div className="tiles">
-              {shown.map((item) => {
-                const remote = remoteChecks.get(item.id);
+              {shown.map((e) => {
+                const remote = remoteChecks.get(e.item.id);
                 return (
                   <Tile
-                    key={item.id}
-                    item={item}
-                    variant={item.checked ? 'packed' : 'open'}
-                    extra={extraOf(item)}
+                    key={`${e.item.id}:${e.person ?? ''}`}
+                    item={e.item}
+                    variant={entryPacked(e) ? 'packed' : 'open'}
+                    extra={extraOf(e)}
+                    people={!e.person && itemPersons(e.item).length ? <PeopleDots item={e.item} /> : undefined}
                     badge={remote ? `✓ ${users.get(remote.by)?.displayName ?? ''}`.trim() : undefined}
                     badgeUser={remote ? users.get(remote.by) : undefined}
-                    onTap={() => {
-                      void setChecked(item, !item.checked);
-                      if (!item.checked) setUndo(item);
-                    }}
-                    onLongPress={() => setEditing(item.id)}
+                    onTap={() => tap(e)}
+                    onLongPress={() => setEditing(e.item.id)}
                   />
                 );
               })}
@@ -217,11 +251,13 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
 
       {undo && (
         <div className="snackbar" role="status">
-          <span>{undo.name} eingepackt</span>
+          <span>
+            {undo.item.name} eingepackt{undo.person ? ` (${undo.person})` : ''}
+          </span>
           <button
             type="button"
             onClick={() => {
-              void setChecked(undo, false);
+              void (undo.person ? setPersonChecked(undo.item, { [undo.person]: false }) : setChecked(undo.item, false));
               setUndo(null);
             }}
           >
@@ -231,6 +267,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
       )}
 
       {editItem && <ItemEditor key={editItem.id} item={editItem} list={list} items={items} users={users} onClose={() => setEditing(null)} />}
+      {checkItem && <PersonCheckDialog key={checkItem.id} item={checkItem} verb="eingepackt" onClose={() => setChecking(null)} />}
     </section>
   );
 });

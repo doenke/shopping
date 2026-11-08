@@ -8,7 +8,12 @@ import {
   type CustomCategoryType,
   packingInfo,
   planAdd,
-  samePacking,
+  isForEach,
+  itemPersons,
+  listPersons,
+  peopleKey,
+  peopleOnItems,
+  resolvePeople,
   type CatalogItem,
   type ItemPatch,
   type ItemRow,
@@ -30,7 +35,11 @@ export type { NewItem };
  */
 export async function addItems(listId: string, parsed: NewItem[]): Promise<void> {
   const existing = await db.items.where('listId').equals(listId).toArray();
-  const changes = planAdd(listId, existing, parsed, () => crypto.randomUUID());
+  // "@alle" / "für jeden": everyone the list is made for (or who is on it already); templates keep "für jeden".
+  const list = await db.lists.get(listId);
+  const persons = list && listPersons(list).length ? listPersons(list) : peopleOnItems(existing);
+  const resolved = parsed.map((p) => resolvePeople(p, { isTemplate: !!list?.isTemplate, persons }));
+  const changes = planAdd(listId, existing, resolved, () => crypto.randomUUID());
   await sync.mutateItems(changes.map(({ id, patch }) => ({ id, patch })));
 }
 
@@ -40,6 +49,19 @@ export function catalogToParsed(c: CatalogItem): ParsedItem {
 
 export async function setChecked(item: ItemRow, checked: boolean): Promise<void> {
   await sync.mutateItem(item.id, { checked });
+}
+
+/** Multi-person items: tick off (or untick) single people, e.g. { Ulli: true }. */
+export async function setPersonChecked(item: ItemRow, checks: Record<string, boolean>): Promise<void> {
+  await sync.mutateItem(item.id, { personChecks: checks });
+}
+
+/** Who a list is for ("Für wen packen wir?"), used for "@alle" / "für jeden". */
+export async function setListPersons(list: ListRow, persons: string[]): Promise<void> {
+  const settings = { ...list.settings };
+  if (persons.length) settings.persons = persons;
+  else delete settings.persons;
+  await sync.mutateList(list.id, { settings });
 }
 
 export async function updateItem(id: string, patch: ItemPatch): Promise<void> {
@@ -62,6 +84,8 @@ export async function createList(
   group?: string,
   /** Recurring checklist: open again every day/week/month. */
   reset?: ResetEvery | null,
+  /** Who the list is for ("für jeden" in templates becomes these people). */
+  persons: string[] = [],
 ): Promise<string> {
   const id = crypto.randomUUID();
   const settings: Record<string, unknown> = {};
@@ -72,6 +96,7 @@ export async function createList(
   }
   if (group?.trim()) settings.group = group.trim();
   if (reset) settings.reset = reset;
+  if (persons.length) settings.persons = persons;
   await sync.mutateList(id, { name, listType, isTemplate, visibility, ...(Object.keys(settings).length ? { settings } : {}) });
   return id;
 }
@@ -123,7 +148,9 @@ export async function templatesMissing(list: ListRow, items: NewItem[]): Promise
       (n) =>
         !have.some((h) => {
           const same = n.catalogItemId ? h.catalogItemId === n.catalogItemId : h.name.trim().toLowerCase() === n.name.trim().toLowerCase();
-          return same && samePacking(packingInfo(h), { person: n.person ?? null, container: n.container ?? null });
+          const container = (packingInfo(h).container ?? '').toLowerCase() === (n.container ?? '').toLowerCase();
+          const many = n.forEach || (n.persons?.length ?? 0) >= 2;
+          return same && container && peopleKey(h) === (many ? '*' : (n.person ?? '').toLowerCase());
         }),
     );
     if (missing.length) out.push({ template, items: missing });
@@ -140,6 +167,8 @@ export function itemToNew(i: ItemRow): NewItem {
     properties: i.properties,
     note: i.note,
     ...packingInfo(i),
+    ...(itemPersons(i).length ? { persons: itemPersons(i) } : {}),
+    ...(isForEach(i) ? { forEach: true } : {}),
   };
 }
 

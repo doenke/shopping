@@ -1,5 +1,7 @@
 import {
+  applyItemPatch,
   applyPatch,
+  mergeItem,
   CATEGORY_FIELDS,
   Hlc,
   ITEM_FIELDS,
@@ -190,12 +192,18 @@ export class SyncEngine {
         hlc: {},
         seq: 0,
       };
-      const patch: Partial<ItemRow> = { ...m.patch };
+      const patch: Partial<ItemRow> & { personChecks?: Record<string, boolean> } = { ...m.patch };
       if (m.patch.checked !== undefined) {
         patch.checkedBy = m.patch.checked ? (this.me?.id ?? null) : null;
         patch.checkedAt = m.patch.checked ? new Date().toISOString() : null;
       }
-      applyPatch(row, patch, m.hlc);
+      const was = row.checked;
+      applyItemPatch(row, patch, m.hlc);
+      // The last person ticked off: the whole item is done (by me, now).
+      if (m.patch.checked === undefined && row.checked !== was) {
+        row.checkedBy = row.checked ? (this.me?.id ?? null) : null;
+        row.checkedAt = row.checked ? new Date().toISOString() : null;
+      }
       await db.items.put(row);
     } else if (m.entity === 'category') {
       const row: CategoryRow = (await db.categories.get(m.id)) ?? {
@@ -402,7 +410,7 @@ export class SyncEngine {
       }
       for (const incoming of cs.items) {
         const local = await db.items.get(incoming.id);
-        const merged = local ? mergeRow(local, incoming, ITEM_FIELDS) : incoming;
+        const merged = local ? mergeItem(local, incoming, ITEM_FIELDS) : incoming;
         if (merged.deleted && !pendingIds.has(merged.id)) await db.items.delete(merged.id);
         else await db.items.put(merged);
         if (local && !local.checked && merged.checked && merged.checkedBy && merged.checkedBy !== this.me?.id) {

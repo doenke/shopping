@@ -2,7 +2,9 @@ import { useCustomCategories } from '../categories';
 import {
   categoriesInOrder,
   categoryInList,
+  itemPersons,
   packingInfo,
+  peopleLabel,
   type CatalogIndex,
   type CatalogItem,
   type ItemRow,
@@ -20,6 +22,7 @@ import { MemoView } from './MemoView';
 import { PackingView } from './PackingView';
 import { TodoView } from './TodoView';
 import { Tile } from './Tile';
+import { PeopleDots, PersonCheckDialog } from './People';
 
 interface Props {
   list: ListRow;
@@ -41,6 +44,8 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView(pr
 
 const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({ list, items, index, users, remoteChecks }, addRef) {
   const [editing, setEditing] = useState<string | null>(null);
+  /** Multi-person item being ticked off ("Für wen?"). */
+  const [checking, setChecking] = useState<string | null>(null);
   const [undo, setUndo] = useState<ItemRow | null>(null);
   const [showRecent, setShowRecent] = useState(false);
   const me = useMe();
@@ -86,7 +91,18 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
     return (c: CatalogItem) => (used.get(c.id) ?? 0) * 5;
   }, [items]);
 
+  /** The last item: shopping is over. */
+  const afterCheck = (id: string, allDone: boolean) => {
+    if (allDone && open.every((i) => i.id === id || remoteChecks.has(i.id))) {
+      stopShopping();
+      setDone(true);
+    } else {
+      shoppingActivity();
+    }
+  };
+
   const editItem = items.find((i) => i.id === editing);
+  const checkItem = items.find((i) => i.id === checking);
 
   return (
     <section className={`listview${shopping ? ' listview--shopping' : ''}${tileView === 'rows' ? ' listview--rows' : ''}`}>
@@ -143,19 +159,16 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
                   fading={!!remote}
                   badge={remote ? `✓ ${users.get(remote.by)?.displayName ?? ''}`.trim() : list.isTemplate && item.optional ? 'optional' : undefined}
                   badgeUser={remote ? users.get(remote.by) : undefined}
-                  extra={[packingInfo(item).person, packingInfo(item).container].filter(Boolean).join(' · ') || undefined}
+                  extra={[itemPersons(item).length ? null : peopleLabel(item), packingInfo(item).container].filter(Boolean).join(' · ') || undefined}
+                  people={itemPersons(item).length ? <PeopleDots item={item} /> : undefined}
                   onTap={() => {
                     if (!shopping) return setEditing(item.id);
                     if (remote) return;
+                    // For several people: ask for whom.
+                    if (itemPersons(item).length) return setChecking(item.id);
                     void setChecked(item, true);
                     setUndo(item);
-                    // The last item: shopping is over.
-                    if (open.every((i) => i.id === item.id || remoteChecks.has(i.id))) {
-                      stopShopping();
-                      setDone(true);
-                    } else {
-                      shoppingActivity();
-                    }
+                    afterCheck(item.id, true);
                   }}
                   onLongPress={() => setEditing(item.id)}
                 />
@@ -203,6 +216,15 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
       )}
 
       {editItem && <ItemEditor key={editItem.id} item={editItem} list={list} items={items} users={users} onClose={() => setEditing(null)} />}
+      {checkItem && (
+        <PersonCheckDialog
+          key={checkItem.id}
+          item={checkItem}
+          verb="gekauft"
+          onDone={(all) => afterCheck(checkItem.id, all)}
+          onClose={() => setChecking(null)}
+        />
+      )}
     </section>
   );
 });

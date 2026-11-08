@@ -1,4 +1,4 @@
-import { formatAmounts, itemSpecification, listTemplateIds, packingInfo, type ItemRow, type ListRow } from '@shopping/shared';
+import { formatAmounts, itemSpecification, listTemplateIds, packingInfo, peopleKey, peopleLabel, type ItemRow, type ListRow } from '@shopping/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, itemToNew, updateItem } from '../actions';
 import { useItems } from '../hooks';
@@ -12,15 +12,15 @@ interface Props {
   onClose: () => void;
 }
 
-/** Same thing: same catalog item (or name), same person and Packstück. */
+/** Same thing: same catalog item (or name), same person and Packstück ("für jeden" = several people). */
 function keyOf(i: ItemRow): string {
   const p = packingInfo(i);
-  return [i.catalogItemId ?? i.name.trim().toLowerCase(), p.person?.toLowerCase() ?? '', p.container?.toLowerCase() ?? ''].join('|');
+  return [i.catalogItemId ?? i.name.trim().toLowerCase(), peopleKey(i), p.container?.toLowerCase() ?? ''].join('|');
 }
 
 const describe = (i: ItemRow) => {
   const p = packingInfo(i);
-  return [itemSpecification(i), p.person, p.container].filter(Boolean).join(' · ');
+  return [itemSpecification(i), peopleLabel(i), p.container].filter(Boolean).join(' · ');
 };
 
 type Direction = 'none' | 'toList' | 'toTemplate';

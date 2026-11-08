@@ -10,6 +10,10 @@ import {
   listDescription,
   packingInfo,
   withPacking,
+  withPeople,
+  listPersons,
+  peopleOnItems,
+  resolvePeople,
   type CatalogKind,
   type ListType,
   findUnit,
@@ -392,9 +396,13 @@ export class ShoppingApi {
 
   async addItems(userId: string, listRef: string | undefined, inputs: NewItem[] | ItemInput[], parsed = false): Promise<AddResult> {
     const list = await this.resolveList(userId, listRef);
-    const items = parsed ? (inputs as NewItem[]) : await this.toNewItems(inputs as ItemInput[], list.listType, userId);
-    if (items.length === 0) throw new ApiError(400, 'empty', 'Keine Artikel erkannt');
     const existing = await this.itemsOf(list.id);
+    // "@alle": everyone the list is made for (or who is on it already); in templates "für jeden".
+    const persons = listPersons(list).length ? listPersons(list) : peopleOnItems(existing);
+    const items = (parsed ? (inputs as NewItem[]) : await this.toNewItems(inputs as ItemInput[], list.listType, userId)).map((i) =>
+      resolvePeople(i, { isTemplate: list.isTemplate, persons }),
+    );
+    if (items.length === 0) throw new ApiError(400, 'empty', 'Keine Artikel erkannt');
     const plan = planAdd(list.id, existing, items, randomUUID);
     await this.mutate(userId, 'item', plan);
     const after = new Map((await this.itemsOf(list.id)).map((i) => [i.id, i]));
@@ -421,10 +429,9 @@ export class ShoppingApi {
     const person = input.person !== undefined ? input.person : input.tipFrom !== undefined ? input.tipFrom : input.assignee;
     const container = input.container !== undefined ? input.container : input.where !== undefined ? input.where : input.area;
     if (person !== undefined || container !== undefined || input.due !== undefined) {
-      patch.attributes = withPacking(item.attributes, {
-        ...(person !== undefined ? { person } : {}),
-        ...(container !== undefined ? { container } : {}),
-      });
+      // "Sönke + Ulli": one entry for both, ticked off per person.
+      const base = person !== undefined ? withPeople(item.attributes, person ? person.split('+') : []) : item.attributes;
+      patch.attributes = withPacking(base, container !== undefined ? { container } : {});
       if (input.due !== undefined) {
         if (input.due) patch.attributes.due = input.due;
         else delete patch.attributes.due;
