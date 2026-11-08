@@ -24,6 +24,9 @@ import { iconRoutes } from './icons/routes.js';
 import { IconService } from './icons/service.js';
 import { mcpRoutes } from './mcp/server.js';
 import { mealieRoutes } from './mealie/routes.js';
+import { davRoutes } from './dav/routes.js';
+import { jmapRoutes } from './jmap/routes.js';
+import { TaskService } from './tasks/service.js';
 import { fetchPageTitle, fetchWebRecipe, RecipeError, webRecipeCandidates } from './recipes/web-recipe.js';
 import { oauthRoutes } from './oauth/routes.js';
 import { MealieService } from './mealie/service.js';
@@ -251,6 +254,10 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   app.addHook('onClose', async () => webhooks.stop());
   await app.register(oauthRoutes, { config, db });
   await app.register(mcpRoutes, { api, requireUser });
+  // Lists as task lists for other apps: CalDAV (Erinnerungen, Thunderbird, DAVx⁵) and JMAP.
+  const tasks = new TaskService(db, api);
+  await davRoutes(app, { config, db, tasks });
+  await app.register(jmapRoutes, { config, db, tasks });
   await app.register(mealieRoutes, { config, db, sync, hub, secrets, mealie, requireUser: requireAccount });
   app.addHook('onClose', async () => mealie.stop());
 

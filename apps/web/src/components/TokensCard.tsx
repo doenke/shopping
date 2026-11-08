@@ -132,6 +132,13 @@ export function TokensCard() {
         </ul>
       )}
 
+      <h3>Erinnerungen &amp; Aufgaben-Apps (CalDAV, JMAP)</h3>
+      <p className="muted">
+        Deine Listen als Aufgabenlisten in Apple Erinnerungen, Thunderbird oder DAVx⁵ (mit Tasks.org/jtx Board): Konto-Typ „CalDAV“, Server{' '}
+        <code>{location.origin}</code>, Benutzername beliebig, Passwort ein Token von oben (Lesen + Ändern). Abhaken, Umbenennen und neue Einträge kommen in
+        beide Richtungen an. JMAP-Clients finden alles unter <code>{location.origin}/.well-known/jmap</code>.
+      </p>
+
       <h3>KI-Assistenten (MCP)</h3>
       <p className="muted">
         MCP-Server-Adresse für Claude &amp; Co.: <code>{location.origin}/mcp</code> – die Anmeldung läuft über dein Pocket-ID-Konto.

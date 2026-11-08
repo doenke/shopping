@@ -89,6 +89,9 @@
   gezogen, bekommt er den Link (hat er schon einen, fragt die App vor dem Ersetzen); auf freie Fläche
   gezogen, entsteht ein neuer Eintrag – benannt nach dem Linktext bzw. dem Titel der Seite. In die
   Eingabezeile gezogen landet der Link wie gewohnt als Text.
+- **In Erinnerungen & Co.** (CalDAV, JMAP): alle Listen als Aufgabenlisten in Apple Erinnerungen,
+  Thunderbird oder DAVx⁵ + Tasks.org – Abhaken, Ändern und Neues in beide Richtungen. Einrichtung:
+  [api-und-ki.md](api-und-ki.md#aufgaben-apps-caldav-und-jmap).
 - **Teilen → Shopping** (installierte App auf Android): Geteiltes aus Browser, Netflix, IMDb & Co. öffnet
   „Hinzufügen“ – Name (der Titel der Seite) und Liste wählen. Mit Link ist eine Merkliste vorausgewählt,
   sonst die Hauptliste; die zuletzt gewählte Liste merkt sich die App. Auf Einkaufslisten gibt es zusätzlich

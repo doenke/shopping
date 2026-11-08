@@ -10,6 +10,7 @@ import { isOwnName } from './catalog-index.js';
 import { extractDue, formatDue, parseDue } from './due.js';
 import { defaultVisibility } from './packing.js';
 import { planAdd } from './plan-add.js';
+import { itemToIcal, parseIcalTodo, taskPatch, taskTitle } from './ical.js';
 import { findUrl, itemUrl, linkLabel, withUrl } from './links.js';
 import { applyItemPatch, itemDone, mergeItem, peopleLabel, resolvePeople, withPeople } from './people.js';
 import { suggestedProperties } from './properties.js';
@@ -505,5 +506,83 @@ describe('links on items', () => {
     const base = { catalogItemId: null, deleted: false, amounts: [], properties: [], note: null, position: 'a0', checked: false };
     const plan = planAdd('l', [{ ...base, id: 'd', name: 'Dune', attributes: {} }], parseInput('Dune https://a.de/dune', undefined, 'memo'), () => 'n');
     expect(plan).toEqual([expect.objectContaining({ id: 'd', patch: { attributes: { url: 'https://a.de/dune' } } })]);
+  });
+});
+
+describe('entries as tasks (CalDAV/JMAP)', () => {
+  const row: ItemRow = {
+    id: '11111111-1111-4111-8111-111111111111',
+    listId: 'l',
+    catalogItemId: null,
+    name: 'Reifen wechseln',
+    amounts: [],
+    properties: [],
+    note: 'Schrauben, Muttern; Werkzeug\nim Keller',
+    categoryId: null,
+    checked: false,
+    checkedAt: null,
+    checkedBy: null,
+    position: 'a0',
+    optional: false,
+    attributes: { due: '2026-11-13', url: 'https://a.de/x', container: 'Auto', person: 'Ben' },
+    createdBy: null,
+    createdAt: '2026-11-01T10:00:00.000Z',
+    deleted: false,
+    mergedInto: null,
+    hlc: { name: '1793900000000:0000:a' },
+    seq: 5,
+  };
+
+  it('writes a VTODO and reads it back', () => {
+    const ics = itemToIcal(row, { name: 'Aufgaben', listType: 'todo' }, new Date('2026-11-08T12:00:00Z'));
+    expect(ics).toContain('SUMMARY:Reifen wechseln – Ben\r\n');
+    expect(ics).toContain('DUE;VALUE=DATE:20261113');
+    expect(ics.replace(/\r\n /g, '')).toContain('DESCRIPTION:Schrauben\\, Muttern\\; Werkzeug\\nim Keller');
+    expect(ics.split('\r\n').every((l) => l.length <= 75)).toBe(true);
+    expect(ics).toContain('STATUS:NEEDS-ACTION');
+    const back = parseIcalTodo(ics)!;
+    expect(back).toEqual({
+      uid: row.id,
+      summary: 'Reifen wechseln – Ben',
+      description: 'Schrauben, Muttern; Werkzeug\nim Keller',
+      completed: false,
+      due: '2026-11-13',
+      url: 'https://a.de/x',
+    });
+    // Unchanged: nothing to do.
+    expect(taskPatch(row, 'todo', back, (t) => parseItem(t))).toEqual({});
+  });
+
+  it('takes over what a task app changed', () => {
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'BEGIN:VTODO',
+      'UID:abc',
+      'SUMMARY:Sommerreifen wechseln',
+      'DUE;TZID=Europe/Berlin:20261114T090000',
+      'STATUS:COMPLETED',
+      'BEGIN:VALARM',
+      'SUMMARY:Erinnerung',
+      'END:VALARM',
+      'END:VTODO',
+      'END:VCALENDAR',
+    ].join('\r\n');
+    const task = parseIcalTodo(ics)!;
+    expect(task).toMatchObject({ uid: 'abc', summary: 'Sommerreifen wechseln', completed: true, due: '2026-11-14', description: null });
+    const patch = taskPatch(row, 'todo', task, (t) => parseItem(t, undefined, 'todo'));
+    expect(patch).toMatchObject({ name: 'Sommerreifen wechseln', checked: true, note: null });
+    expect(patch.attributes).toMatchObject({ due: '2026-11-14' });
+    expect(patch.attributes).not.toHaveProperty('url');
+    // A shopping title with amount is read like typed input.
+    const milk = { ...row, name: 'Milch', note: null, attributes: {} };
+    expect(taskTitle({ ...milk, amounts: [{ q: 1, u: 'l' }] }, 'shopping')).toBe('Milch – 1 l');
+    expect(
+      taskPatch(
+        { ...milk, amounts: [{ q: 1, u: 'l' }] },
+        'shopping',
+        { summary: '2 l Milch', description: null, completed: false, due: null, url: null },
+        (t) => parseItem(t),
+      ),
+    ).toEqual({ amounts: [{ q: 2, u: 'l' }] });
   });
 });

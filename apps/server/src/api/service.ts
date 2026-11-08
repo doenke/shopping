@@ -23,6 +23,7 @@ import {
   type CatalogItem,
   type ItemPatch,
   type ListPatch,
+  type ListRow,
   type NewItem,
 } from '@shopping/shared';
 import { and, desc, eq, inArray } from 'drizzle-orm';
@@ -110,6 +111,26 @@ export class ShoppingApi {
       };
     }
     return this.catalogCache;
+  }
+
+  /** The catalog for parsing typed text on a list of this type (CalDAV/JMAP titles). */
+  async indexFor(listType: ListType): Promise<CatalogIndex> {
+    return (await this.catalog()).index[listType];
+  }
+
+  /** Item changes as the user (CalDAV/JMAP); same rules and notifications as the app. */
+  async applyItems(userId: string, changes: { id: string; patch: ItemPatch }[]): Promise<void> {
+    await this.mutate(userId, 'item', changes);
+  }
+
+  /** List changes as the user (CalDAV/JMAP renames). */
+  async applyLists(userId: string, changes: { id: string; patch: ListPatch }[]): Promise<void> {
+    await this.mutate(userId, 'list', changes);
+  }
+
+  /** The lists a user can see (including templates and archived ones). */
+  async visibleLists(userId: string): Promise<ListRow[]> {
+    return this.accessibleLists(userId);
   }
 
   invalidateCatalog(): void {

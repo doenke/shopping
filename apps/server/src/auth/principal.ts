@@ -32,7 +32,7 @@ export function newToken(): string {
 const ALL_SCOPES: ReadonlySet<Scope> = new Set(SCOPES);
 const LAST_USED_GRANULARITY_MS = 5 * 60_000;
 
-async function tokenPrincipal(db: Db, token: string): Promise<Principal | null> {
+export async function tokenPrincipal(db: Db, token: string): Promise<Principal | null> {
   const now = new Date();
   const [row] = await db
     .select({
@@ -58,6 +58,21 @@ async function tokenPrincipal(db: Db, token: string): Promise<Principal | null> 
     tokenId: row.id,
     tokenName: row.name,
   };
+}
+
+/**
+ * For calendar/task apps (CalDAV, JMAP): an API token as Bearer, or as the password of HTTP Basic
+ * (the user name does not matter – many apps can only do user name + password).
+ */
+export async function credentialPrincipal(db: Db, authorization: string | undefined): Promise<Principal | null> {
+  if (!authorization) return null;
+  if (authorization.startsWith('Bearer ')) return tokenPrincipal(db, authorization.slice(7).trim());
+  if (authorization.startsWith('Basic ')) {
+    const decoded = Buffer.from(authorization.slice(6).trim(), 'base64').toString('utf8');
+    const password = decoded.slice(decoded.indexOf(':') + 1);
+    return password.startsWith(TOKEN_PREFIX) ? tokenPrincipal(db, password) : null;
+  }
+  return null;
 }
 
 /** Bearer token (API/OAuth) or the browser's session cookie. */

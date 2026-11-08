@@ -13,7 +13,9 @@
 3. `docker compose up -d` – die App ist auf `127.0.0.1:38417` erreichbar, dorthin zeigt der Reverse Proxy.
    `docker compose ps` zeigt beide Dienste als `healthy`, sobald App und Datenbank laufen (`/healthz` prüft
    auch die Datenbank).
-4. Reverse Proxy mit HTTPS davor, WebSocket-Upgrade für `/ws` erlauben.
+4. Reverse Proxy mit HTTPS davor, WebSocket-Upgrade für `/ws` erlauben. Für Aufgaben-Apps (CalDAV) muss er auch
+   die WebDAV-Methoden (`PROPFIND`, `REPORT`, `PROPPATCH`) und `/.well-known/caldav` bzw. `/.well-known/jmap` durchreichen
+   – Caddy und Nginx tun das ohne weitere Einstellung.
 
 Datenbank-Migrationen und der Grundkatalog laufen beim Start automatisch.
 

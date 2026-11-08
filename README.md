@@ -151,7 +151,7 @@ Danach *Integration hinzufügen → Shopping* mit Adresse und API-Token, und bei
 | Icons mit Bild-KI | [docs/icons.md](docs/icons.md) |
 | Mealie | [docs/mealie.md](docs/mealie.md) |
 | Home Assistant | [docs/home-assistant.md](docs/home-assistant.md) |
-| REST-API, MCP, Webhooks | [docs/api-und-ki.md](docs/api-und-ki.md) |
+| REST-API, MCP, CalDAV/JMAP, Webhooks | [docs/api-und-ki.md](docs/api-und-ki.md) |
 | Betrieb, Updates, Versionen | [docs/betrieb.md](docs/betrieb.md) |
 | Entwickeln, Aufbau, Konzept | [docs/entwicklung.md](docs/entwicklung.md) |
 
