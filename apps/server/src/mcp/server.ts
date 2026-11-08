@@ -20,7 +20,8 @@ function itemLine(i: ApiItem, type = 'shopping'): string {
         : [i.person && `@${i.person}`, i.container && `#${i.container}`].filter(Boolean).join(' ');
   // Several people: who is done already ("✓ Ulli").
   const partly = !i.checked && i.donePersons.length ? ` (✓ ${i.donePersons.join(', ')})` : '';
-  return `- ${i.checked ? '~~' : ''}${i.name}${spec}${i.checked ? '~~' : ''}${packing ? ` ${packing}` : ''}${partly}${from}`;
+  const link = i.url ? ` <${i.url}>` : '';
+  return `- ${i.checked ? '~~' : ''}${i.name}${spec}${i.checked ? '~~' : ''}${packing ? ` ${packing}` : ''}${partly}${link}${from}`;
 }
 
 /** A list as Markdown, grouped by category – easy to read for models and people. */
@@ -195,6 +196,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         person: z.string().nullable().optional().describe('Für wen (leer = niemand); mehrere mit „+“, z. B. „Sönke + Ulli“'),
         container: z.string().nullable().optional().describe('Packliste: Packstück, z. B. „Koffer“'),
         tipFrom: z.string().nullable().optional().describe('Merkliste: von wem der Tipp kommt'),
+        url: z.string().url().nullable().optional().describe('Link, z. B. zum Film oder Rezept (null = entfernen)'),
         where: z.string().nullable().optional().describe('Merkliste: wo es das gibt, z. B. „Netflix“'),
         due: z
           .string()

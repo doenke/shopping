@@ -9,6 +9,7 @@ import {
   packingInfo,
   planAdd,
   isForEach,
+  linkLabel,
   itemPersons,
   listPersons,
   peopleKey,
@@ -41,6 +42,23 @@ export async function addItems(listId: string, parsed: NewItem[]): Promise<void>
   const resolved = parsed.map((p) => resolvePeople(p, { isTemplate: !!list?.isTemplate, persons }));
   const changes = planAdd(listId, existing, resolved, () => crypto.randomUUID());
   await sync.mutateItems(changes.map(({ id, patch }) => ({ id, patch })));
+}
+
+/** The page title for a link (best effort: offline or without a title the site's name stays). */
+export async function linkTitle(url: string): Promise<string | null> {
+  const res = await fetch(`/api/v1/links/title?url=${encodeURIComponent(url)}`).catch(() => null);
+  if (!res?.ok) return null;
+  const body = (await res.json().catch(() => null)) as { title?: string | null } | null;
+  return body?.title?.trim() || null;
+}
+
+/**
+ * Adds a link as an entry: with the typed/shared name, else named after the page's title.
+ * "Dune: Part Two | Netflix" stays as it is – the name can be edited later.
+ */
+export async function addLink(listId: string, url: string, name?: string | null, extra: Partial<NewItem> = {}): Promise<void> {
+  const title = name?.trim() || (await linkTitle(url)) || linkLabel(url);
+  await addItems(listId, [{ name: title, catalogItemId: null, categoryId: null, amounts: [], properties: [], note: null, url, ...extra }]);
 }
 
 export function catalogToParsed(c: CatalogItem): ParsedItem {

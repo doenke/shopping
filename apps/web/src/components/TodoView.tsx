@@ -7,6 +7,7 @@ import {
   listDescription,
   itemDone,
   itemPersons,
+  itemUrl,
   packingInfo,
   peopleLabel,
   type CatalogIndex,
@@ -166,6 +167,18 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
             {remote && <span>✓ {users.get(remote.by)?.displayName}</span>}
           </span>
         </button>
+        {itemUrl(item) && (
+          <a
+            className="task__link"
+            href={itemUrl(item)!}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Link öffnen: ${item.name}`}
+            title={itemUrl(item)!}
+          >
+            🔗
+          </a>
+        )}
       </li>
     );
   };

@@ -2,6 +2,7 @@ import { generateKeyBetween } from 'fractional-indexing';
 import { mergeAmounts } from './amounts.js';
 import type { ItemPatch, ItemRow, ItemSource } from './model.js';
 import { packingInfo, withPacking } from './packing.js';
+import { withUrl } from './links.js';
 import { isForEach, peopleAttributes, peopleOf, withPeople } from './people.js';
 import type { ParsedItem } from './parser.js';
 
@@ -44,7 +45,7 @@ function sameItem(item: ExistingItem, p: NewItem): boolean {
 
 function attributesOf(p: NewItem): Record<string, unknown> {
   const base = withPacking({ ...(p.sources?.length ? { sources: p.sources } : {}), ...(p.due ? { due: p.due } : {}) }, { container: p.container ?? null });
-  return { ...base, ...peopleAttributes(p) };
+  return { ...(p.url ? withUrl(base, p.url) : base), ...peopleAttributes(p) };
 }
 
 function withSources(attributes: Record<string, unknown>, add: ItemSource[] | undefined): Record<string, unknown> | null {
@@ -79,6 +80,8 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
       if (p.note && p.note !== open.note) open.note = patch.note = open.note ? `${open.note}, ${p.note}` : p.note;
       let attributes = withSources(open.attributes, p.sources);
       if (more.length) attributes = withPeople(attributes ?? open.attributes, [...have, ...more]);
+      // A link comes on (or replaces the old one).
+      if (p.url && p.url !== (attributes ?? open.attributes).url) attributes = withUrl(attributes ?? open.attributes, p.url);
       if (attributes) open.attributes = patch.attributes = attributes;
       // Someone already ticked off needs it again: open for them.
       const again = have.length >= 2 ? newPeople(p).filter((n) => lower(have).includes(n.toLowerCase())) : [];

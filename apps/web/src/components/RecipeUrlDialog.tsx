@@ -1,6 +1,6 @@
 import { inUserOrder, itemSpecification, type ParsedItem } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, type NewItem } from '../actions';
+import { addItems, addLink, type NewItem } from '../actions';
 import { useLists, useMe } from '../hooks';
 import { ItemIcon } from './Tile';
 
@@ -18,9 +18,7 @@ interface Recipe {
 }
 
 /** A web address in a text ("Käsespätzle – chefkoch.de https://…" when shared from an app). */
-export function findUrl(text: string): string | null {
-  return /https?:\/\/[^\s<>"]+/i.exec(text)?.[0] ?? null;
-}
+export { findUrl } from '@shopping/shared';
 
 interface Props {
   url: string;
@@ -104,6 +102,21 @@ export function RecipeUrlDialog({ url, listId, onClose }: Props) {
                 {url}
               </a>
             </p>
+            {target && (
+              <footer className="sheet__actions">
+                <span className="spacer" />
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={() => {
+                    void addLink(target.id, url);
+                    ref.current?.close();
+                  }}
+                >
+                  🔗 Als Eintrag mit Link hinzufügen
+                </button>
+              </footer>
+            )}
           </>
         )}
         {loading && !recipe && <p className="muted">Lese das Rezept …</p>}

@@ -13,6 +13,8 @@ import {
   isForEach,
   peopleOf,
   withPeople,
+  itemUrl,
+  withUrl,
   type Amount,
   type ItemRow,
   type ItemSource,
@@ -56,6 +58,13 @@ const NOTE_EXAMPLE: Record<ListType, string> = {
   todo: 'z. B. Schrauben liegen in der Garage',
 };
 
+const LINK_EXAMPLE: Record<ListType, string> = {
+  shopping: 'z. B. zum Produkt oder Rezept',
+  packing: 'z. B. zur Bestätigung oder zum Shop',
+  memo: 'z. B. zum Film, Buch oder Restaurant',
+  todo: 'z. B. zur Anleitung',
+};
+
 function parseQuantity(s: string): number | null {
   const n = Number(s.replace(',', '.'));
   return s.trim() && Number.isFinite(n) && n > 0 ? n : null;
@@ -92,6 +101,8 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const suggestions = usePeopleSuggestions(list, items);
   const [container, setContainer] = useState(packingInfo(item).container ?? '');
   const [due, setDue] = useState(dueOf(item) ?? '');
+  const [link, setLink] = useState(typeof item.attributes.url === 'string' ? item.attributes.url : '');
+  const linkValid = itemUrl({ attributes: withUrl({}, link) });
   // The date field only shows once a task has (or gets) a due date.
   const [showDue, setShowDue] = useState(!!dueOf(item));
   const [forAll, setForAll] = useState(false);
@@ -209,16 +220,17 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
       note: note.trim() || null,
       categoryId,
       ...(isTemplate ? { optional } : {}),
-      ...(labels
-        ? {
-            attributes: withDue(
+      attributes: withUrl(
+        labels
+          ? withDue(
               multi
                 ? withPeople(withPacking(item.attributes, labels.container ? { container } : {}), people, isTemplate && forEach)
                 : withPacking(item.attributes, { person, container }),
               todo ? due : undefined,
-            ),
-          }
-        : {}),
+            )
+          : item.attributes,
+        link,
+      ),
     });
     if (forAll && item.catalogItemId && categoryId !== item.categoryId) {
       await fetch(`/api/v1/catalog/${item.catalogItemId}`, {
@@ -311,6 +323,25 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
           <span>Notiz</span>
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={NOTE_EXAMPLE[list.listType]} />
         </label>
+
+        <div className="field">
+          <span>Link</span>
+          <div className="field__link">
+            <input
+              aria-label="Link"
+              type="url"
+              inputMode="url"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder={LINK_EXAMPLE[list.listType]}
+            />
+            {linkValid && (
+              <a className="btn" href={linkValid} target="_blank" rel="noopener noreferrer" aria-label="Link öffnen">
+                🔗 Öffnen
+              </a>
+            )}
+          </div>
+        </div>
 
         {todo && !showDue && (
           <button type="button" className="link field" onClick={() => setShowDue(true)}>

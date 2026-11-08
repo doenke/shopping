@@ -12,7 +12,8 @@
   in die Eingabezeile einfügen – jede Zeile wird ein Artikel mit Menge, Einheit und Notiz („1 Zehe(n) Knoblauch“,
   „30 g Petersilie (glatt)“, „200 g Bergkäse, gerieben“). Vorher lässt sich die Liste noch bearbeiten.
 - **Rezept aus dem Web** (Chefkoch, Lecker, EAT SMARTER, BBC Good Food …): den Link des Rezepts in die
-  Eingabezeile einer Einkaufsliste einfügen oder in der Rezept-App/im Browser *Teilen → Shopping* wählen.
+  Eingabezeile einer Einkaufsliste einfügen oder in der Rezept-App/im Browser *Teilen → Shopping* wählen
+  (dort eine Einkaufsliste wählen und „Zutaten aus dem Rezept“).
   Shopping liest die Zutaten aus den Rezeptdaten der Seite (wie Bring es tut) und zeigt sie als Checkliste:
   Portionen anpassen, Vorrat wie Salz und Öl ist vorab abgewählt, Einkaufsliste wählen.
 - **Spracheingabe**: 🎤 in der Eingabezeile, „zwei Liter Milch und Butter“ – auf Einkaufs- und Packlisten
@@ -78,6 +79,16 @@
   daraus die Einträge für diese Personen; „@alle“ in der Liste selbst meint dieselben Leute. Gleichzeitiges
   Abhaken von zwei Handys überschreibt sich nicht. Wiederkehrende ToDo-Listen öffnen auch teilweise
   abgehakte Einträge wieder.
+- **Links an Einträgen** 🔗 (alle Listentypen, besonders Merklisten): ein Link im eingetippten Text
+  („Dune https://… @Ben“) oder im Editor (Feld *Link*, mit „Öffnen“). Die Kachel zeigt oben links ein 🔗 –
+  ein Tipp darauf öffnet die Seite, ohne abzuhaken; in ToDo-Zeilen steht das 🔗 rechts. Nur ein Link
+  eingetippt: Der Eintrag heißt wie die Seite (Titel, sonst der Name der Website). Auf Einkaufslisten öffnet
+  ein bloßer Link wie bisher die Rezept-Zutaten; findet sich kein Rezept, gibt es „Als Eintrag mit Link
+  hinzufügen“.
+- **Teilen → Shopping** (installierte App auf Android): Geteiltes aus Browser, Netflix, IMDb & Co. öffnet
+  „Hinzufügen“ – Name (der Titel der Seite) und Liste wählen. Mit Link ist eine Merkliste vorausgewählt,
+  sonst die Hauptliste; die zuletzt gewählte Liste merkt sich die App. Auf Einkaufslisten gibt es zusätzlich
+  „Zutaten aus dem Rezept“. Geteilter Text ohne Link wird wie eingetippt zu Einträgen.
 - **Von der Packliste auf die Einkaufsliste** (oder auf eine Vorlage): im Editor eines Eintrags
   *🛒 Auf Einkaufsliste setzen …* bzw. *◇ Auf Vorlage setzen …* – Liste wählen, übernehmen. Auf der
   Einkaufsliste mit der passenden Lebensmittel-Kategorie und dem Vermerk, für welche Packliste.

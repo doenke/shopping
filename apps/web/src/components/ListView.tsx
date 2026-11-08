@@ -3,6 +3,7 @@ import {
   categoriesInOrder,
   categoryInList,
   itemPersons,
+  itemUrl,
   packingInfo,
   peopleLabel,
   type CatalogIndex,
@@ -156,6 +157,7 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
                 <Tile
                   key={item.id}
                   item={item}
+                  url={itemUrl(item)}
                   fading={!!remote}
                   badge={remote ? `✓ ${users.get(remote.by)?.displayName ?? ''}`.trim() : list.isTemplate && item.optional ? 'optional' : undefined}
                   badgeUser={remote ? users.get(remote.by) : undefined}
@@ -193,7 +195,14 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
           {showRecent && (
             <div className="tiles">
               {recent.map((item) => (
-                <Tile key={item.id} item={item} variant="done" onTap={() => void setChecked(item, false)} onLongPress={() => setEditing(item.id)} />
+                <Tile
+                  key={item.id}
+                  item={item}
+                  url={itemUrl(item)}
+                  variant="done"
+                  onTap={() => void setChecked(item, false)}
+                  onLongPress={() => setEditing(item.id)}
+                />
               ))}
             </div>
           )}

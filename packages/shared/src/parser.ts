@@ -2,6 +2,7 @@ import type { CatalogIndex } from './catalog-index.js';
 import type { Amount, ListType } from './model.js';
 import { extractDue } from './due.js';
 import { extractPackingTokens } from './packing.js';
+import { extractUrl, linkLabel } from './links.js';
 import { findProperty } from './properties.js';
 import { findUnit } from './units.js';
 
@@ -21,6 +22,8 @@ export interface ParsedItem {
   container?: string | null;
   /** ToDo lists: "!morgen", "!12.11." → YYYY-MM-DD. */
   due?: string | null;
+  /** A web link in the text ("Dune https://…"). */
+  url?: string | null;
 }
 
 const NUMBER_WORDS: Record<string, number> = {
@@ -82,7 +85,13 @@ function capitalize(s: string): string {
 }
 
 export function parseItem(text: string, catalog?: CatalogIndex, listType: ListType = 'shopping'): ParsedItem | null {
-  const dated = extractDue(text);
+  // A link first: its "#…" or "@…" are no Packstück or person.
+  const linked = extractUrl(text);
+  if (linked.url && !linked.text) {
+    // Only a link: named after the site until there is something better (the page title).
+    return { name: linkLabel(linked.url), catalogItemId: null, categoryId: null, amounts: [], properties: [], note: null, url: linked.url };
+  }
+  const dated = extractDue(linked.text);
   const packing = extractPackingTokens(dated.text);
   let rest = packing.text;
   if (!rest) return null;
@@ -182,11 +191,17 @@ export function parseItem(text: string, catalog?: CatalogIndex, listType: ListTy
     ...(listType !== 'memo' && packing.forEach ? { forEach: true } : {}),
     ...(packing.container ? { container: packing.container } : {}),
     ...(dated.due ? { due: dated.due } : {}),
+    ...(linked.url ? { url: linked.url } : {}),
   };
 }
 
 /** Splits and parses an input line; the list type decides which words are properties. */
 export function parseInput(text: string, catalog?: CatalogIndex, listType: ListType = 'shopping'): ParsedItem[] {
+  // One line with a link is one entry: links may contain commas.
+  if (extractUrl(text).url && !text.trim().includes('\n')) {
+    const one = parseItem(text.trim(), catalog, listType);
+    return one ? [one] : [];
+  }
   return splitInput(text)
     .map((part) => parseItem(part, catalog, listType))
     .filter((p): p is ParsedItem => p !== null);

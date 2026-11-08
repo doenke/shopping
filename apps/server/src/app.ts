@@ -24,7 +24,7 @@ import { iconRoutes } from './icons/routes.js';
 import { IconService } from './icons/service.js';
 import { mcpRoutes } from './mcp/server.js';
 import { mealieRoutes } from './mealie/routes.js';
-import { fetchWebRecipe, RecipeError, webRecipeCandidates } from './recipes/web-recipe.js';
+import { fetchPageTitle, fetchWebRecipe, RecipeError, webRecipeCandidates } from './recipes/web-recipe.js';
 import { oauthRoutes } from './oauth/routes.js';
 import { MealieService } from './mealie/service.js';
 import { sharingRoutes } from './sharing/routes.js';
@@ -201,6 +201,17 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
         return await webRecipeCandidates(recipe, catalog, q.servings);
       } catch (err) {
         if (err instanceof RecipeError) return reply.code(422).send({ error: 'recipe', detail: err.message });
+        throw err;
+      }
+    });
+
+    // Name for a link that came without one (shared or pasted): the page's title.
+    api.get('/api/v1/links/title', { preHandler: requireAccount }, async (request, reply) => {
+      const q = z.object({ url: z.string().url().max(2000) }).parse(request.query);
+      try {
+        return await fetchPageTitle(q.url, fetchImpl);
+      } catch (err) {
+        if (err instanceof RecipeError) return reply.code(422).send({ error: 'link', detail: err.message });
         throw err;
       }
     });

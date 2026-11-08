@@ -2,6 +2,7 @@ import {
   asksForTemplates,
   CatalogIndex,
   extractPackingTokens,
+  extractUrl,
   type ListRow,
   isOwnName,
   itemSpecification,
@@ -10,9 +11,9 @@ import {
   type ListType,
 } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
-import { addItems, catalogToParsed, stopAskingForTemplates, templatesMissing, type NewItem } from '../actions';
+import { addItems, catalogToParsed, linkTitle, stopAskingForTemplates, templatesMissing, type NewItem } from '../actions';
 import { useLists, useTileView } from '../hooks';
-import { RecipeUrlDialog, findUrl } from './RecipeUrlDialog';
+import { RecipeUrlDialog } from './RecipeUrlDialog';
 import { Tile } from './Tile';
 
 interface Props {
@@ -34,7 +35,7 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
   // "@Anna" / "#Koffer" (packing lists) are not part of the search.
   const packing = useMemo(() => extractPackingTokens(text), [text]);
   const suggestions = useMemo(
-    () => (packing.text && !text.includes(',') && !hasAmount ? index.search(packing.text, 12, boost) : []),
+    () => (packing.text && !text.includes(',') && !hasAmount && !/https?:\/\//i.test(text) ? index.search(packing.text, 12, boost) : []),
     [text, packing, index, boost, hasAmount],
   );
 
@@ -67,7 +68,9 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
   };
 
   // A recipe link (Chefkoch & co.) on a shopping list: its ingredients, not the link as an item.
-  const recipeLink = listType === 'shopping' ? findUrl(text) : null;
+  // Only a link: on shopping lists a recipe; elsewhere (or with a name: "Kaffeemaschine https://…") an entry with link.
+  const typedLink = extractUrl(text);
+  const recipeLink = listType === 'shopping' && typedLink.url && !typedLink.text ? typedLink.url : null;
   const [recipeUrl, setRecipeUrl] = useState<string | null>(null);
 
   // Clear the field first, so fast typing never loses the next entry.
@@ -80,6 +83,11 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
     }
     if (parsed.length === 0) return;
     setText('');
+    // A bare link gets the page's title as its name (the site's name if that fails).
+    if (typedLink.url && !typedLink.text && parsed.length === 1) {
+      const title = await linkTitle(typedLink.url);
+      return add([{ ...parsed[0]!, name: title ?? parsed[0]!.name }]);
+    }
     await add(parsed);
   };
 

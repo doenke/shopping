@@ -1,6 +1,6 @@
-import { categoriesInOrder, groupLists, inUserOrder, listGroup, parseInput, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
+import { categoriesInOrder, groupLists, inUserOrder, listGroup, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, setCategoryOrder, setListOrder, setSectionOrder } from './actions';
+import { setCategoryOrder, setListOrder, setSectionOrder } from './actions';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { startShopping, stopShopping, useShopping, useWakeLock } from './shopMode';
@@ -13,7 +13,8 @@ import { MembersDialog } from './components/MembersDialog';
 import { LIST_TYPE_LABEL, NewListDialog } from './components/NewListDialog';
 import { SortDialog } from './components/SortDialog';
 import { SyncTemplateDialog } from './components/SyncTemplateDialog';
-import { RecipeUrlDialog, findUrl } from './components/RecipeUrlDialog';
+import { RecipeUrlDialog } from './components/RecipeUrlDialog';
+import { ShareDialog, readShared, type Shared } from './components/ShareDialog';
 import { ListView } from './components/ListView';
 import { Login } from './components/Login';
 import { SECTION_TITLE, Settings } from './components/Settings';
@@ -134,18 +135,15 @@ function Shell({ me }: { me: Me }) {
   useWakeLock(shopMode);
   const items = useItems(list?.id);
 
-  // Shared text from another app ("Teilen → Shopping") lands on the main list; a recipe link opens its ingredients.
-  const [sharedRecipe, setSharedRecipe] = useState<string | null>(null);
+  // Shared from another app ("Teilen → Shopping"): which list, and a link becomes an entry with 🔗.
+  const [sharedRecipe, setSharedRecipe] = useState<{ url: string; listId?: string } | null>(null);
+  const [shared, setShared] = useState<Shared | null>(null);
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const text = [params.get('share_title'), params.get('share_text'), params.get('share_url')].filter(Boolean).join(' ');
-    const target = mainList?.id;
-    if (!text || !target) return;
+    const got = readShared(location.search);
+    if (!got) return;
     history.replaceState(null, '', '/');
-    const link = findUrl(text);
-    if (link) setSharedRecipe(link);
-    else void addItems(target, parseInput(text, catalog.index));
-  }, [mainList?.id, catalog.index]);
+    setShared(got);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -371,7 +369,10 @@ function Shell({ me }: { me: Me }) {
           {syncDialog && list && (
             <SyncTemplateDialog list={list} templates={templates.filter((t) => t.listType === list.listType)} onClose={() => setSyncDialog(false)} />
           )}
-          {sharedRecipe && <RecipeUrlDialog url={sharedRecipe} listId={mainList?.id} onClose={() => setSharedRecipe(null)} />}
+          {shared && (
+            <ShareDialog shared={shared} index={catalog.index} onRecipe={(url, listId) => setSharedRecipe({ url, listId })} onClose={() => setShared(null)} />
+          )}
+          {sharedRecipe && <RecipeUrlDialog url={sharedRecipe.url} listId={sharedRecipe.listId ?? mainList?.id} onClose={() => setSharedRecipe(null)} />}
           {notice && (
             <div className="snackbar" role="status">
               <span>{notice}</span>

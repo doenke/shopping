@@ -28,12 +28,13 @@ const ItemObject = z.object({
     .describe('ToDo-Liste: fällig am (JJJJ-MM-TT)'),
   assignee: z.string().max(40).nullable().optional().describe('ToDo-Liste: wer sich kümmert'),
   area: z.string().max(40).nullable().optional().describe('ToDo-Liste: Bereich, z. B. „Garten“'),
+  url: z.string().url().max(2000).nullable().optional().describe('Link, z. B. zum Film, Rezept oder Produkt (leer = keiner)'),
 });
 const ListType = z
   .enum(['shopping', 'packing', 'memo', 'todo'])
   .describe('„shopping“ (Einkaufsliste), „packing“ (Packliste), „memo“ (Merkliste) oder „todo“ (ToDo-Liste, standardmäßig privat)');
 const Description = z.string().max(300).nullable().describe('Worum es geht, z. B. „Filme und Serien, die wir sehen wollen“');
-const ItemInput = z.union([z.string().trim().min(1).max(300).describe('Freitext, z. B. „2 kg Kartoffeln festkochend“'), ItemObject]);
+const ItemInput = z.union([z.string().trim().min(1).max(2300).describe('Freitext, z. B. „2 kg Kartoffeln festkochend“ oder „Dune https://…“'), ItemObject]);
 
 const ListRef = z.object({ id: z.string().min(1).max(100).describe('Listen-ID, Name oder „default“ für die Hauptliste') });
 const ItemRef = z.object({ id: z.string().min(1).max(120).describe('Artikel-ID') });

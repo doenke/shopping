@@ -97,3 +97,26 @@ test('one item for two people is ticked off per person', async ({ page }, info) 
   await expect(dialog).toBeHidden();
   await expect(page.getByText(/Einkauf fertig/)).toBeVisible();
 });
+
+test('a link on an entry opens from the tile', async ({ page, context }, info) => {
+  await login(page, `Emil ${info.project.name}`);
+  await context.route('https://example.org/**', (r) => r.fulfill({ body: 'ok' }));
+  await page.goto('/');
+  if (phone(page)) await page.getByRole('button', { name: 'Listen' }).click();
+  await page.locator('.sidebar__new').click();
+  const dialog = page.locator('dialog[open]');
+  await dialog.getByRole('button', { name: /Merkliste/ }).click();
+  await dialog.getByRole('textbox', { name: 'Name' }).fill('Filme');
+  await dialog.locator('button[type=submit]').click();
+  const input = page.getByRole('searchbox', { name: 'Artikel hinzufügen' });
+  await input.fill('Dune https://example.org/dune @Ben');
+  await input.press('Enter');
+  await expect(tile(page, 'Dune')).toBeVisible();
+  // The 🔗 opens the page – and does not tick the entry off.
+  const [popup] = await Promise.all([context.waitForEvent('page'), tile(page, 'Dune').locator('.tile__link').click()]);
+  expect(popup.url()).toBe('https://example.org/dune');
+  await popup.close();
+  await expect(tile(page, 'Dune')).not.toHaveClass(/tile--done/);
+  await tile(page, 'Dune').click({ button: 'right' });
+  await expect(page.locator('dialog[open]').getByRole('textbox', { name: 'Link' })).toHaveValue('https://example.org/dune');
+});

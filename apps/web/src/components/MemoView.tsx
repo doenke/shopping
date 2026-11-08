@@ -1,5 +1,5 @@
 import { useTileView } from '../hooks';
-import { listDescription, packingInfo, type CatalogIndex, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
+import { itemUrl, listDescription, packingInfo, type CatalogIndex, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { setChecked } from '../actions';
 import type { RemoteCheck } from '../sync/engine';
@@ -127,6 +127,7 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
                 <Tile
                   key={item.id}
                   item={item}
+                  url={itemUrl(item)}
                   extra={extraOf(item)}
                   fading={!!remote}
                   badge={remote ? `✓ ${users.get(remote.by)?.displayName ?? ''}`.trim() : undefined}
@@ -157,6 +158,7 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
                 <Tile
                   key={item.id}
                   item={item}
+                  url={itemUrl(item)}
                   variant="done"
                   extra={extraOf(item)}
                   onTap={() => void setChecked(item, false)}

@@ -216,3 +216,17 @@ export async function webRecipeCandidates(
     .map((c) => ({ ...c, sources: [recipe.name] }));
   return { name: recipe.name, url: recipe.url, image: recipe.image, servings: servings ?? recipe.servings, items: mergeCandidates(items) };
 }
+
+/**
+ * Title of a web page for a shared or pasted link ("Dune: Part Two | Netflix"): og:title, else <title>.
+ * Same safety rules as for recipes (public addresses only, size and time limits).
+ */
+export async function fetchPageTitle(input: string, fetchImpl: typeof fetch = fetch): Promise<{ title: string | null; url: string }> {
+  const { html, url } = await fetchPage(input, fetchImpl);
+  const meta =
+    /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["']/i.exec(html)?.[1] ??
+    /<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:title["']/i.exec(html)?.[1] ??
+    /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1];
+  const title = meta ? decode(meta).slice(0, 120) : '';
+  return { title: title || null, url };
+}

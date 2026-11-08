@@ -17,6 +17,8 @@ const fakeFetch = (async (input: string | URL | Request) => {
   requested.push(url);
   if (url.includes('/weiter')) return new Response('', { status: 301, headers: { location: 'http://127.0.0.1/geheim' } });
   if (url.includes('/kein-rezept')) return new Response('<html><body>Hallo</body></html>', { status: 200 });
+  if (url.includes('/film'))
+    return new Response('<html><head><meta property="og:title" content="Dune: Part Two &amp; mehr"><title>x</title></head></html>', { status: 200 });
   return new Response(CHEFKOCH, { status: 200, headers: { 'content-type': 'text/html' } });
 }) as typeof fetch;
 
@@ -71,5 +73,21 @@ describe('recipes from the web', () => {
     expect(tidyIngredient('2 Zwiebel(n)')).toBe('2 Zwiebel');
     expect(tidyIngredient('n. B. Salz')).toBe('Salz');
     expect(tidyIngredient('3 Ei(er)')).toBe('3 Ei');
+  });
+});
+
+describe('titles for links', () => {
+  it('names a shared link after its page', async () => {
+    const res = await t.app.inject({ method: 'GET', url: `/api/v1/links/title?url=${encodeURIComponent('http://93.184.216.34/film')}`, headers: { cookie } });
+    expect(res.json()).toMatchObject({ title: 'Dune: Part Two & mehr' });
+    const plain = await t.app.inject({
+      method: 'GET',
+      url: `/api/v1/links/title?url=${encodeURIComponent('http://93.184.216.34/kein-rezept')}`,
+      headers: { cookie },
+    });
+    expect(plain.json()).toMatchObject({ title: null });
+    // Internal addresses are not fetched.
+    const internal = await t.app.inject({ method: 'GET', url: `/api/v1/links/title?url=${encodeURIComponent('http://127.0.0.1/x')}`, headers: { cookie } });
+    expect(internal.statusCode).toBe(422);
   });
 });

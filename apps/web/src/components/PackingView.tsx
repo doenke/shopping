@@ -4,6 +4,7 @@ import {
   categoryInList,
   itemDone,
   itemPersons,
+  itemUrl,
   packingInfo,
   peopleLabel,
   type CatalogIndex,
@@ -234,6 +235,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
                   <Tile
                     key={`${e.item.id}:${e.person ?? ''}`}
                     item={e.item}
+                    url={itemUrl(e.item)}
                     variant={entryPacked(e) ? 'packed' : 'open'}
                     extra={extraOf(e)}
                     people={!e.person && itemPersons(e.item).length ? <PeopleDots item={e.item} /> : undefined}

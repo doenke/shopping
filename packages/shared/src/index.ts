@@ -7,6 +7,7 @@ export * from './model.js';
 export * from './due.js';
 export * from './packing.js';
 export * from './people.js';
+export * from './links.js';
 export * from './parser.js';
 export * from './properties.js';
 export * from './seed-catalog.js';

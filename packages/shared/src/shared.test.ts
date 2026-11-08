@@ -10,6 +10,7 @@ import { isOwnName } from './catalog-index.js';
 import { extractDue, formatDue, parseDue } from './due.js';
 import { defaultVisibility } from './packing.js';
 import { planAdd } from './plan-add.js';
+import { findUrl, itemUrl, linkLabel, withUrl } from './links.js';
 import { applyItemPatch, itemDone, mergeItem, peopleLabel, resolvePeople, withPeople } from './people.js';
 import { suggestedProperties } from './properties.js';
 import { listAsText } from './list-text.js';
@@ -484,5 +485,25 @@ describe('things for several people', () => {
     expect(peopleLabel(item({ forEach: true }))).toBe('für jeden');
     expect(peopleLabel(item({ persons: ['Sönke', 'Ulli'] }))).toBe('Sönke + Ulli');
     expect(withPeople({ persons: ['A', 'B'], done: ['A', 'B'] }, ['A', 'C'])).toEqual({ persons: ['A', 'C'], done: ['A'] });
+  });
+});
+
+describe('links on items', () => {
+  it('takes the link out of the text', () => {
+    expect(parseInput('Dune https://www.imdb.com/title/tt1160419/?ref=a,b @Ben #Netflix', undefined, 'memo')).toEqual([
+      expect.objectContaining({ name: 'Dune', url: 'https://www.imdb.com/title/tt1160419/?ref=a,b', person: 'Ben', container: 'Netflix' }),
+    ]);
+    expect(parseItem('https://www.example.org/x#teil')).toMatchObject({ name: 'example.org', url: 'https://www.example.org/x#teil' });
+    expect(findUrl('Schau mal (https://a.de/b).')).toBe('https://a.de/b');
+  });
+
+  it('keeps links valid and adds them to existing entries', () => {
+    expect(itemUrl({ attributes: { url: 'javascript:alert(1)' } })).toBeNull();
+    expect(itemUrl({ attributes: { url: 'https://a.de/b' } })).toBe('https://a.de/b');
+    expect(withUrl({}, 'kino.de/film')).toEqual({ url: 'https://kino.de/film' });
+    expect(linkLabel('https://www.Netflix.com/title/1')).toBe('netflix.com');
+    const base = { catalogItemId: null, deleted: false, amounts: [], properties: [], note: null, position: 'a0', checked: false };
+    const plan = planAdd('l', [{ ...base, id: 'd', name: 'Dune', attributes: {} }], parseInput('Dune https://a.de/dune', undefined, 'memo'), () => 'n');
+    expect(plan).toEqual([expect.objectContaining({ id: 'd', patch: { attributes: { url: 'https://a.de/dune' } } })]);
   });
 });

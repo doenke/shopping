@@ -51,6 +51,8 @@ interface TileProps {
   extra?: string;
   /** Multi-person items: who is ticked off already (initials). */
   people?: React.ReactNode;
+  /** A web link: 🔗 in the corner, a tap on it opens the link (not the item). */
+  url?: string | null;
   onTap: () => void;
   onLongPress?: () => void;
 }
@@ -58,7 +60,7 @@ interface TileProps {
 const isOffer = (p: string) => p.trim().toLowerCase() === 'angebot';
 
 /** Tile: tap to check (or add), long press / right click for details. */
-export function Tile({ item, variant = 'open', badge, badgeUser, fading = false, extra, people, onTap, onLongPress }: TileProps) {
+export function Tile({ item, variant = 'open', badge, badgeUser, fading = false, extra, people, url, onTap, onLongPress }: TileProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressed = useRef(false);
   // "Angebot" is not written out but shown as a % badge.
@@ -98,7 +100,9 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
         cancel();
         onLongPress();
       }}
-      aria-label={[item.name, offer ? 'im Angebot' : null, spec, extra, unreviewed ? 'neues Icon zu prüfen' : null].filter(Boolean).join(', ')}
+      aria-label={[item.name, offer ? 'im Angebot' : null, spec, extra, url ? 'mit Link' : null, unreviewed ? 'neues Icon zu prüfen' : null]
+        .filter(Boolean)
+        .join(', ')}
     >
       <ItemIcon
         name={item.name}
@@ -115,6 +119,7 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
           🖼
         </span>
       )}
+      {url && <LinkBadge url={url} />}
       {offer && (
         <span className="tile__offer" title="Angebot" aria-hidden>
           %
@@ -127,5 +132,30 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
         </span>
       )}
     </button>
+  );
+}
+
+/**
+ * The 🔗 on a tile. The tile itself is a button, so this is no nested link: it opens the page itself and
+ * keeps the tap from reaching the tile (no check, no long press). Keyboard users open it in the editor.
+ */
+export function LinkBadge({ url }: { url: string }) {
+  const open = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+  return (
+    <span
+      className="tile__link"
+      title={url}
+      aria-hidden
+      onClick={open}
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      onContextMenu={(e) => e.stopPropagation()}
+    >
+      🔗
+    </span>
   );
 }

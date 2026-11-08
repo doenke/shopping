@@ -11,6 +11,7 @@ import {
   packingInfo,
   withPacking,
   withPeople,
+  withUrl,
   listPersons,
   peopleOnItems,
   resolvePeople,
@@ -53,6 +54,8 @@ export type ItemInput =
       due?: string | null;
       assignee?: string | null;
       area?: string | null;
+      /** A web link (film, recipe, product …); shown as 🔗 on the item. */
+      url?: string | null;
     };
 
 /**
@@ -226,6 +229,7 @@ export class ShoppingApi {
         person: (input.person ?? input.tipFrom ?? input.assignee)?.trim() || null,
         container: (input.container ?? input.where ?? input.area)?.trim() || null,
         due: input.due ?? null,
+        url: input.url?.trim() || null,
       });
     }
     return out;
@@ -437,6 +441,7 @@ export class ShoppingApi {
         else delete patch.attributes.due;
       }
     }
+    if (input.url !== undefined) patch.attributes = withUrl(patch.attributes ?? item.attributes, input.url);
     if (input.category !== undefined) {
       const list = (await this.accessibleLists(userId)).find((l) => l.id === item.listId);
       const cat = categoriesFor(list?.listType ?? 'shopping', await this.sync.visibleCategories(userId)).find(

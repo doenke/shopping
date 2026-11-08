@@ -2062,3 +2062,62 @@ img.avatar {
 .task__meta .people-dots {
   justify-content: flex-start;
 }
+
+/* ---- Links on items: 🔗 on the tile opens the page ---- */
+
+.tile__link {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.tile__link:hover {
+  box-shadow: 0 0 0 2px var(--primary);
+}
+.tile:has(.tile__offer) .tile__link {
+  left: 34px;
+}
+.listview--rows .group .tile__link {
+  left: auto;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+}
+.listview--rows .group .tile:has(.tile__link) .tile__offer {
+  right: 46px;
+}
+.task__link {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  text-decoration: none;
+}
+.task__link:hover {
+  background: var(--surface-2);
+}
+.field__link {
+  display: flex;
+  gap: 8px;
+}
+.field__link input {
+  flex: 1;
+  min-width: 0;
+}
+.share__link {
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.share__text {
+  margin: 0 0 8px;
+}

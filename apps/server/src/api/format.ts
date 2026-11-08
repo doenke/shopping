@@ -9,6 +9,7 @@ import {
   listGroup,
   packingInfo,
   itemDone,
+  itemUrl,
   itemPersons,
   peopleLabel,
   type ItemRow,
@@ -41,6 +42,8 @@ export interface ApiItem {
   /** One entry for several people ("Sonnenbrille" for Sönke and Ulli): everyone, and who is ticked off already. */
   persons: string[];
   donePersons: string[];
+  /** A web link on the item. */
+  url: string | null;
   /** Merklisten: who the tip is from, and where to find it (same values as person/container). */
   tipFrom: string | null;
   where: string | null;
@@ -94,6 +97,7 @@ export function toApiItem(i: ItemRow, userNames: Map<string, string>, listType?:
     container: packing.container,
     persons: itemPersons(i),
     donePersons: itemDone(i),
+    url: itemUrl(i),
     tipFrom: packing.person,
     where: packing.container,
     due: dueOf(i),
