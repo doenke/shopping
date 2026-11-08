@@ -120,3 +120,30 @@ test('a link on an entry opens from the tile', async ({ page, context }, info) =
   await tile(page, 'Dune').click({ button: 'right' });
   await expect(page.locator('dialog[open]').getByRole('textbox', { name: 'Link' })).toHaveValue('https://example.org/dune');
 });
+
+test('links dropped onto an entry or onto free space', async ({ page }, info) => {
+  await login(page, `Frieda ${info.project.name}`);
+  await page.goto('/');
+  await newList(page, 'Merken');
+  const input = page.getByRole('searchbox', { name: 'Artikel hinzufügen' });
+  await input.fill('Kaffeemaschine');
+  await input.press('Enter');
+  await expect(tile(page, 'Kaffeemaschine')).toBeVisible();
+  const drop = async (selector: string, url: string, html?: string) => {
+    const dt = await page.evaluateHandle(
+      ([u, h]) => {
+        const d = new DataTransfer();
+        d.setData('text/uri-list', u!);
+        if (h) d.setData('text/html', h);
+        return d;
+      },
+      [url, html],
+    );
+    await page.dispatchEvent(selector, 'dragover', { dataTransfer: dt });
+    await page.dispatchEvent(selector, 'drop', { dataTransfer: dt });
+  };
+  await drop('.listview .tile[aria-label^="Kaffeemaschine"]', 'https://example.org/kaffee');
+  await expect(tile(page, 'Kaffeemaschine').locator('.tile__link')).toBeVisible();
+  await drop('section.listview', 'https://example.org/muehle', '<a href="https://example.org/muehle">Kaffeemühle</a>');
+  await expect(tile(page, 'Kaffeemühle').locator('.tile__link')).toBeVisible();
+});

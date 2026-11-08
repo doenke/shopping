@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { setChecked } from '../actions';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
+import { useLinkDrop } from '../linkDrop';
 import { ItemEditor } from './ItemEditor';
 import { Tile } from './Tile';
 
@@ -38,6 +39,8 @@ const noBoost = () => 0;
 export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ list, items, index, users, remoteChecks }, addRef) {
   const [tileView] = useTileView();
   const [editing, setEditing] = useState<string | null>(null);
+  // Drag a link onto an entry (adds it there) or onto free space (new entry).
+  const linkDrop = useLinkDrop(list.id, items);
   const [undo, setUndo] = useState<ItemRow | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupBy>(() => loadGroupBy(list.id));
@@ -80,7 +83,7 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
   const editItem = items.find((i) => i.id === editing);
 
   return (
-    <section className={`listview${tileView === 'rows' ? ' listview--rows' : ''}`}>
+    <section className={`listview${tileView === 'rows' ? ' listview--rows' : ''}`} {...linkDrop}>
       <AddBar
         ref={addRef}
         listId={list.id}

@@ -85,6 +85,10 @@
   eingetippt: Der Eintrag heißt wie die Seite (Titel, sonst der Name der Website). Auf Einkaufslisten öffnet
   ein bloßer Link wie bisher die Rezept-Zutaten; findet sich kein Rezept, gibt es „Als Eintrag mit Link
   hinzufügen“.
+- **Links hineinziehen** (Laptop): einen Link oder Browser-Tab auf die Liste ziehen. Auf einen Eintrag
+  gezogen, bekommt er den Link (hat er schon einen, fragt die App vor dem Ersetzen); auf freie Fläche
+  gezogen, entsteht ein neuer Eintrag – benannt nach dem Linktext bzw. dem Titel der Seite. In die
+  Eingabezeile gezogen landet der Link wie gewohnt als Text.
 - **Teilen → Shopping** (installierte App auf Android): Geteiltes aus Browser, Netflix, IMDb & Co. öffnet
   „Hinzufügen“ – Name (der Titel der Seite) und Liste wählen. Mit Link ist eine Merkliste vorausgewählt,
   sonst die Hauptliste; die zuletzt gewählte Liste merkt sich die App. Auf Einkaufslisten gibt es zusätzlich

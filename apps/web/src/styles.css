@@ -2121,3 +2121,19 @@ img.avatar {
 .share__text {
   margin: 0 0 8px;
 }
+
+/* ---- Dropping links onto a list (laptop) ---- */
+
+/* The whole free area below the entries is a drop target too (topbar 60px, bottom padding 90px). */
+section.listview {
+  min-height: calc(100dvh - 150px);
+}
+.listview--drop {
+  outline: 2px dashed var(--primary);
+  outline-offset: -4px;
+  border-radius: var(--radius);
+}
+.tile.drop-target,
+.task.drop-target {
+  box-shadow: 0 0 0 3px var(--primary);
+}

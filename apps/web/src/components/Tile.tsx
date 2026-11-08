@@ -86,6 +86,7 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
     <button
       type="button"
       className={`tile tile--${variant}${fading ? ' tile--remote' : ''}`}
+      data-item-id={item.id}
       style={{ '--cat': cat.color } as React.CSSProperties}
       onPointerDown={start}
       onPointerUp={cancel}

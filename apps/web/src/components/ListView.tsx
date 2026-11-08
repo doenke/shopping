@@ -18,6 +18,7 @@ import { shopModeKnown, shoppingActivity, startShopping, stopShopping, useShoppi
 import { useMe, useTileView } from '../hooks';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
+import { useLinkDrop } from '../linkDrop';
 import { ItemEditor } from './ItemEditor';
 import { MemoView } from './MemoView';
 import { PackingView } from './PackingView';
@@ -45,6 +46,8 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView(pr
 
 const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({ list, items, index, users, remoteChecks }, addRef) {
   const [editing, setEditing] = useState<string | null>(null);
+  // Drag a link onto an entry (adds it there) or onto free space (new entry).
+  const linkDrop = useLinkDrop(list.id, items);
   /** Multi-person item being ticked off ("Für wen?"). */
   const [checking, setChecking] = useState<string | null>(null);
   const [undo, setUndo] = useState<ItemRow | null>(null);
@@ -106,7 +109,7 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
   const checkItem = items.find((i) => i.id === checking);
 
   return (
-    <section className={`listview${shopping ? ' listview--shopping' : ''}${tileView === 'rows' ? ' listview--rows' : ''}`}>
+    <section className={`listview${shopping ? ' listview--shopping' : ''}${tileView === 'rows' ? ' listview--rows' : ''}`} {...linkDrop}>
       <AddBar
         ref={addRef}
         listId={list.id}

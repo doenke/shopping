@@ -18,6 +18,7 @@ import { archiveList, setChecked, setPersonChecked } from '../actions';
 import { navigate, useMe, useTileView } from '../hooks';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
+import { useLinkDrop } from '../linkDrop';
 import { ItemEditor } from './ItemEditor';
 import { Tile } from './Tile';
 import { PeopleDots, PersonCheckDialog } from './People';
@@ -75,6 +76,8 @@ function saveFlag(key: string, on: boolean): void {
  */
 export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingView({ list, items, index, users, remoteChecks }, addRef) {
   const [editing, setEditing] = useState<string | null>(null);
+  // Drag a link onto an entry (adds it there) or onto free space (new entry).
+  const linkDrop = useLinkDrop(list.id, items);
   /** Multi-person item being ticked off ("Für wen?"). */
   const [checking, setChecking] = useState<string | null>(null);
   const [undo, setUndo] = useState<Entry | null>(null);
@@ -160,7 +163,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
   const checkItem = items.find((i) => i.id === checking);
 
   return (
-    <section className={`listview${tileView === 'rows' ? ' listview--rows' : ''}`}>
+    <section className={`listview${tileView === 'rows' ? ' listview--rows' : ''}`} {...linkDrop}>
       <AddBar ref={addRef} listId={list.id} listType={list.listType} index={index} boost={boost} placeholder="Was kommt mit? z. B. 3 T-Shirts @Anna #Koffer" />
 
       {list.archivedAt && (

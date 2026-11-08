@@ -19,6 +19,7 @@ import { forwardRef, useEffect, useMemo, useState } from 'react';
 import { setChecked, setPersonChecked } from '../actions';
 import type { RemoteCheck } from '../sync/engine';
 import { AddBar } from './AddBar';
+import { useLinkDrop } from '../linkDrop';
 import { ItemEditor } from './ItemEditor';
 import { PeopleDots, PersonCheckDialog } from './People';
 
@@ -64,6 +65,8 @@ function dueBucket(due: string | null, today: string, weekEnd: string): { key: s
 /** ToDo list: tasks as a checklist, sorted by due date; done ones move to "Erledigt". */
 export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ list, items, index, users, remoteChecks }, addRef) {
   const [editing, setEditing] = useState<string | null>(null);
+  // Drag a link onto an entry (adds it there) or onto free space (new entry).
+  const linkDrop = useLinkDrop(list.id, items);
   /** Multi-person task being ticked off ("Für wen?"). */
   const [checking, setChecking] = useState<string | null>(null);
   const [undo, setUndo] = useState<ItemRow | null>(null);
@@ -146,7 +149,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
     const fmt = due ? formatDue(due) : null;
     const remote = remoteChecks.get(item.id);
     return (
-      <li key={`${item.id}:${person ?? ''}`} className={`task${item.checked ? ' task--done' : ''}${remote ? ' tile--remote' : ''}`}>
+      <li key={`${item.id}:${person ?? ''}`} data-item-id={item.id} className={`task${item.checked ? ' task--done' : ''}${remote ? ' tile--remote' : ''}`}>
         <button
           type="button"
           className="task__check"
@@ -187,7 +190,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
   const checkItem = items.find((i) => i.id === checking);
 
   return (
-    <section className="listview">
+    <section className="listview" {...linkDrop}>
       <AddBar
         ref={addRef}
         listId={list.id}
