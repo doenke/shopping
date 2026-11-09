@@ -172,17 +172,17 @@ test('keyboard: arrows, space and delete with undo on a shopping list', async ({
   await expect(tile(page, next)).toBeVisible();
 });
 
-test('Arbeitsmodus: only work lists, tasks by keyboard', async ({ page }, info) => {
-  test.skip(phone(page), 'the Arbeitsmodus is for the desktop');
+test('Arbeitsmodus hides lists; ToDo lists on the desktop are a table', async ({ page }, info) => {
+  test.skip(phone(page), 'the table is for the desktop');
   await login(page, `Hanna ${info.project.name}`);
   const work = await (await page.request.post('/api/v1/lists', { data: { name: 'Projekt X', type: 'todo', group: 'Arbeit' } })).json();
+  const home = await (await page.request.post('/api/v1/lists', { data: { name: 'Haus', type: 'todo' } })).json();
   await page.request.post('/api/v1/lists', { data: { name: 'Wocheneinkauf' } });
   await page.request.post(`/api/v1/lists/${work.id}/items`, { data: { items: ['Angebot schicken'] } });
-  await page.goto('/');
-  await page.getByRole('button', { name: /Arbeitsmodus/ }).click();
-  await expect(page.locator('.work-nav')).toContainText('Projekt X');
-  await expect(page.locator('.work-nav')).not.toContainText('Wocheneinkauf');
-  await page.locator('.work-nav a', { hasText: 'Projekt X' }).click();
+  // Any ToDo list gets the table – no mode needed.
+  await page.goto(`/#/list/${home.id}`);
+  await expect(page.locator('.work-table, .work-empty').first()).toBeVisible();
+  await page.goto(`/#/list/${work.id}`);
   await page.keyboard.press('n');
   await page.keyboard.type('Vertrag senden !morgen');
   await page.keyboard.press('Enter');
@@ -192,7 +192,11 @@ test('Arbeitsmodus: only work lists, tasks by keyboard', async ({ page }, info) 
   await expect(page.getByRole('textbox', { name: 'Titel' })).toHaveValue('Vertrag senden');
   await page.keyboard.press(' ');
   await expect(page.locator('.work-table')).toContainText('Erledigt (1)');
-  // Back to the normal app.
+  // The Arbeitsmodus only hides the other lists.
+  await page.getByRole('button', { name: /Arbeitsmodus/ }).click();
+  await expect(page.locator('.sidebar')).toContainText('Projekt X');
+  await expect(page.locator('.sidebar')).not.toContainText('Wocheneinkauf');
+  await expect(page.locator('.sidebar')).not.toContainText('Haus');
   await page.keyboard.press('Control+Shift+A');
   await expect(page.locator('.sidebar')).toContainText('Wocheneinkauf');
 });

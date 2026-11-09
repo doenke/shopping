@@ -89,12 +89,13 @@
   gezogen, bekommt er den Link (hat er schon einen, fragt die App vor dem Ersetzen); auf freie Fläche
   gezogen, entsteht ein neuer Eintrag – benannt nach dem Linktext bzw. dem Titel der Seite. In die
   Eingabezeile gezogen landet der Link wie gewohnt als Text.
-- **Arbeitsmodus** 💼 (Desktop, *Arbeitsmodus* unten in der Seitenleiste oder Strg+Shift+A): nur ToDo-Listen –
-  standardmäßig die der Kategorie „Arbeit“, umstellbar auf alle – in einem sachlichen Design (Grau mit
-  gedecktem Blau, Segoe UI, hell/dunkel nach System): links die Listen, in der Mitte die Aufgaben als Tabelle
-  (Fällig, Wer, Bereich, Link), rechts die Details zum direkten Bearbeiten. Pro Gerät gemerkt; auf dem Handy
-  bleibt die normale Ansicht. Die installierte App bietet per Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“
-  und „Einkaufslisten“ als Sprungziele.
+- **Arbeitsmodus** 💼 (*Arbeitsmodus* unten in der Seitenleiste oder Strg+Shift+A, pro Gerät gemerkt): blendet
+  Listen aus – Seitenleiste, Suche und Start zeigen nur noch die ToDo-Listen der Kategorie „Arbeit“
+  (umstellbar auf alle ToDo-Listen). Neue Listen sind dann ToDo-Listen in „Arbeit“. Die installierte App
+  bietet per Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ als Sprungziele.
+- **ToDo-Listen am Rechner** (breites Fenster, jede ToDo-Liste, ob Arbeit oder nicht): Aufgaben als Tabelle
+  (Fällig, Wer, Bereich, Link) und rechts die gewählte Aufgabe zum direkten Bearbeiten, in einem sachlichen
+  Design (Grau mit gedecktem Blau, Segoe UI, hell/dunkel nach System). Andere Listen behalten ihr Aussehen.
 - **Tastatur** (in jedem Modus): N neuer Eintrag, Pfeiltasten zwischen Einträgen (auch im Kachelraster),
   Leertaste abhaken, Enter öffnen, Entf löschen mit „Rückgängig“, Strg+K Listen und Einträge suchen,
   Strg+Shift+A Arbeitsmodus, ? zeigt alle Kürzel.

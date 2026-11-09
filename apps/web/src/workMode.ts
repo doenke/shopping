@@ -2,8 +2,8 @@ import { listGroup, type ListRow } from '@shopping/shared';
 import { useEffect, useState } from 'react';
 
 /**
- * Arbeitsmodus (desktop): only ToDo lists, in a calm business look with three columns.
- * Remembered per device; on phones the normal app shows.
+ * Arbeitsmodus: only shows and hides lists – the sidebar (and the search) show just the work lists.
+ * Remembered per device. How a ToDo list looks does not depend on it (desktop: table + details).
  */
 
 const MODE_KEY = 'work-mode';

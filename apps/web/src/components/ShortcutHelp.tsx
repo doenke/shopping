@@ -7,7 +7,7 @@ const KEYS: [string, string][] = [
   ['Enter', 'Eintrag öffnen / bearbeiten'],
   ['Entf', 'Eintrag löschen (mit Rückgängig)'],
   ['Strg + K', 'Liste oder Eintrag suchen'],
-  ['Strg + Shift + A', 'Arbeitsmodus an/aus (am Desktop)'],
+  ['Strg + Shift + A', 'Arbeitsmodus: nur die Arbeitslisten zeigen (an/aus)'],
   ['?', 'Diese Übersicht'],
   ['Esc', 'Dialog schließen'],
 ];

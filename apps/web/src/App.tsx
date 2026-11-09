@@ -29,9 +29,8 @@ import { ListMenu } from './components/ListMenu';
 import { CommandPalette } from './components/CommandPalette';
 import { ShortcutHelp } from './components/ShortcutHelp';
 import { Toast } from './components/Toast';
-import { WorkShell } from './components/work/WorkShell';
 import { useShortcuts } from './keyboard';
-import { applyModeFromUrl, isWorkList, isWorkMode, setWorkMode, useWorkModeSetting, useWorkScope } from './workMode';
+import { applyModeFromUrl, isWorkList, isWorkMode, setWorkMode, setWorkScope, useWorkModeSetting, useWorkScope } from './workMode';
 import { ListBadges, OpenCount } from './components/ListBadges';
 
 export function App() {
@@ -87,6 +86,10 @@ function Shell({ me }: { me: Me }) {
   const packingLists = ordered.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'packing');
   const memoLists = ordered.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'memo');
   const todoLists = ordered.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'todo');
+  // Arbeitsmodus: only shows and hides lists – just the work lists in the sidebar, the search and as start.
+  const workMode = useWorkModeSetting();
+  const scope = useWorkScope();
+  const workLists = todoLists.filter((l) => isWorkList(l, scope));
   const archived = ordered.filter((l) => !l.isTemplate && l.archivedAt);
   const templates = ordered.filter((l) => l.isTemplate);
   const [editing, setEditing] = useState(false);
@@ -103,11 +106,11 @@ function Shell({ me }: { me: Me }) {
   /** Sidebar sections, in the user's own order (Merklisten at the bottom, for instance). */
   const sections: { key: SectionKey; title: string | null; lists: ListRow[]; prefix: (l: ListRow) => string; grouped?: boolean }[] = inUserOrder(
     [
-      { key: 'shopping', title: null, lists: shoppingLists, prefix: () => '' },
-      { key: 'packing', title: 'Packlisten', lists: packingLists, prefix: () => '🧳 ' },
-      { key: 'memo', title: 'Merklisten', lists: memoLists, prefix: () => '📌 ' },
-      { key: 'todo', title: 'ToDo', lists: todoLists, prefix: () => '✅ ', grouped: true },
-      { key: 'templates', title: 'Vorlagen', lists: templates, prefix: (l: ListRow) => TYPE_ICON[l.listType] },
+      { key: 'shopping', title: null, lists: workMode ? [] : shoppingLists, prefix: () => '' },
+      { key: 'packing', title: 'Packlisten', lists: workMode ? [] : packingLists, prefix: () => '🧳 ' },
+      { key: 'memo', title: 'Merklisten', lists: workMode ? [] : memoLists, prefix: () => '📌 ' },
+      { key: 'todo', title: 'ToDo', lists: workMode ? workLists : todoLists, prefix: () => '✅ ', grouped: true },
+      { key: 'templates', title: 'Vorlagen', lists: workMode ? [] : templates, prefix: (l: ListRow) => TYPE_ICON[l.listType] },
     ],
     me.sectionOrder,
     (s) => s.key,
@@ -131,7 +134,7 @@ function Shell({ me }: { me: Me }) {
     </ul>
   );
   const mainList = shoppingLists.find((l) => l.id === me.defaultListId) ?? shoppingLists[0];
-  const listId = route.page === 'list' ? (route.listId ?? (mainList ?? packingLists[0])?.id) : undefined;
+  const listId = route.page === 'list' ? (route.listId ?? (workMode ? workLists[0] : (mainList ?? packingLists[0]))?.id) : undefined;
   const addRef = useRef<HTMLInputElement>(null);
 
   const list = lists.find((l) => l.id === listId);
@@ -160,21 +163,24 @@ function Shell({ me }: { me: Me }) {
     }
   }, []);
 
-  // Arbeitsmodus (desktop only) and the keyboard, in every mode.
-  const work = useWorkModeSetting() && wide;
-  const scope = useWorkScope();
+  // Arbeitsmodus on while a hidden list is open: go to the first work list.
+  useEffect(() => {
+    if (workMode && route.page === 'list' && list && !isWorkList(list, scope))
+      navigate(workLists[0] ? { page: 'list', listId: workLists[0].id } : { page: 'list' });
+  }, [workMode, scope, list?.id]);
+
+  // A ToDo list on the desktop: tasks as a table with details, in the calm business look.
+  const board = wide && route.page === 'list' && list?.listType === 'todo' && !list.isTemplate;
+  useEffect(() => {
+    document.documentElement.classList.toggle('business', board);
+  }, [board]);
+  // The keyboard, in every mode.
   const [palette, setPalette] = useState(false);
   const [shortcutHelp, setShortcutHelp] = useState(false);
-  const [workEdit, setWorkEdit] = useState<ListRow | null>(null);
-  useEffect(() => {
-    document.documentElement.classList.toggle('work', work);
-  }, [work]);
   useShortcuts({
     onSearch: () => setPalette(true),
     onHelp: () => setShortcutHelp(true),
-    onToggleWork: () => {
-      if (wide) setWorkMode(!isWorkMode());
-    },
+    onToggleWork: () => setWorkMode(!isWorkMode()),
   });
 
   const newList = () => {
@@ -218,7 +224,7 @@ function Shell({ me }: { me: Me }) {
             </div>
           ),
       )}
-      {archived.length > 0 && (
+      {!workMode && archived.length > 0 && (
         <details className="sidebar__archive">
           <summary className="sidebar__section">Archiv ({archived.length})</summary>
           <ul>
@@ -236,11 +242,23 @@ function Shell({ me }: { me: Me }) {
         </details>
       )}
       <span className="spacer" />
-      {wide && !guest && (
-        <button type="button" className="sidebar__work" onClick={() => setWorkMode(true)} title="Nur ToDo-Listen, sachliches Design – Strg+Shift+A">
-          💼 Arbeitsmodus
-        </button>
-      )}
+      {!guest &&
+        (workMode ? (
+          <div className="sidebar__work sidebar__work--on">
+            <strong>💼 Arbeitsmodus</strong>
+            <select value={scope} onChange={(e) => setWorkScope(e.target.value === 'all' ? 'all' : 'arbeit')} aria-label="Welche Listen">
+              <option value="arbeit">ToDo-Listen „Arbeit“</option>
+              <option value="all">Alle ToDo-Listen</option>
+            </select>
+            <button type="button" className="link" onClick={() => setWorkMode(false)} title="Strg+Shift+A">
+              Alle Listen zeigen
+            </button>
+          </div>
+        ) : (
+          <button type="button" className="sidebar__work" onClick={() => setWorkMode(true)} title="Nur die Arbeitslisten zeigen – Strg+Shift+A">
+            💼 Arbeitsmodus
+          </button>
+        ))}
       <a href="#/help" className={route.page === 'help' ? 'active' : ''} onClick={() => setDrawer(false)}>
         ❓ Hilfe
       </a>
@@ -250,59 +268,19 @@ function Shell({ me }: { me: Me }) {
     </nav>
   );
 
-  const todoGroups = [...new Set(todoLists.map(listGroup).filter((g): g is string => !!g))];
   const overlays = (
     <>
-      {palette && <CommandPalette lists={work ? ordered.filter((l) => isWorkList(l, scope)) : ordered} onClose={() => setPalette(false)} />}
+      {palette && <CommandPalette lists={workMode ? workLists : ordered} onClose={() => setPalette(false)} />}
       {shortcutHelp && <ShortcutHelp onClose={() => setShortcutHelp(false)} />}
       <Toast />
     </>
   );
 
-  if (work) {
-    return (
-      <IconContext.Provider value={icons}>
-        <CategoryContext.Provider value={customCategories}>
-          <WorkShell
-            me={me}
-            route={route}
-            lists={ordered}
-            users={users}
-            index={catalog.emptyIndex}
-            onNewList={() => setNewDialog(true)}
-            onSearch={() => setPalette(true)}
-            onShortcuts={() => setShortcutHelp(true)}
-            onEditList={setWorkEdit}
-          />
-          {newDialog && (
-            <NewListDialog
-              templates={templates}
-              groups={todoGroups}
-              initialType="todo"
-              initialGroup={scope === 'arbeit' ? 'Arbeit' : ''}
-              onClose={() => setNewDialog(false)}
-            />
-          )}
-          {workEdit && (
-            <ListEditDialog
-              list={lists.find((l) => l.id === workEdit.id) ?? workEdit}
-              me={me}
-              groups={todoGroups}
-              onClose={() => setWorkEdit(null)}
-              onSortCategories={() => setWorkEdit(null)}
-            />
-          )}
-          {overlays}
-        </CategoryContext.Provider>
-      </IconContext.Provider>
-    );
-  }
-
   return (
     <IconContext.Provider value={icons}>
       <CategoryContext.Provider value={customCategories}>
         <div
-          className={`shell${wide ? ' shell--wide' : ''}${extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' ? ' shell--catalog' : ''}`}
+          className={`shell${wide ? ' shell--wide' : ''}${board ? ' shell--board' : ''}${extraWide && route.page === 'list' && list && list.listType !== 'memo' && list.listType !== 'todo' ? ' shell--catalog' : ''}`}
         >
           {wide
             ? sidebar
@@ -409,6 +387,7 @@ function Shell({ me }: { me: Me }) {
                   }
                   users={users}
                   remoteChecks={remoteChecks}
+                  desktop={wide}
                 />
               ) : route.page === 'list' && route.listId && !list ? (
                 <div className="empty">
@@ -428,6 +407,7 @@ function Shell({ me }: { me: Me }) {
           {newDialog && (
             <NewListDialog
               templates={templates}
+              {...(workMode ? { initialType: 'todo' as const, initialGroup: scope === 'arbeit' ? 'Arbeit' : '' } : {})}
               groups={[...new Set(todoLists.map(listGroup).filter((g): g is string => !!g))]}
               onClose={() => setNewDialog(false)}
             />

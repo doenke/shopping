@@ -109,7 +109,6 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen }: Pr
     <section className="work-tasks" aria-label={list.name}>
       <header className="work-tasks__head">
         <div>
-          <h1>{list.name}</h1>
           <p className="work-tasks__sub">
             {open.length} offen{done.length ? ` · ${done.length} erledigt` : ''}
             {description ? ` · ${description}` : ''}

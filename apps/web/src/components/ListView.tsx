@@ -23,6 +23,7 @@ import { ItemEditor } from './ItemEditor';
 import { MemoView } from './MemoView';
 import { PackingView } from './PackingView';
 import { TodoView } from './TodoView';
+import { TaskBoard } from './work/TaskBoard';
 import { Tile } from './Tile';
 import { PeopleDots, PersonCheckDialog } from './People';
 
@@ -32,6 +33,8 @@ interface Props {
   index: CatalogIndex;
   users: Map<string, UserInfo>;
   remoteChecks: Map<string, RemoteCheck>;
+  /** Wide screen: ToDo lists as a table with details. */
+  desktop?: boolean;
 }
 
 const RECENT_LIMIT = 40;
@@ -40,6 +43,9 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView(pr
   // Packing lists work differently: packed items stay visible (templates are shown like any template).
   if (props.list.listType === 'packing' && !props.list.isTemplate) return <PackingView ref={addRef} {...props} />;
   if (props.list.listType === 'memo') return <MemoView ref={addRef} {...props} />;
+  // ToDo lists on the desktop: table + details (every ToDo list, work or not).
+  if (props.list.listType === 'todo' && props.desktop && !props.list.isTemplate)
+    return <TaskBoard list={props.list} items={props.items} index={props.index} users={props.users} />;
   if (props.list.listType === 'todo') return <TodoView ref={addRef} {...props} />;
   return <ShoppingView ref={addRef} {...props} />;
 });
