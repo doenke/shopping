@@ -276,3 +276,20 @@ test('Kanban: cards move between status columns and to Erledigt', async ({ page 
   const items = (await (await page.request.get(`/api/v1/lists/${list.id}?items=all`)).json()).items as { name: string; status: string; checked: boolean }[];
   expect(items.find((i) => i.name === 'Rechnung')).toMatchObject({ status: 'Wartet', checked: false });
 });
+
+test('Kanban: the order within a column is set by hand', async ({ page }, info) => {
+  test.skip(phone(page), 'the board is for the desktop');
+  await login(page, `Lea ${info.project.name}`);
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Reihenfolge', type: 'todo' } })).json();
+  await page.request.post(`/api/v1/lists/${list.id}/items`, { data: { items: ['Erstens', 'Zweitens', 'Drittens'] } });
+  await page.goto(`/#/list/${list.id}`);
+  await page.getByRole('button', { name: 'Kanban' }).click();
+  const titles = page.locator('.kanban-col').first().locator('.kanban-card__title');
+  await expect(titles).toHaveText(['Erstens', 'Zweitens', 'Drittens']);
+  // "Drittens" onto the upper half of "Erstens": it goes first.
+  await page.locator('.kanban-card', { hasText: 'Drittens' }).dragTo(page.locator('.kanban-card', { hasText: 'Erstens' }), { targetPosition: { x: 20, y: 4 } });
+  await expect(titles).toHaveText(['Drittens', 'Erstens', 'Zweitens']);
+  // Kept after a reload (it is synced).
+  await page.reload();
+  await expect(page.locator('.kanban-col').first().locator('.kanban-card__title')).toHaveText(['Drittens', 'Erstens', 'Zweitens']);
+});

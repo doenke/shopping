@@ -97,7 +97,8 @@
   verliert nichts.
 - **Kanban** (ToDo-Listen am Rechner, Umschalter *Tabelle | Kanban* oben rechts, pro Liste gemerkt): eine
   Spalte pro Status, „Erledigt“ als letzte (die 30 neuesten). Karten mit Fälligkeit, Bereich, Personen und
-  Link; mit Maus oder Stift in eine andere Spalte ziehen setzt den Status bzw. hakt ab – zurück aus „Erledigt“ öffnet
+  Link; mit Maus oder Stift in eine andere Spalte ziehen setzt den Status bzw. hakt ab, innerhalb einer
+  Spalte ändert Ziehen die Reihenfolge (eine Linie zeigt, wo die Karte landet; gilt für alle) – zurück aus „Erledigt“ öffnet
   wieder. Klick zeigt die Details rechts (✕ oder Esc schließt sie), Doppelklick/Enter bearbeitet,
   Leertaste hakt ab, Pfeiltasten wandern über die Karten. Ohne eigene Status: „Offen“ und „Erledigt“.
 - **Arbeitsmodus** 💼 (*Arbeitsmodus* unten in der Seitenleiste oder Strg+Shift+A, pro Gerät gemerkt): blendet

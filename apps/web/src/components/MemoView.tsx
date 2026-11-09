@@ -1,3 +1,4 @@
+import { comparePositions } from '@shopping/shared';
 import { useTileView } from '../hooks';
 import { itemUrl, listDescription, packingInfo, type CatalogIndex, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { forwardRef, useEffect, useMemo, useState } from 'react';
@@ -64,7 +65,7 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
   const done = items.filter((i) => i.checked && !remoteChecks.has(i.id)).sort((a, b) => (b.checkedAt ?? '').localeCompare(a.checkedAt ?? ''));
 
   const groups = useMemo(() => {
-    const sorted = [...open].sort((a, b) => a.position.localeCompare(b.position));
+    const sorted = [...open].sort((a, b) => comparePositions(a.position, b.position));
     if (groupBy === 'none') return [{ key: 'all', title: null as string | null, items: sorted }];
     const keyOf = (i: ItemRow) => (groupBy === 'where' ? packingInfo(i).container : packingInfo(i).person) ?? '';
     const byKey = new Map<string, ItemRow[]>();

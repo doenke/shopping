@@ -1,3 +1,4 @@
+import { comparePositions } from '@shopping/shared';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import {
@@ -319,8 +320,8 @@ export class ShoppingApi {
       .filter((i) => (filter === 'all' ? true : filter === 'open' ? !i.checked : i.checked))
       .sort((a, b) =>
         list.listType === 'todo'
-          ? byDue(a, b) || a.position.localeCompare(b.position)
-          : rank(a.categoryId) - rank(b.categoryId) || a.position.localeCompare(b.position),
+          ? byDue(a, b) || comparePositions(a.position, b.position)
+          : rank(a.categoryId) - rank(b.categoryId) || comparePositions(a.position, b.position),
       );
     return {
       ...toApiList(list, userId, await this.mainListId(userId), items.filter((i) => !i.checked).length),

@@ -10,6 +10,7 @@ export * from './people.js';
 export * from './links.js';
 export * from './ical.js';
 export * from './status.js';
+export * from './order.js';
 export * from './parser.js';
 export * from './properties.js';
 export * from './seed-catalog.js';

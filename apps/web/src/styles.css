@@ -2781,3 +2781,9 @@ kbd {
   touch-action: manipulation;
   user-select: none;
 }
+.kanban-drop {
+  height: 4px;
+  margin: -2px 2px;
+  border-radius: 2px;
+  background: var(--primary);
+}

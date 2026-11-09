@@ -29,7 +29,7 @@ const date = (s: string | null) => (s ? new Date(s).toLocaleDateString('de-DE') 
 /** Personal API tokens for Home Assistant, n8n & co., plus connected AI assistants (MCP). */
 export function TokensCard() {
   const [tokens, setTokens] = useState<Token[]>([]);
-  const [name, setName] = useState('Home Assistant');
+  const [name, setName] = useState('Mein Token');
   const [scopes, setScopes] = useState<string[]>(['read', 'write']);
   const [fresh, setFresh] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

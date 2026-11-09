@@ -1,3 +1,4 @@
+import { comparePositions } from './order.js';
 import { itemSpecification } from './amounts.js';
 import { categoriesInOrder, categoryInList, type CustomCategories } from './categories.js';
 import { dueOf, formatDue } from './due.js';
@@ -34,8 +35,8 @@ export function listAsText(
   if (list.listType === 'memo' || list.listType === 'todo') {
     const sorted = [...open].sort((a, b) =>
       list.listType === 'todo'
-        ? (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || a.position.localeCompare(b.position)
-        : a.position.localeCompare(b.position),
+        ? (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || comparePositions(a.position, b.position)
+        : comparePositions(a.position, b.position),
     );
     return `${head}\n\n${sorted.map(line).join('\n')}`;
   }
@@ -51,7 +52,7 @@ export function listAsText(
       (c) =>
         `${c.name}\n${byCat
           .get(c.id)!
-          .sort((a, b) => a.position.localeCompare(b.position))
+          .sort((a, b) => comparePositions(a.position, b.position))
           .map(line)
           .join('\n')}`,
     );

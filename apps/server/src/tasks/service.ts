@@ -1,3 +1,4 @@
+import { comparePositions } from '@shopping/shared';
 import { randomUUID } from 'node:crypto';
 import { generateKeyBetween, parseItem, taskPatch, withUrl, type IncomingTask, type ItemPatch, type ItemRow, type ListRow } from '@shopping/shared';
 import { and, eq, gt, inArray, sql } from 'drizzle-orm';
@@ -36,7 +37,7 @@ export class TaskService {
       .select()
       .from(listItems)
       .where(and(inArray(listItems.listId, listIds), since === undefined ? eq(listItems.deleted, false) : gt(listItems.seq, since)));
-    return rows.map(toItemRow).sort((a, b) => a.position.localeCompare(b.position));
+    return rows.map(toItemRow).sort((a, b) => comparePositions(a.position, b.position));
   }
 
   /** A change counter over lists and their entries (CalDAV ctag/sync-token, JMAP state). */

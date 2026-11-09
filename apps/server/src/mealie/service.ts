@@ -251,7 +251,8 @@ export class MealieService {
       .select({ position: listItems.position })
       .from(listItems)
       .where(eq(listItems.listId, listId))
-      .orderBy(desc(listItems.position))
+      // Byte order like the app ("Zz" before "a0"), not the database's locale.
+      .orderBy(desc(sql`${listItems.position} COLLATE "C"`))
       .limit(1);
     return row?.position ?? null;
   }

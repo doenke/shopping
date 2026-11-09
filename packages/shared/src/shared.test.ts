@@ -10,6 +10,7 @@ import { isOwnName } from './catalog-index.js';
 import { extractDue, formatDue, parseDue } from './due.js';
 import { defaultVisibility } from './packing.js';
 import { planAdd } from './plan-add.js';
+import { comparePositions } from './order.js';
 import { findStatus, itemStatus, listDefaultStatus, listStatuses, withStatus } from './status.js';
 import { itemToIcal, parseIcalTodo, taskPatch, taskTitle } from './ical.js';
 import { findUrl, itemUrl, linkLabel, withUrl } from './links.js';
@@ -608,5 +609,12 @@ describe('status of open entries', () => {
     expect(itemStatus({ attributes: {} }, statuses, def)?.name).toBe('In Arbeit');
     expect(withStatus({}, 'a', statuses, def)).toEqual({ status: 'a' });
     expect(listDefaultStatus({ settings: { ...list.settings, defaultStatus: 'gone' } })?.name).toBe('Neu');
+  });
+});
+
+describe('order of entries', () => {
+  it('sorts position keys by code units (before-first keys are upper case)', () => {
+    const keys = ['a1', 'Zz', 'a0', 'a0V'];
+    expect([...keys].sort(comparePositions)).toEqual(['Zz', 'a0', 'a0V', 'a1']);
   });
 });

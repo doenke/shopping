@@ -1,3 +1,4 @@
+import { comparePositions } from '@shopping/shared';
 import { useCustomCategories } from '../categories';
 import {
   categoriesInOrder,
@@ -93,7 +94,7 @@ const ShoppingView = forwardRef<HTMLInputElement, Props>(function ShoppingView({
       .filter((c) => byCat.has(c.id))
       .map((c) => ({
         category: c,
-        items: byCat.get(c.id)!.sort((a, b) => a.position.localeCompare(b.position)),
+        items: byCat.get(c.id)!.sort((a, b) => comparePositions(a.position, b.position)),
       }));
   }, [open, list.listType, me?.categoryOrder, custom]);
 

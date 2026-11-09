@@ -1,3 +1,4 @@
+import { comparePositions } from '@shopping/shared';
 import {
   dueOf,
   listReset,
@@ -108,7 +109,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
     const today = isoDate(now);
     // The coming seven days (not just until Sunday – on a Sunday "tomorrow" would otherwise be "later").
     const weekEnd = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7));
-    const sorted = [...open].sort((a, b) => (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || a.position.localeCompare(b.position));
+    const sorted = [...open].sort((a, b) => (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || comparePositions(a.position, b.position));
     if (shown === 'none') return [{ key: 'all', title: null as string | null, order: 0, items: sorted.map((i) => ({ item: i }) as Entry) }];
     const byKey = new Map<string, { title: string | null; order: number; items: Entry[] }>();
     // "Wer": a task for several people shows up with each of them who still has to do it.

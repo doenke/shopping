@@ -1,3 +1,4 @@
+import { comparePositions } from '@shopping/shared';
 import { useCustomCategories } from '../categories';
 import {
   categoriesInOrder,
@@ -122,7 +123,7 @@ export const PackingView = forwardRef<HTMLInputElement, Props>(function PackingV
     };
     const byKey = new Map<string, Entry[]>();
     for (const e of entries) byKey.set(keyOf(e), [...(byKey.get(keyOf(e)) ?? []), e]);
-    const sortEntries = (rows: Entry[]) => rows.sort((a, b) => a.item.position.localeCompare(b.item.position));
+    const sortEntries = (rows: Entry[]) => rows.sort((a, b) => comparePositions(a.item.position, b.item.position));
     if (groupBy === 'category') {
       return categoriesInOrder('packing', me?.categoryOrder, custom)
         .filter((c) => byKey.has(c.id))

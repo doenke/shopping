@@ -1,3 +1,4 @@
+import { comparePositions } from '@shopping/shared';
 import {
   dueOf,
   formatDue,
@@ -31,7 +32,7 @@ interface Props {
   viewSwitch?: React.ReactNode;
 }
 
-const byDue = (a: ItemRow, b: ItemRow) => (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || a.position.localeCompare(b.position);
+const byDue = (a: ItemRow, b: ItemRow) => (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || comparePositions(a.position, b.position);
 
 /** The middle column: a field for new tasks and the tasks as a table (open ones, then "Erledigt"). */
 export function TaskTable({ list, items, index, selected, onSelect, onOpen, viewSwitch }: Props) {

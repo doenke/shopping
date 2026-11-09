@@ -1,5 +1,7 @@
+import { comparePositions } from '@shopping/shared';
 import {
   dueOf,
+  generateKeyBetween,
   formatDue,
   itemPersons,
   itemStatus,
@@ -37,8 +39,6 @@ const OPEN: ListStatus = { id: '', name: 'Offen' };
 /** The done column shows the latest ones; older ones stay in the table. */
 const DONE_SHOWN = 30;
 
-const byDue = (a: ItemRow, b: ItemRow) => (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || a.position.localeCompare(b.position);
-
 /**
  * Kanban: one column per status, "Erledigt" last. Drag a card to another column (or Space to tick
  * off); click selects it for the detail column, double click / Enter edits it.
@@ -47,7 +47,8 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
   const own = listStatuses(list);
   const statuses = own.length ? own : [OPEN];
   const defaultStatus = own.length ? listDefaultStatus(list, own) : OPEN;
-  const [over, setOver] = useState<string | null>(null);
+  /** Where a dragged card would land: the column and the place in it. */
+  const [over, setOver] = useState<{ column: string; index: number } | null>(null);
   /**
    * Dragging with the mouse (or a pen): own pointer handling instead of the browser's drag and drop,
    * which in Chrome can report the previously dragged card after cards moved columns.
@@ -65,13 +66,15 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
       else byStatus.get((own.length ? itemStatus(i, own, defaultStatus) : OPEN)!.id)!.push(i);
     }
     return {
-      open: statuses.map((s) => ({ status: s, items: byStatus.get(s.id)!.sort(byDue) })),
+      // Open columns in the hand-made order (drag a card up or down); new ones come last.
+      open: statuses.map((s) => ({ status: s, items: byStatus.get(s.id)!.sort((a, b) => comparePositions(a.position, b.position)) })),
       done: done.sort((a, b) => (b.checkedAt ?? '').localeCompare(a.checkedAt ?? '')),
     };
   }, [items, list.settings]);
 
   /** Into a column: a status (open again if it was done), or done. One change, so it syncs as one. */
-  const moveTo = (item: ItemRow, column: string) => {
+  /** Into a column (at a place in it): status, done/open and order as one change. */
+  const moveTo = (item: ItemRow, column: string, index?: number) => {
     if (column === DONE) {
       if (item.checked) return;
       if (itemPersons(item).length) return setChecking(item.id);
@@ -79,27 +82,50 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
     }
     const attributes = own.length ? withStatus(item.attributes, column, own, defaultStatus) : item.attributes;
     const same = JSON.stringify(attributes) === JSON.stringify(item.attributes);
-    if (!item.checked && same) return;
-    void updateItem(item.id, { ...(item.checked ? { checked: false } : {}), ...(same ? {} : { attributes }) });
+    let position: string | undefined;
+    if (index !== undefined) {
+      const cards = columns.open.find((c) => c.status.id === column)?.items ?? [];
+      const others = cards.filter((c) => c.id !== item.id);
+      const at = Math.max(0, Math.min(index, others.length));
+      const unchanged = !item.checked && cards.indexOf(item) === at && same;
+      if (!unchanged) {
+        try {
+          position = generateKeyBetween(others[at - 1]?.position ?? null, others[at]?.position ?? null);
+        } catch {
+          // Two entries with the same place (old data): leave the order as it is.
+        }
+      }
+    }
+    if (!item.checked && same && !position) return;
+    void updateItem(item.id, { ...(item.checked ? { checked: false } : {}), ...(same ? {} : { attributes }), ...(position ? { position } : {}) });
   };
   useEffect(() => {
-    const columnAt = (x: number, y: number) =>
-      (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('[data-column]')?.dataset.column ?? null;
+    /** The column under the pointer, and before which card (the dragged one not counted). */
+    const dropAt = (x: number, y: number, dragId: string) => {
+      const col = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('[data-column]');
+      if (!col) return null;
+      const cards = [...col.querySelectorAll<HTMLElement>('[data-item-id]')].filter((c) => c.dataset.itemId !== dragId);
+      const index = cards.filter((c) => {
+        const r = c.getBoundingClientRect();
+        return r.top + r.height / 2 < y;
+      }).length;
+      return { column: col.dataset.column ?? '', index };
+    };
     const onMove = (e: PointerEvent) => {
       const p = pending.current;
       if (!p) return;
       if (!dragged.current && Math.hypot(e.clientX - p.x, e.clientY - p.y) < 6) return;
       dragged.current = true;
       setDrag({ ...p, x: e.clientX, y: e.clientY });
-      setOver(columnAt(e.clientX, e.clientY));
+      setOver(dropAt(e.clientX, e.clientY, p.id));
     };
     const onUp = (e: PointerEvent) => {
       const p = pending.current;
       pending.current = null;
       if (p && dragged.current) {
-        const target = columnAt(e.clientX, e.clientY);
+        const target = dropAt(e.clientX, e.clientY, p.id);
         const item = items.find((i) => i.id === p.id);
-        if (item && target !== null) moveTo(item, target);
+        if (item && target) moveTo(item, target.column, target.column === DONE ? undefined : target.index);
       }
       setDrag(null);
       setOver(null);
@@ -112,7 +138,7 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
     };
-  }, [items, list.settings]);
+  }, [items, list.settings, columns]);
 
   const toggle = (item: ItemRow) => (item.checked ? moveTo(item, defaultStatus!.id) : moveTo(item, DONE));
 
@@ -165,10 +191,23 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
     );
   };
 
+  /** The cards of a column, with a mark where the dragged card would go (open columns only). */
+  const withDropMark = (id: string, cards: ItemRow[]): (ItemRow | 'drop')[] => {
+    if (!drag || over?.column !== id || id === DONE) return cards;
+    const out: (ItemRow | 'drop')[] = [];
+    let n = 0;
+    for (const c of cards) {
+      if (c.id !== drag.id && n++ === over.index) out.push('drop');
+      out.push(c);
+    }
+    if (!out.includes('drop')) out.push('drop');
+    return out;
+  };
+
   const column = (id: string, title: string, cards: ItemRow[], extra?: React.ReactNode) => (
     <section
       key={id || 'open'}
-      className={`kanban-col${over === id ? ' kanban-col--over' : ''}${id === DONE ? ' kanban-col--done' : ''}`}
+      className={`kanban-col${over?.column === id ? ' kanban-col--over' : ''}${id === DONE ? ' kanban-col--done' : ''}`}
       aria-label={title}
       data-column={id}
     >
@@ -176,7 +215,7 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
         {title} <span className="kanban-col__count">{id === DONE ? columns.done.length : cards.length}</span>
       </h2>
       <div className="kanban-col__cards">
-        {cards.map(card)}
+        {withDropMark(id, cards).map((c) => (typeof c === 'string' ? <div key="drop" className="kanban-drop" aria-hidden /> : card(c)))}
         {extra}
       </div>
     </section>

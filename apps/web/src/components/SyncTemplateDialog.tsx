@@ -1,3 +1,4 @@
+import { comparePositions } from '@shopping/shared';
 import { formatAmounts, itemSpecification, listTemplateIds, packingInfo, peopleKey, peopleLabel, type ItemRow, type ListRow } from '@shopping/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addItems, itemToNew, updateItem } from '../actions';
@@ -50,8 +51,8 @@ export function SyncTemplateDialog({ list, templates, onClose }: Props) {
     const present = new Map(items.filter((i) => list.listType !== 'shopping' || !i.checked).map((i) => [keyOf(i), i]));
     const inTemplate = new Map(tpl.map((i) => [keyOf(i), i]));
     return {
-      missingInList: tpl.filter((i) => !present.has(keyOf(i))).sort((a, b) => a.position.localeCompare(b.position)),
-      missingInTemplate: items.filter((i) => !inTemplate.has(keyOf(i))).sort((a, b) => a.position.localeCompare(b.position)),
+      missingInList: tpl.filter((i) => !present.has(keyOf(i))).sort((a, b) => comparePositions(a.position, b.position)),
+      missingInTemplate: items.filter((i) => !inTemplate.has(keyOf(i))).sort((a, b) => comparePositions(a.position, b.position)),
       different: tpl
         .map((t) => ({ t, l: present.get(keyOf(t)) }))
         .filter((x): x is { t: ItemRow; l: ItemRow } => !!x.l && formatAmounts(x.l.amounts) !== formatAmounts(x.t.amounts)),

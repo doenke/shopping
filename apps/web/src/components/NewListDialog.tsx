@@ -1,3 +1,4 @@
+import { comparePositions } from '@shopping/shared';
 import {
   canAutoReset,
   defaultVisibility,
@@ -67,7 +68,7 @@ export function NewListDialog({ templates: allTemplates, groups = [], initialTyp
   const sorted = useMemo(() => {
     const seen = new Map<string, { item: ItemRow; from: string[] }>();
     for (const t of chosenTemplates) {
-      const own = (items ?? []).filter((i) => i.listId === t.id && !i.deleted).sort((a, b) => a.position.localeCompare(b.position));
+      const own = (items ?? []).filter((i) => i.listId === t.id && !i.deleted).sort((a, b) => comparePositions(a.position, b.position));
       for (const i of own) {
         const p = packingInfo(i);
         const key = [i.catalogItemId ?? i.name.trim().toLowerCase(), peopleKey(i), p.container?.toLowerCase() ?? ''].join('|');

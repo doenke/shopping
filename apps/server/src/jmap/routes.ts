@@ -1,3 +1,4 @@
+import { comparePositions } from '@shopping/shared';
 import { dueOf, itemUrl, lastModified, taskTitle, taskUid, type IncomingTask, type ItemRow, type ListRow } from '@shopping/shared';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -256,7 +257,7 @@ export async function jmapRoutes(app: FastifyInstance, opts: { config: Config; d
         const text = (filter.text ?? filter.title)?.toLowerCase();
         if (text) items = items.filter((i) => i.name.toLowerCase().includes(text) || (i.note ?? '').toLowerCase().includes(text));
         // Lists in the user's order, entries in list order.
-        items.sort((a, b) => listIds.indexOf(a.listId) - listIds.indexOf(b.listId) || a.position.localeCompare(b.position));
+        items.sort((a, b) => listIds.indexOf(a.listId) - listIds.indexOf(b.listId) || comparePositions(a.position, b.position));
         const position = Math.max(0, Number(args.position ?? 0));
         const limit = args.limit === undefined || args.limit === null ? undefined : Number(args.limit);
         const page = items.slice(position, limit === undefined ? undefined : position + limit);
