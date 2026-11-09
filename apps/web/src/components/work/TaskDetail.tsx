@@ -2,6 +2,7 @@ import {
   dueOf,
   itemStatus,
   listStatuses,
+  listDefaultStatus,
   withStatus,
   isForEach,
   itemPersons,
@@ -43,6 +44,7 @@ export function TaskDetail({ item, list, items, users, focusTitle }: Props) {
   const suggestions = usePeopleSuggestions(list, items);
   const people = peopleOf(item);
   const statuses = listStatuses(list);
+  const defaultStatus = listDefaultStatus(list, statuses);
 
   // Someone else changed it meanwhile: show that (unless the field is being edited right now).
   useEffect(() => {
@@ -114,8 +116,8 @@ export function TaskDetail({ item, list, items, users, focusTitle }: Props) {
           <span>Status</span>
           <select
             aria-label="Status"
-            value={itemStatus(item, statuses)?.id ?? ''}
-            onChange={(e) => saveAttributes(withStatus(item.attributes, e.target.value, statuses))}
+            value={itemStatus(item, statuses, defaultStatus)?.id ?? ''}
+            onChange={(e) => saveAttributes(withStatus(item.attributes, e.target.value, statuses, defaultStatus))}
           >
             {statuses.map((st) => (
               <option key={st.id} value={st.id}>

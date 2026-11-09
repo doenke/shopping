@@ -24,6 +24,8 @@ import {
   type ParsedItem,
   type ResetEvery,
   type ListStatus,
+  listDefaultStatus,
+  listStatuses,
   type SectionKey,
 } from '@shopping/shared';
 import { db } from './db';
@@ -221,7 +223,15 @@ export async function saveAsTemplate(list: ListRow, name: string): Promise<strin
 /** Name, description and (ToDo lists) Kategorie in one change – one settings patch, nothing overwrites the other. */
 export async function editList(
   list: ListRow,
-  edit: { name: string; description: string; group?: string; reset?: ResetEvery | null; askTemplates?: boolean; statuses?: ListStatus[] },
+  edit: {
+    name: string;
+    description: string;
+    group?: string;
+    reset?: ResetEvery | null;
+    askTemplates?: boolean;
+    statuses?: ListStatus[];
+    defaultStatus?: string | null;
+  },
 ): Promise<void> {
   const settings = { ...list.settings };
   if (edit.description.trim()) settings.description = edit.description.trim();
@@ -238,6 +248,12 @@ export async function editList(
     const statuses = edit.statuses.map((st) => ({ id: st.id, name: st.name.trim() })).filter((st) => st.name);
     if (statuses.length) settings.statuses = statuses;
     else delete settings.statuses;
+    // The default: what new entries get. Entries that had the old default keep it.
+    const before = listDefaultStatus(list);
+    const def = statuses.find((st) => st.id === edit.defaultStatus) ?? statuses[0] ?? null;
+    if (def && def.id !== statuses[0]?.id) settings.defaultStatus = def.id;
+    else delete settings.defaultStatus;
+    if (before && def && before.id !== def.id && statuses.some((st) => st.id === before.id)) await pinStatus(list, before.id);
   }
   if (edit.reset !== undefined) {
     if (edit.reset) settings.reset = edit.reset;
@@ -247,6 +263,15 @@ export async function editList(
   if (edit.name.trim() && edit.name.trim() !== list.name) patch.name = edit.name.trim();
   if (JSON.stringify(settings) !== JSON.stringify(list.settings)) patch.settings = settings;
   if (patch.name || patch.settings) await sync.mutateList(list.id, patch);
+}
+
+/** Open entries without a status of their own get this one written onto them (before the default changes). */
+async function pinStatus(list: ListRow, statusId: string): Promise<void> {
+  const known = new Set(listStatuses(list).map((st) => st.id));
+  const items = (await db.items.where('listId').equals(list.id).toArray()).filter(
+    (i) => !i.deleted && !i.checked && !(typeof i.attributes.status === 'string' && known.has(i.attributes.status)),
+  );
+  await sync.mutateItems(items.map((i) => ({ id: i.id, patch: { attributes: { ...i.attributes, status: statusId } } })));
 }
 
 /** A new icon for the list, drawn from its name and description. */

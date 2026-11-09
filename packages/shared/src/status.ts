@@ -26,16 +26,29 @@ export function listStatuses(list: { settings: Record<string, unknown> }): ListS
   return out;
 }
 
-/** An item's status: the one set on it, else the list's first (new entries start there); null without statuses. */
-export function itemStatus(item: Pick<ItemRow, 'attributes'>, statuses: ListStatus[]): ListStatus | null {
-  const id = item.attributes.status;
-  return statuses.find((s) => s.id === id) ?? statuses[0] ?? null;
+/** The list's default status (`settings.defaultStatus`) – what new entries get; else the first one. */
+export function listDefaultStatus(list: { settings: Record<string, unknown> }, statuses = listStatuses(list)): ListStatus | null {
+  return statuses.find((s) => s.id === list.settings.defaultStatus) ?? statuses[0] ?? null;
 }
 
-/** Sets the status (by id); the first one is the default and is not stored. */
-export function withStatus(attributes: Record<string, unknown>, statusId: string | null, statuses: ListStatus[]): Record<string, unknown> {
+/**
+ * An item's status: the one set on it, else the default (entries without one are "new" – they got the
+ * default; when the default changes, the app writes the old one onto them first). Null without statuses.
+ */
+export function itemStatus(item: Pick<ItemRow, 'attributes'>, statuses: ListStatus[], fallback: ListStatus | null = statuses[0] ?? null): ListStatus | null {
+  const id = item.attributes.status;
+  return statuses.find((s) => s.id === id) ?? fallback;
+}
+
+/** Sets the status (by id); the default one is not stored. */
+export function withStatus(
+  attributes: Record<string, unknown>,
+  statusId: string | null,
+  statuses: ListStatus[],
+  fallback: ListStatus | null = statuses[0] ?? null,
+): Record<string, unknown> {
   const next = { ...attributes };
-  if (!statusId || statusId === statuses[0]?.id) delete next.status;
+  if (!statusId || statusId === fallback?.id) delete next.status;
   else next.status = statusId;
   return next;
 }

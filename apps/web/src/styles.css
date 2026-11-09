@@ -2630,3 +2630,11 @@ kbd {
 .work-table th.work-row__status {
   width: 130px;
 }
+.status-editor__default {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+}
+.status-editor__default input {
+  margin: 0;
+}

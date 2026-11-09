@@ -10,7 +10,7 @@ import { isOwnName } from './catalog-index.js';
 import { extractDue, formatDue, parseDue } from './due.js';
 import { defaultVisibility } from './packing.js';
 import { planAdd } from './plan-add.js';
-import { findStatus, itemStatus, listStatuses, withStatus } from './status.js';
+import { findStatus, itemStatus, listDefaultStatus, listStatuses, withStatus } from './status.js';
 import { itemToIcal, parseIcalTodo, taskPatch, taskTitle } from './ical.js';
 import { findUrl, itemUrl, linkLabel, withUrl } from './links.js';
 import { applyItemPatch, itemDone, mergeItem, peopleLabel, resolvePeople, withPeople } from './people.js';
@@ -601,5 +601,12 @@ describe('status of open entries', () => {
     expect(withStatus({ status: 'b' }, 'a', statuses)).toEqual({});
     expect(withStatus({}, 'b', statuses)).toEqual({ status: 'b' });
     expect(findStatus(statuses, 'in arbeit')?.id).toBe('b');
+    // A default of its own: new entries (no status stored) have it.
+    const withDefault = { settings: { ...list.settings, defaultStatus: 'b' } };
+    const def = listDefaultStatus(withDefault);
+    expect(def?.name).toBe('In Arbeit');
+    expect(itemStatus({ attributes: {} }, statuses, def)?.name).toBe('In Arbeit');
+    expect(withStatus({}, 'a', statuses, def)).toEqual({ status: 'a' });
+    expect(listDefaultStatus({ settings: { ...list.settings, defaultStatus: 'gone' } })?.name).toBe('Neu');
   });
 });

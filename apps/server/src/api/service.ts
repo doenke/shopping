@@ -14,6 +14,7 @@ import {
   withUrl,
   findStatus,
   listStatuses,
+  listDefaultStatus,
   withStatus,
   listPersons,
   peopleOnItems,
@@ -323,14 +324,21 @@ export class ShoppingApi {
       );
     return {
       ...toApiList(list, userId, await this.mainListId(userId), items.filter((i) => !i.checked).length),
-      items: shown.map((i) => toApiItem(i, names, list.listType, custom, listStatuses(list))),
+      items: shown.map((i) => toApiItem(i, names, list.listType, custom, listStatuses(list), listDefaultStatus(list))),
     };
   }
 
   async item(userId: string, ref: string, listRef?: string): Promise<ApiItem> {
     const item = await this.resolveItem(userId, ref, listRef);
     const list = (await this.accessibleLists(userId)).find((l) => l.id === item.listId);
-    return toApiItem(item, await this.userNames(), list?.listType, await this.sync.visibleCategories(userId), list ? listStatuses(list) : []);
+    return toApiItem(
+      item,
+      await this.userNames(),
+      list?.listType,
+      await this.sync.visibleCategories(userId),
+      list ? listStatuses(list) : [],
+      list ? listDefaultStatus(list) : null,
+    );
   }
 
   /** Recently bought items – good suggestions for "what do we usually buy?". */
@@ -481,7 +489,7 @@ export class ShoppingApi {
           statuses.length ? `Unbekannter Status – möglich: ${statuses.map((x) => x.name).join(', ')}` : 'Diese Liste hat keine Status',
         );
       }
-      patch.attributes = withStatus(patch.attributes ?? item.attributes, st?.id ?? null, statuses);
+      patch.attributes = withStatus(patch.attributes ?? item.attributes, st?.id ?? null, statuses, list ? listDefaultStatus(list, statuses) : null);
     }
     if (input.category !== undefined) {
       const list = (await this.accessibleLists(userId)).find((l) => l.id === item.listId);

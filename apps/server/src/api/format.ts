@@ -82,6 +82,7 @@ export function toApiItem(
   listType?: ListType,
   custom: CustomCategories = [],
   statuses: ListStatus[] = [],
+  defaultStatus: ListStatus | null = statuses[0] ?? null,
 ): ApiItem {
   // Category ids are unique across list types; with the type known, foreign ones go to "Sonstiges".
   const cat = listType ? categoryInList(i.categoryId, listType, custom) : getCategory(i.categoryId, custom);
@@ -108,7 +109,7 @@ export function toApiItem(
     persons: itemPersons(i),
     donePersons: itemDone(i),
     url: itemUrl(i),
-    status: statuses.length && !i.checked ? (itemStatus(i, statuses)?.name ?? null) : null,
+    status: statuses.length && !i.checked ? (itemStatus(i, statuses, defaultStatus)?.name ?? null) : null,
     tipFrom: packing.person,
     where: packing.container,
     due: dueOf(i),

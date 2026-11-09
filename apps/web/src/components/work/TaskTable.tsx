@@ -6,6 +6,7 @@ import {
   itemStatus,
   listDescription,
   listStatuses,
+  listDefaultStatus,
   packingInfo,
   parseInput,
   peopleLabel,
@@ -39,6 +40,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen }: Pr
   const done = useMemo(() => items.filter((i) => i.checked).sort((a, b) => (b.checkedAt ?? '').localeCompare(a.checkedAt ?? '')), [items]);
   const description = listDescription(list);
   const statuses = listStatuses(list);
+  const defaultStatus = listDefaultStatus(list, statuses);
 
   const add = async () => {
     const parsed = parseInput(text, index, 'todo');
@@ -93,8 +95,8 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen }: Pr
         {statuses.length > 0 && (
           <td className="work-row__status">
             {!item.checked && (
-              <span className={`status-tag${itemStatus(item, statuses)?.id === statuses[0]!.id ? ' status-tag--first' : ''}`}>
-                {itemStatus(item, statuses)?.name}
+              <span className={`status-tag${itemStatus(item, statuses, defaultStatus)?.id === defaultStatus?.id ? ' status-tag--first' : ''}`}>
+                {itemStatus(item, statuses, defaultStatus)?.name}
               </span>
             )}
           </td>

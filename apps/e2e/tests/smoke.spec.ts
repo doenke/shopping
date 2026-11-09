@@ -231,6 +231,20 @@ test('a ToDo list gets statuses; tasks get one', async ({ page }, info) => {
   await dialog.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.work-table th', { hasText: 'Status' })).toBeVisible();
   await page.locator('.work-row', { hasText: 'Konzept' }).click();
-  await page.locator('.work-detail').getByRole('combobox', { name: 'Status' }).selectOption({ label: 'In Arbeit' });
-  await expect(page.locator('.work-row', { hasText: 'Konzept' })).toContainText('In Arbeit');
+  await page.locator('.work-detail').getByRole('combobox', { name: 'Status' }).selectOption({ label: 'Wartet' });
+  await expect(page.locator('.work-row', { hasText: 'Konzept' })).toContainText('Wartet');
+  await page.locator('.work-row', { hasText: 'Konzept' }).click();
+  await page.locator('.work-detail').getByRole('combobox', { name: 'Status' }).selectOption({ label: 'Neu' });
+
+  // Default "In Arbeit": new entries get it, existing ones keep theirs.
+  await page.getByRole('button', { name: 'Listenmenü' }).click();
+  await page.getByRole('menuitem', { name: /Bearbeiten/ }).click();
+  await page.locator('dialog[open]').getByRole('radio', { name: 'In Arbeit als Standard' }).check();
+  await page.locator('dialog[open]').getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+  await page.keyboard.press('n');
+  await page.keyboard.type('Umsetzung');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.work-row', { hasText: 'Umsetzung' })).toContainText('In Arbeit');
+  await expect(page.locator('.work-row', { hasText: 'Konzept' })).toContainText('Neu');
 });

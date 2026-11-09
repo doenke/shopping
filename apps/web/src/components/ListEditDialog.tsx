@@ -12,6 +12,7 @@ import {
   type Me,
   type ResetEvery,
   listStatuses,
+  listDefaultStatus,
   SUGGESTED_STATUSES,
   type ListStatus,
 } from '@shopping/shared';
@@ -44,6 +45,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
   const [reset, setReset] = useState<ResetEvery | null>(listReset(list));
   const [icon, setIcon] = useState<'idle' | 'queued' | 'error'>('idle');
   const [statuses, setStatuses] = useState<ListStatus[]>(listStatuses(list));
+  const [defaultStatus, setDefaultStatus] = useState<string | null>(listDefaultStatus(list)?.id ?? null);
   const todo = list.listType === 'todo';
 
   useEffect(() => ref.current?.showModal(), []);
@@ -58,7 +60,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
           await editList(list, {
             name,
             description,
-            ...(todo ? { group, statuses } : {}),
+            ...(todo ? { group, statuses, defaultStatus } : {}),
             ...(canAutoReset(list) ? { reset } : {}),
             ...(templates.length ? { askTemplates } : {}),
           });
@@ -99,7 +101,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
           </label>
         )}
 
-        {todo && <StatusEditor value={statuses} onChange={setStatuses} />}
+        {todo && <StatusEditor value={statuses} onChange={setStatuses} defaultId={defaultStatus} onDefault={setDefaultStatus} />}
 
         {templates.length > 0 && (
           <div className="field">
@@ -193,7 +195,18 @@ const newStatusId = () => crypto.randomUUID().slice(0, 8);
  * The statuses of a ToDo list, in order: new tasks start in the first one; "Erledigt" is the tick,
  * not a status. Ids stay when renaming, so tasks keep their status.
  */
-function StatusEditor({ value, onChange }: { value: ListStatus[]; onChange: (v: ListStatus[]) => void }) {
+function StatusEditor({
+  value,
+  onChange,
+  defaultId,
+  onDefault,
+}: {
+  value: ListStatus[];
+  onChange: (v: ListStatus[]) => void;
+  defaultId: string | null;
+  onDefault: (id: string) => void;
+}) {
+  const effective = value.find((st) => st.id === defaultId)?.id ?? value[0]?.id;
   const move = (i: number, by: number) => {
     const next = [...value];
     const [s] = next.splice(i, 1);
@@ -216,6 +229,15 @@ function StatusEditor({ value, onChange }: { value: ListStatus[]; onChange: (v: 
         <ol className="status-editor">
           {value.map((st, i) => (
             <li key={st.id}>
+              <label className="status-editor__default" title="Standard – den bekommen neue Einträge">
+                <input
+                  type="radio"
+                  name="default-status"
+                  checked={st.id === effective}
+                  onChange={() => onDefault(st.id)}
+                  aria-label={`${st.name || `Status ${i + 1}`} als Standard`}
+                />
+              </label>
               <input
                 value={st.name}
                 aria-label={`Status ${i + 1}`}
@@ -240,7 +262,9 @@ function StatusEditor({ value, onChange }: { value: ListStatus[]; onChange: (v: 
           </li>
         </ol>
       )}
-      <small className="muted">Für offene Aufgaben – neue starten im ersten. „Erledigt“ ist der Haken. Später die Spalten eines Kanban-Boards.</small>
+      <small className="muted">
+        Für offene Aufgaben. ◉ = Standard, den bekommt jeder neue Eintrag. „Erledigt“ ist der Haken. Später die Spalten eines Kanban-Boards.
+      </small>
     </div>
   );
 }

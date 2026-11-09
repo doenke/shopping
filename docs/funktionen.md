@@ -90,7 +90,8 @@
   gezogen, entsteht ein neuer Eintrag – benannt nach dem Linktext bzw. dem Titel der Seite. In die
   Eingabezeile gezogen landet der Link wie gewohnt als Text.
 - **Status für Aufgaben** (ToDo-Listen): unter *⋮ → Bearbeiten …* eigene Status festlegen und sortieren
-  (Vorschlag: Neu · In Arbeit · Wartet). Neue Aufgaben starten im ersten; „Erledigt“ ist der Haken, kein Status.
+  (Vorschlag: Neu · In Arbeit · Wartet) und einen **Standard** wählen, den jeder neue Eintrag bekommt (bestehende
+  behalten ihren, wenn der Standard wechselt); „Erledigt“ ist der Haken, kein Status.
   Am Rechner eine eigene Spalte in der Tabelle und eine Auswahl in den Details, auf dem Handy im Editor und als
   Gruppierung „Status“. Gespeichert wird der Status pro Eintrag (auch REST/MCP: `status`), umbenennen
   verliert nichts. Gedacht als Spalten für ein späteres Kanban-Board.

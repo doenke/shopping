@@ -15,6 +15,7 @@ import {
   withPeople,
   itemStatus,
   listStatuses,
+  listDefaultStatus,
   withStatus,
   itemUrl,
   withUrl,
@@ -106,7 +107,8 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const [due, setDue] = useState(dueOf(item) ?? '');
   const [link, setLink] = useState(typeof item.attributes.url === 'string' ? item.attributes.url : '');
   const statuses = todo && !isTemplate ? listStatuses(list) : [];
-  const [status, setStatus] = useState(itemStatus(item, statuses)?.id ?? '');
+  const defaultStatus = listDefaultStatus(list, statuses);
+  const [status, setStatus] = useState(itemStatus(item, statuses, defaultStatus)?.id ?? '');
   const linkValid = itemUrl({ attributes: withUrl({}, link) });
   // The date field only shows once a task has (or gets) a due date.
   const [showDue, setShowDue] = useState(!!dueOf(item));
@@ -225,7 +227,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
       note: note.trim() || null,
       categoryId,
       ...(isTemplate ? { optional } : {}),
-      attributes: (statuses.length ? (a: Record<string, unknown>) => withStatus(a, status, statuses) : (a: Record<string, unknown>) => a)(
+      attributes: (statuses.length ? (a: Record<string, unknown>) => withStatus(a, status, statuses, defaultStatus) : (a: Record<string, unknown>) => a)(
         withUrl(
           labels
             ? withDue(
