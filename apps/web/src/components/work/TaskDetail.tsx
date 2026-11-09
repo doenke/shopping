@@ -28,13 +28,15 @@ interface Props {
   users: Map<string, UserInfo>;
   /** Focus the title (Enter on a row). */
   focusTitle: number;
+  /** Kanban: the details can be closed (the board gets the width back). */
+  onClose?: () => void;
 }
 
 /**
  * The right column of the Arbeitsmodus: one task, edited in place. Text fields save when they lose
  * focus (or on Enter), everything else right away.
  */
-export function TaskDetail({ item, list, items, users, focusTitle }: Props) {
+export function TaskDetail({ item, list, items, users, focusTitle, onClose }: Props) {
   const [name, setName] = useState(item.name);
   const [note, setNote] = useState(item.note ?? '');
   const [area, setArea] = useState(packingInfo(item).container ?? '');
@@ -109,6 +111,11 @@ export function TaskDetail({ item, list, items, users, focusTitle }: Props) {
           onBlur={saveName}
           onKeyDown={enterSaves(saveName)}
         />
+        {onClose && (
+          <button type="button" className="icon-btn" aria-label="Details schließen" onClick={onClose}>
+            ✕
+          </button>
+        )}
       </div>
 
       {statuses.length > 0 && !item.checked && (

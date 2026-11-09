@@ -94,7 +94,12 @@
   behalten ihren, wenn der Standard wechselt); „Erledigt“ ist der Haken, kein Status.
   Am Rechner eine eigene Spalte in der Tabelle und eine Auswahl in den Details, auf dem Handy im Editor und als
   Gruppierung „Status“. Gespeichert wird der Status pro Eintrag (auch REST/MCP: `status`), umbenennen
-  verliert nichts. Gedacht als Spalten für ein späteres Kanban-Board.
+  verliert nichts.
+- **Kanban** (ToDo-Listen am Rechner, Umschalter *Tabelle | Kanban* oben rechts, pro Liste gemerkt): eine
+  Spalte pro Status, „Erledigt“ als letzte (die 30 neuesten). Karten mit Fälligkeit, Bereich, Personen und
+  Link; mit Maus oder Stift in eine andere Spalte ziehen setzt den Status bzw. hakt ab – zurück aus „Erledigt“ öffnet
+  wieder. Klick zeigt die Details rechts (✕ oder Esc schließt sie), Doppelklick/Enter bearbeitet,
+  Leertaste hakt ab, Pfeiltasten wandern über die Karten. Ohne eigene Status: „Offen“ und „Erledigt“.
 - **Arbeitsmodus** 💼 (*Arbeitsmodus* unten in der Seitenleiste oder Strg+Shift+A, pro Gerät gemerkt): blendet
   Listen aus – Seitenleiste, Suche und Start zeigen nur noch die ToDo-Listen der Kategorie „Arbeit“
   (umstellbar auf alle ToDo-Listen). Neue Listen sind dann ToDo-Listen in „Arbeit“; oben links steht „To-Do“

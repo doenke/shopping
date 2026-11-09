@@ -248,3 +248,31 @@ test('a ToDo list gets statuses; tasks get one', async ({ page }, info) => {
   await expect(page.locator('.work-row', { hasText: 'Umsetzung' })).toContainText('In Arbeit');
   await expect(page.locator('.work-row', { hasText: 'Konzept' })).toContainText('Neu');
 });
+
+test('Kanban: cards move between status columns and to Erledigt', async ({ page }, info) => {
+  test.skip(phone(page), 'the board is for the desktop');
+  await login(page, `Kim ${info.project.name}`);
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Board', type: 'todo' } })).json();
+  await page.request.post(`/api/v1/lists/${list.id}/items`, { data: { items: ['Konzept', 'Rechnung'] } });
+  await page.goto(`/#/list/${list.id}`);
+  await page.getByRole('button', { name: 'Kanban' }).click();
+  // Without statuses: "Offen" and "Erledigt", and a way to the settings.
+  await expect(page.locator('.kanban-col__title')).toHaveText(['Offen 2', 'Erledigt 0']);
+  await page.getByRole('button', { name: /Status in den Listeneinstellungen/ }).click();
+  await page
+    .locator('dialog[open]')
+    .getByRole('button', { name: /übernehmen/ })
+    .click();
+  await page.locator('dialog[open]').getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('.kanban-col__title')).toHaveText(['Neu 2', 'In Arbeit 0', 'Wartet 0', 'Erledigt 0']);
+  const col = (name: string) => page.locator('.kanban-col', { has: page.locator('.kanban-col__title', { hasText: name }) });
+  await page.locator('.kanban-card', { hasText: 'Konzept' }).dragTo(col('In Arbeit').locator('.kanban-col__cards'));
+  await expect(col('In Arbeit')).toContainText('Konzept');
+  await page.locator('.kanban-card', { hasText: 'Rechnung' }).dragTo(col('Erledigt').locator('.kanban-col__cards'));
+  await expect(col('Erledigt')).toContainText('Rechnung');
+  // And back: open again, in the column it was dropped on.
+  await page.locator('.kanban-card', { hasText: 'Rechnung' }).dragTo(col('Wartet').locator('.kanban-col__cards'));
+  await expect(col('Wartet')).toContainText('Rechnung');
+  const items = (await (await page.request.get(`/api/v1/lists/${list.id}?items=all`)).json()).items as { name: string; status: string; checked: boolean }[];
+  expect(items.find((i) => i.name === 'Rechnung')).toMatchObject({ status: 'Wartet', checked: false });
+});

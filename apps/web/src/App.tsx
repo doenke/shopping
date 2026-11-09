@@ -391,6 +391,7 @@ function Shell({ me }: { me: Me }) {
                   users={users}
                   remoteChecks={remoteChecks}
                   desktop={wide}
+                  onEditList={() => setEditing(true)}
                 />
               ) : route.page === 'list' && route.listId && !list ? (
                 <div className="empty">

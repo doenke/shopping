@@ -27,27 +27,21 @@ interface Props {
   onSelect: (id: string) => void;
   /** Enter on a row: edit it in the detail column. */
   onOpen: (id: string) => void;
+  /** Table ↔ Kanban (top right). */
+  viewSwitch?: React.ReactNode;
 }
 
 const byDue = (a: ItemRow, b: ItemRow) => (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || a.position.localeCompare(b.position);
 
 /** The middle column: a field for new tasks and the tasks as a table (open ones, then "Erledigt"). */
-export function TaskTable({ list, items, index, selected, onSelect, onOpen }: Props) {
-  const [text, setText] = useState('');
+export function TaskTable({ list, items, index, selected, onSelect, onOpen, viewSwitch }: Props) {
   const [showDone, setShowDone] = useState(false);
   const [checking, setChecking] = useState<string | null>(null);
   const open = useMemo(() => items.filter((i) => !i.checked).sort(byDue), [items]);
   const done = useMemo(() => items.filter((i) => i.checked).sort((a, b) => (b.checkedAt ?? '').localeCompare(a.checkedAt ?? '')), [items]);
-  const description = listDescription(list);
   const statuses = listStatuses(list);
   const defaultStatus = listDefaultStatus(list, statuses);
 
-  const add = async () => {
-    const parsed = parseInput(text, index, 'todo');
-    if (!parsed.length) return;
-    setText('');
-    await addItems(list.id, parsed);
-  };
   const toggle = (item: ItemRow) => {
     if (itemPersons(item).length && !item.checked) return setChecking(item.id);
     void setChecked(item, !item.checked);
@@ -121,39 +115,8 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen }: Pr
 
   return (
     <section className="work-tasks" aria-label={list.name}>
-      <header className="work-tasks__head">
-        <div>
-          <p className="work-tasks__sub">
-            {open.length} offen{done.length ? ` · ${done.length} erledigt` : ''}
-            {description ? ` · ${description}` : ''}
-          </p>
-        </div>
-      </header>
-
-      <form
-        className="work-add"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void add();
-        }}
-      >
-        <span className="work-add__plus" aria-hidden>
-          +
-        </span>
-        <input
-          data-add-input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') e.currentTarget.blur();
-          }}
-          placeholder="Neue Aufgabe – z. B. Angebot schicken !Fr @Ben #Kunde"
-          aria-label="Neue Aufgabe"
-        />
-        <kbd className="work-add__key" aria-hidden>
-          N
-        </kbd>
-      </form>
+      <TaskHeader list={list} open={open.length} done={done.length} viewSwitch={viewSwitch} />
+      <TaskAdd list={list} index={index} />
 
       {open.length === 0 && done.length === 0 ? (
         <p className="work-empty">Keine Aufgaben. Oben eintippen – „!Fr“ setzt die Fälligkeit, „@Ben“ wer, „#Kunde“ den Bereich.</p>
@@ -188,5 +151,56 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen }: Pr
 
       {checkItem && <PersonCheckDialog item={checkItem} verb="erledigt" onClose={() => setChecking(null)} />}
     </section>
+  );
+}
+
+/** "3 offen · 2 erledigt · description" and the view switch. */
+export function TaskHeader({ list, open, done, viewSwitch }: { list: ListRow; open: number; done: number; viewSwitch?: React.ReactNode }) {
+  const description = listDescription(list);
+  return (
+    <header className="work-tasks__head">
+      <p className="work-tasks__sub">
+        {open} offen{done ? ` · ${done} erledigt` : ''}
+        {description ? ` · ${description}` : ''}
+      </p>
+      {viewSwitch}
+    </header>
+  );
+}
+
+/** The field for new tasks (N focuses it); "!Fr" due, "@Ben" who, "#Kunde" area. */
+export function TaskAdd({ list, index }: { list: ListRow; index: CatalogIndex }) {
+  const [text, setText] = useState('');
+  const add = async () => {
+    const parsed = parseInput(text, index, 'todo');
+    if (!parsed.length) return;
+    setText('');
+    await addItems(list.id, parsed);
+  };
+  return (
+    <form
+      className="work-add"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void add();
+      }}
+    >
+      <span className="work-add__plus" aria-hidden>
+        +
+      </span>
+      <input
+        data-add-input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') e.currentTarget.blur();
+        }}
+        placeholder="Neue Aufgabe – z. B. Angebot schicken !Fr @Ben #Kunde"
+        aria-label="Neue Aufgabe"
+      />
+      <kbd className="work-add__key" aria-hidden>
+        N
+      </kbd>
+    </form>
   );
 }
