@@ -112,7 +112,7 @@
   gruppierbar nach Ort oder Tippgeber; Erledigtes (gesehen, gelesen, besucht) bleibt unter „Erledigt“. Die
   Beschreibung der Liste („Filme und Serien, die wir sehen wollen“) hilft beim Icon jedes Eintrags.
 - **ToDo-Listen** ✅ (standardmäßig **privat**): Aufgaben mit **Fälligkeit** („!morgen“, „!Fr“, „!12.11.“),
-  **Wer** („@Ben“) und **Bereich** („#Garten“), gruppiert nach Fälligkeit (Überfällig, Heute, Diese Woche …),
+  **Wer** („@Ben“) und **Bereich** („#Garten“), gruppiert nach Fälligkeit (Überfällig, Heute, Nächste 7 Tage, Später),
   Bereich oder Person. Die Listen selbst lassen sich in **Kategorien** ordnen (Arbeit, Hobby, Urlaub …; beim
   Anlegen oder unter *⋮ → Bearbeiten …*) und stehen in der Seitenleiste darunter gruppiert.
 - **Wiederkehrende Checklisten** ↺ (z. B. „Haus verlassen“, „Wochenputz“): *⋮ → ↺ Alles zurücksetzen*

@@ -46,7 +46,7 @@ Laptop-Ansicht.
 | Einkauf | Kacheln nach Kategorien, „Zuletzt verwendet“ |
 | Packliste | Kacheln, eingepackt bleibt durchgestrichen stehen oder wird ausgeblendet (Schalter, pro Liste und Gerät); Fortschritt „12 von 30 eingepackt“; gruppiert nach Kategorie, Packstück oder Person; erledigte Packliste ins Archiv |
 | Merkliste | Kacheln mit eigenem Icon je Eintrag, Tipp von und Wo darunter; gruppiert nach Ort oder Tippgeber; „Erledigt“ eingeklappt |
-| ToDo | Checkliste; ohne Fälligkeiten schlicht, mit Fälligkeiten gruppiert nach Überfällig / Heute / Diese Woche / Später, wahlweise nach Bereich oder Person; „Erledigt“ eingeklappt |
+| ToDo | Checkliste; ohne Fälligkeiten schlicht, mit Fälligkeiten gruppiert nach Überfällig / Heute / Nächste 7 Tage / Später, wahlweise nach Bereich oder Person; „Erledigt“ eingeklappt |
 
 ## Laptop
 

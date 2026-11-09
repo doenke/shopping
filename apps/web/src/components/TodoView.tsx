@@ -59,7 +59,7 @@ function dueBucket(due: string | null, today: string, weekEnd: string): { key: s
   if (!due) return { key: 'none', title: 'Ohne Datum', order: 5 };
   if (due < today) return { key: 'overdue', title: 'Überfällig', order: 0 };
   if (due === today) return { key: 'today', title: 'Heute', order: 1 };
-  if (due <= weekEnd) return { key: 'week', title: 'Diese Woche', order: 2 };
+  if (due <= weekEnd) return { key: 'week', title: 'Nächste 7 Tage', order: 2 };
   return { key: 'later', title: 'Später', order: 3 };
 }
 
@@ -101,7 +101,8 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
   const groups = useMemo(() => {
     const now = new Date();
     const today = isoDate(now);
-    const weekEnd = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + ((7 - now.getDay()) % 7)));
+    // The coming seven days (not just until Sunday – on a Sunday "tomorrow" would otherwise be "later").
+    const weekEnd = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7));
     const sorted = [...open].sort((a, b) => (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || a.position.localeCompare(b.position));
     if (shown === 'none') return [{ key: 'all', title: null as string | null, order: 0, items: sorted.map((i) => ({ item: i }) as Entry) }];
     const byKey = new Map<string, { title: string | null; order: number; items: Entry[] }>();
