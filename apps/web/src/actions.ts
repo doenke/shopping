@@ -23,6 +23,7 @@ import {
   type NewItem,
   type ParsedItem,
   type ResetEvery,
+  type ListStatus,
   type SectionKey,
 } from '@shopping/shared';
 import { db } from './db';
@@ -220,7 +221,7 @@ export async function saveAsTemplate(list: ListRow, name: string): Promise<strin
 /** Name, description and (ToDo lists) Kategorie in one change – one settings patch, nothing overwrites the other. */
 export async function editList(
   list: ListRow,
-  edit: { name: string; description: string; group?: string; reset?: ResetEvery | null; askTemplates?: boolean },
+  edit: { name: string; description: string; group?: string; reset?: ResetEvery | null; askTemplates?: boolean; statuses?: ListStatus[] },
 ): Promise<void> {
   const settings = { ...list.settings };
   if (edit.description.trim()) settings.description = edit.description.trim();
@@ -232,6 +233,11 @@ export async function editList(
   if (edit.askTemplates !== undefined) {
     if (edit.askTemplates) delete settings.askTemplates;
     else settings.askTemplates = false;
+  }
+  if (edit.statuses !== undefined) {
+    const statuses = edit.statuses.map((st) => ({ id: st.id, name: st.name.trim() })).filter((st) => st.name);
+    if (statuses.length) settings.statuses = statuses;
+    else delete settings.statuses;
   }
   if (edit.reset !== undefined) {
     if (edit.reset) settings.reset = edit.reset;

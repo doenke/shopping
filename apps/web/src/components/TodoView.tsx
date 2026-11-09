@@ -9,6 +9,8 @@ import {
   itemPersons,
   itemUrl,
   packingInfo,
+  itemStatus,
+  listStatuses,
   peopleLabel,
   type CatalogIndex,
   type ItemRow,
@@ -24,7 +26,7 @@ import { ItemEditor } from './ItemEditor';
 import { entryKeys } from '../keyboard';
 import { PeopleDots, PersonCheckDialog } from './People';
 
-type GroupBy = 'none' | 'due' | 'area' | 'who';
+type GroupBy = 'none' | 'due' | 'area' | 'who' | 'status';
 
 /** A row: a task, or – grouped by "Wer" – one person's part of a task for several people. */
 interface Entry {
@@ -32,7 +34,7 @@ interface Entry {
   person?: string;
 }
 
-const GROUP_LABEL: Record<GroupBy, string> = { none: 'Alle', due: 'Fällig', area: 'Bereich', who: 'Wer' };
+const GROUP_LABEL: Record<GroupBy, string> = { none: 'Alle', due: 'Fällig', area: 'Bereich', who: 'Wer', status: 'Status' };
 
 interface Props {
   list: ListRow;
@@ -45,7 +47,7 @@ interface Props {
 function loadGroupBy(listId: string): GroupBy {
   try {
     const v = localStorage.getItem(`todo-group:${listId}`);
-    if (v === 'none' || v === 'due' || v === 'area' || v === 'who') return v;
+    if (v === 'none' || v === 'due' || v === 'area' || v === 'who' || v === 'status') return v;
   } catch {
     // Storage unavailable: default grouping.
   }
@@ -94,8 +96,9 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
 
   // Due dates stay out of sight until a task has one: then a plain checklist instead of "Ohne Datum".
   const hasDue = open.some((i) => dueOf(i));
-  const hasMeta = hasDue || open.some((i) => packingInfo(i).person || packingInfo(i).container);
-  const options: GroupBy[] = hasDue ? ['due', 'area', 'who'] : ['none', 'area', 'who'];
+  const statuses = listStatuses(list);
+  const hasMeta = hasDue || statuses.length > 0 || open.some((i) => packingInfo(i).person || packingInfo(i).container);
+  const options: GroupBy[] = [...(hasDue ? (['due'] as const) : (['none'] as const)), ...(statuses.length ? (['status'] as const) : []), 'area', 'who'];
   const shown: GroupBy = groupBy === 'due' && !hasDue ? 'none' : groupBy === 'none' && hasDue ? 'due' : groupBy;
 
   const groups = useMemo(() => {
@@ -124,9 +127,14 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
       const g =
         shown === 'due'
           ? dueBucket(dueOf(i), today, weekEnd)
-          : shown === 'area'
-            ? { key: p.container ?? '', title: p.container ?? 'Ohne Bereich', order: p.container ? 0 : 1 }
-            : { key: who ?? '', title: who ?? 'Ohne Zuständigkeit', order: who ? 0 : 1 };
+          : shown === 'status'
+            ? (() => {
+                const st = itemStatus(i, statuses);
+                return { key: st?.id ?? '', title: st?.name ?? '', order: statuses.findIndex((x) => x.id === st?.id) };
+              })()
+            : shown === 'area'
+              ? { key: p.container ?? '', title: p.container ?? 'Ohne Bereich', order: p.container ? 0 : 1 }
+              : { key: who ?? '', title: who ?? 'Ohne Zuständigkeit', order: who ? 0 : 1 };
       const entry = byKey.get(g.key) ?? { title: g.title, order: g.order, items: [] };
       entry.items.push(e);
       byKey.set(g.key, entry);
@@ -134,7 +142,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
     return [...byKey.entries()]
       .sort(([, a], [, b]) => a.order - b.order || (a.title ?? '').localeCompare(b.title ?? '', 'de'))
       .map(([key, g]) => ({ key, ...g }));
-  }, [open, shown]);
+  }, [open, shown, list.settings]);
 
   const toggle = ({ item, person }: Entry) => {
     if (person) return void setPersonChecked(item, { [person]: !itemDone(item).includes(person) });
@@ -176,6 +184,9 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
             {!many && !itemPersons(item).length && p.person && shown !== 'who' && <span>@{peopleLabel(item)}</span>}
             {many && <PeopleDots item={item} />}
             {p.container && shown !== 'area' && <span>#{p.container}</span>}
+            {statuses.length > 0 && shown !== 'status' && !item.checked && itemStatus(item, statuses)?.id !== statuses[0]!.id && (
+              <span className="status-tag">{itemStatus(item, statuses)?.name}</span>
+            )}
             {item.note && <span className="muted">{item.note}</span>}
             {remote && <span>✓ {users.get(remote.by)?.displayName}</span>}
           </span>

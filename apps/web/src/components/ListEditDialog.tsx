@@ -11,6 +11,9 @@ import {
   type ListRow,
   type Me,
   type ResetEvery,
+  listStatuses,
+  SUGGESTED_STATUSES,
+  type ListStatus,
 } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { editList, newListIcon } from '../actions';
@@ -40,6 +43,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
   const [askTemplates, setAskTemplates] = useState(asksForTemplates(list));
   const [reset, setReset] = useState<ResetEvery | null>(listReset(list));
   const [icon, setIcon] = useState<'idle' | 'queued' | 'error'>('idle');
+  const [statuses, setStatuses] = useState<ListStatus[]>(listStatuses(list));
   const todo = list.listType === 'todo';
 
   useEffect(() => ref.current?.showModal(), []);
@@ -54,7 +58,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
           await editList(list, {
             name,
             description,
-            ...(todo ? { group } : {}),
+            ...(todo ? { group, statuses } : {}),
             ...(canAutoReset(list) ? { reset } : {}),
             ...(templates.length ? { askTemplates } : {}),
           });
@@ -94,6 +98,8 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
             </datalist>
           </label>
         )}
+
+        {todo && <StatusEditor value={statuses} onChange={setStatuses} />}
 
         {templates.length > 0 && (
           <div className="field">
@@ -178,5 +184,63 @@ export function ResetSelect({ value, onChange }: { value: ResetEvery | null; onC
       </select>
       <small className="muted">Für wiederkehrende Checklisten, z. B. „Haus verlassen“ oder „Wochenputz“: Abgehaktes ist dann wieder offen.</small>
     </label>
+  );
+}
+
+const newStatusId = () => crypto.randomUUID().slice(0, 8);
+
+/**
+ * The statuses of a ToDo list, in order: new tasks start in the first one; "Erledigt" is the tick,
+ * not a status. Ids stay when renaming, so tasks keep their status.
+ */
+function StatusEditor({ value, onChange }: { value: ListStatus[]; onChange: (v: ListStatus[]) => void }) {
+  const move = (i: number, by: number) => {
+    const next = [...value];
+    const [s] = next.splice(i, 1);
+    next.splice(i + by, 0, s!);
+    onChange(next);
+  };
+  return (
+    <div className="field">
+      <span>Status</span>
+      {value.length === 0 ? (
+        <div className="row row--center">
+          <button type="button" className="btn" onClick={() => onChange(SUGGESTED_STATUSES.map((name) => ({ id: newStatusId(), name })))}>
+            {SUGGESTED_STATUSES.join(' · ')} übernehmen
+          </button>
+          <button type="button" className="link" onClick={() => onChange([{ id: newStatusId(), name: '' }])}>
+            eigene anlegen
+          </button>
+        </div>
+      ) : (
+        <ol className="status-editor">
+          {value.map((st, i) => (
+            <li key={st.id}>
+              <input
+                value={st.name}
+                aria-label={`Status ${i + 1}`}
+                placeholder="z. B. In Arbeit"
+                onChange={(e) => onChange(value.map((x) => (x.id === st.id ? { ...x, name: e.target.value } : x)))}
+              />
+              <button type="button" className="icon-btn" aria-label="Nach oben" disabled={i === 0} onClick={() => move(i, -1)}>
+                ↑
+              </button>
+              <button type="button" className="icon-btn" aria-label="Nach unten" disabled={i === value.length - 1} onClick={() => move(i, 1)}>
+                ↓
+              </button>
+              <button type="button" className="icon-btn" aria-label="Entfernen" onClick={() => onChange(value.filter((x) => x.id !== st.id))}>
+                ✕
+              </button>
+            </li>
+          ))}
+          <li>
+            <button type="button" className="link" onClick={() => onChange([...value, { id: newStatusId(), name: '' }])}>
+              + Status
+            </button>
+          </li>
+        </ol>
+      )}
+      <small className="muted">Für offene Aufgaben – neue starten im ersten. „Erledigt“ ist der Haken. Später die Spalten eines Kanban-Boards.</small>
+    </div>
   );
 }

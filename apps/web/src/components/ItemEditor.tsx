@@ -13,6 +13,9 @@ import {
   isForEach,
   peopleOf,
   withPeople,
+  itemStatus,
+  listStatuses,
+  withStatus,
   itemUrl,
   withUrl,
   type Amount,
@@ -102,6 +105,8 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const [container, setContainer] = useState(packingInfo(item).container ?? '');
   const [due, setDue] = useState(dueOf(item) ?? '');
   const [link, setLink] = useState(typeof item.attributes.url === 'string' ? item.attributes.url : '');
+  const statuses = todo && !isTemplate ? listStatuses(list) : [];
+  const [status, setStatus] = useState(itemStatus(item, statuses)?.id ?? '');
   const linkValid = itemUrl({ attributes: withUrl({}, link) });
   // The date field only shows once a task has (or gets) a due date.
   const [showDue, setShowDue] = useState(!!dueOf(item));
@@ -220,16 +225,18 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
       note: note.trim() || null,
       categoryId,
       ...(isTemplate ? { optional } : {}),
-      attributes: withUrl(
-        labels
-          ? withDue(
-              multi
-                ? withPeople(withPacking(item.attributes, labels.container ? { container } : {}), people, isTemplate && forEach)
-                : withPacking(item.attributes, { person, container }),
-              todo ? due : undefined,
-            )
-          : item.attributes,
-        link,
+      attributes: (statuses.length ? (a: Record<string, unknown>) => withStatus(a, status, statuses) : (a: Record<string, unknown>) => a)(
+        withUrl(
+          labels
+            ? withDue(
+                multi
+                  ? withPeople(withPacking(item.attributes, labels.container ? { container } : {}), people, isTemplate && forEach)
+                  : withPacking(item.attributes, { person, container }),
+                todo ? due : undefined,
+              )
+            : item.attributes,
+          link,
+        ),
       ),
     });
     if (forAll && item.catalogItemId && categoryId !== item.categoryId) {
@@ -364,6 +371,19 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
                 kein Datum
               </button>
             </div>
+          </label>
+        )}
+
+        {statuses.length > 0 && !item.checked && (
+          <label className="field">
+            <span>Status</span>
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              {statuses.map((st) => (
+                <option key={st.id} value={st.id}>
+                  {st.name}
+                </option>
+              ))}
+            </select>
           </label>
         )}
 

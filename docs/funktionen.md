@@ -89,6 +89,11 @@
   gezogen, bekommt er den Link (hat er schon einen, fragt die App vor dem Ersetzen); auf freie Fläche
   gezogen, entsteht ein neuer Eintrag – benannt nach dem Linktext bzw. dem Titel der Seite. In die
   Eingabezeile gezogen landet der Link wie gewohnt als Text.
+- **Status für Aufgaben** (ToDo-Listen): unter *⋮ → Bearbeiten …* eigene Status festlegen und sortieren
+  (Vorschlag: Neu · In Arbeit · Wartet). Neue Aufgaben starten im ersten; „Erledigt“ ist der Haken, kein Status.
+  Am Rechner eine eigene Spalte in der Tabelle und eine Auswahl in den Details, auf dem Handy im Editor und als
+  Gruppierung „Status“. Gespeichert wird der Status pro Eintrag (auch REST/MCP: `status`), umbenennen
+  verliert nichts. Gedacht als Spalten für ein späteres Kanban-Board.
 - **Arbeitsmodus** 💼 (*Arbeitsmodus* unten in der Seitenleiste oder Strg+Shift+A, pro Gerät gemerkt): blendet
   Listen aus – Seitenleiste, Suche und Start zeigen nur noch die ToDo-Listen der Kategorie „Arbeit“
   (umstellbar auf alle ToDo-Listen). Neue Listen sind dann ToDo-Listen in „Arbeit“; oben links steht „To-Do“

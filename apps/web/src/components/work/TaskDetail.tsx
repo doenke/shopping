@@ -1,5 +1,8 @@
 import {
   dueOf,
+  itemStatus,
+  listStatuses,
+  withStatus,
   isForEach,
   itemPersons,
   itemUrl,
@@ -39,6 +42,7 @@ export function TaskDetail({ item, list, items, users, focusTitle }: Props) {
   const titleRef = useRef<HTMLInputElement>(null);
   const suggestions = usePeopleSuggestions(list, items);
   const people = peopleOf(item);
+  const statuses = listStatuses(list);
 
   // Someone else changed it meanwhile: show that (unless the field is being edited right now).
   useEffect(() => {
@@ -104,6 +108,23 @@ export function TaskDetail({ item, list, items, users, focusTitle }: Props) {
           onKeyDown={enterSaves(saveName)}
         />
       </div>
+
+      {statuses.length > 0 && !item.checked && (
+        <label className="work-field">
+          <span>Status</span>
+          <select
+            aria-label="Status"
+            value={itemStatus(item, statuses)?.id ?? ''}
+            onChange={(e) => saveAttributes(withStatus(item.attributes, e.target.value, statuses))}
+          >
+            {statuses.map((st) => (
+              <option key={st.id} value={st.id}>
+                {st.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <label className="work-field">
         <span>Fällig</span>

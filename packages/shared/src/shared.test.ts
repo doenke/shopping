@@ -10,6 +10,7 @@ import { isOwnName } from './catalog-index.js';
 import { extractDue, formatDue, parseDue } from './due.js';
 import { defaultVisibility } from './packing.js';
 import { planAdd } from './plan-add.js';
+import { findStatus, itemStatus, listStatuses, withStatus } from './status.js';
 import { itemToIcal, parseIcalTodo, taskPatch, taskTitle } from './ical.js';
 import { findUrl, itemUrl, linkLabel, withUrl } from './links.js';
 import { applyItemPatch, itemDone, mergeItem, peopleLabel, resolvePeople, withPeople } from './people.js';
@@ -584,5 +585,21 @@ describe('entries as tasks (CalDAV/JMAP)', () => {
         (t) => parseItem(t),
       ),
     ).toEqual({ amounts: [{ q: 2, u: 'l' }] });
+  });
+});
+
+describe('status of open entries', () => {
+  const list = { settings: { statuses: [{ id: 'a', name: 'Neu' }, { id: 'b', name: 'In Arbeit' }, { id: 'b', name: 'doppelt' }, { name: 'kaputt' }] } };
+  it('reads the list statuses and an item status, first one by default', () => {
+    const statuses = listStatuses(list);
+    expect(statuses.map((s) => s.name)).toEqual(['Neu', 'In Arbeit']);
+    expect(itemStatus({ attributes: {} }, statuses)?.name).toBe('Neu');
+    expect(itemStatus({ attributes: { status: 'b' } }, statuses)?.name).toBe('In Arbeit');
+    // A status removed from the list: back to the first.
+    expect(itemStatus({ attributes: { status: 'x' } }, statuses)?.name).toBe('Neu');
+    expect(itemStatus({ attributes: { status: 'b' } }, [])).toBeNull();
+    expect(withStatus({ status: 'b' }, 'a', statuses)).toEqual({});
+    expect(withStatus({}, 'b', statuses)).toEqual({ status: 'b' });
+    expect(findStatus(statuses, 'in arbeit')?.id).toBe('b');
   });
 });

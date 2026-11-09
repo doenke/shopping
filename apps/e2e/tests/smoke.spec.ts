@@ -216,3 +216,21 @@ test('mouse: double click opens an entry; the Arbeitsmodus is called To-Do', asy
   await page.keyboard.press('Control+Shift+A');
   await expect(page.locator('.sidebar__head')).toContainText('To-Do');
 });
+
+test('a ToDo list gets statuses; tasks get one', async ({ page }, info) => {
+  test.skip(phone(page), 'table and details on the desktop');
+  await login(page, `Jan ${info.project.name}`);
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Projekt', type: 'todo' } })).json();
+  await page.request.post(`/api/v1/lists/${list.id}/items`, { data: { items: ['Konzept'] } });
+  await page.goto(`/#/list/${list.id}`);
+  await page.getByRole('button', { name: 'Listenmenü' }).click();
+  await page.getByRole('menuitem', { name: /Bearbeiten/ }).click();
+  const dialog = page.locator('dialog[open]');
+  await dialog.getByRole('button', { name: /übernehmen/ }).click();
+  await expect(dialog.getByRole('textbox', { name: 'Status 2' })).toHaveValue('In Arbeit');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('.work-table th', { hasText: 'Status' })).toBeVisible();
+  await page.locator('.work-row', { hasText: 'Konzept' }).click();
+  await page.locator('.work-detail').getByRole('combobox', { name: 'Status' }).selectOption({ label: 'In Arbeit' });
+  await expect(page.locator('.work-row', { hasText: 'Konzept' })).toContainText('In Arbeit');
+});

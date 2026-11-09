@@ -10,6 +10,8 @@ import {
   packingInfo,
   itemDone,
   itemUrl,
+  itemStatus,
+  type ListStatus,
   itemPersons,
   peopleLabel,
   type ItemRow,
@@ -44,6 +46,8 @@ export interface ApiItem {
   donePersons: string[];
   /** A web link on the item. */
   url: string | null;
+  /** ToDo lists with statuses: the status of an open task ("In Arbeit"), null otherwise. */
+  status: string | null;
   /** Merklisten: who the tip is from, and where to find it (same values as person/container). */
   tipFrom: string | null;
   where: string | null;
@@ -72,7 +76,13 @@ export interface ApiList {
   openItems: number;
 }
 
-export function toApiItem(i: ItemRow, userNames: Map<string, string>, listType?: ListType, custom: CustomCategories = []): ApiItem {
+export function toApiItem(
+  i: ItemRow,
+  userNames: Map<string, string>,
+  listType?: ListType,
+  custom: CustomCategories = [],
+  statuses: ListStatus[] = [],
+): ApiItem {
   // Category ids are unique across list types; with the type known, foreign ones go to "Sonstiges".
   const cat = listType ? categoryInList(i.categoryId, listType, custom) : getCategory(i.categoryId, custom);
   const packing = packingInfo(i);
@@ -98,6 +108,7 @@ export function toApiItem(i: ItemRow, userNames: Map<string, string>, listType?:
     persons: itemPersons(i),
     donePersons: itemDone(i),
     url: itemUrl(i),
+    status: statuses.length && !i.checked ? (itemStatus(i, statuses)?.name ?? null) : null,
     tipFrom: packing.person,
     where: packing.container,
     due: dueOf(i),

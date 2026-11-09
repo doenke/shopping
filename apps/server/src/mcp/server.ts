@@ -16,7 +16,7 @@ function itemLine(i: ApiItem, type = 'shopping'): string {
     type === 'memo'
       ? [i.tipFrom && `Tipp von ${i.tipFrom}`, i.where && `bei ${i.where}`, i.note].filter(Boolean).join(', ')
       : type === 'todo'
-        ? [i.due && `fällig ${i.due}`, i.assignee && `@${i.assignee}`, i.area && `#${i.area}`, i.note].filter(Boolean).join(', ')
+        ? [i.status && `[${i.status}]`, i.due && `fällig ${i.due}`, i.assignee && `@${i.assignee}`, i.area && `#${i.area}`, i.note].filter(Boolean).join(', ')
         : [i.person && `@${i.person}`, i.container && `#${i.container}`].filter(Boolean).join(' ');
   // Several people: who is done already ("✓ Ulli").
   const partly = !i.checked && i.donePersons.length ? ` (✓ ${i.donePersons.join(', ')})` : '';
@@ -197,6 +197,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         container: z.string().nullable().optional().describe('Packliste: Packstück, z. B. „Koffer“'),
         tipFrom: z.string().nullable().optional().describe('Merkliste: von wem der Tipp kommt'),
         url: z.string().url().nullable().optional().describe('Link, z. B. zum Film oder Rezept (null = entfernen)'),
+        status: z.string().nullable().optional().describe('ToDo-Liste: Status, z. B. „In Arbeit“ (aus den Status der Liste)'),
         where: z.string().nullable().optional().describe('Merkliste: wo es das gibt, z. B. „Netflix“'),
         due: z
           .string()

@@ -3,7 +3,9 @@ import {
   formatDue,
   itemPersons,
   itemUrl,
+  itemStatus,
   listDescription,
+  listStatuses,
   packingInfo,
   parseInput,
   peopleLabel,
@@ -36,6 +38,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen }: Pr
   const open = useMemo(() => items.filter((i) => !i.checked).sort(byDue), [items]);
   const done = useMemo(() => items.filter((i) => i.checked).sort((a, b) => (b.checkedAt ?? '').localeCompare(a.checkedAt ?? '')), [items]);
   const description = listDescription(list);
+  const statuses = listStatuses(list);
 
   const add = async () => {
     const parsed = parseInput(text, index, 'todo');
@@ -87,6 +90,15 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen }: Pr
           {item.name}
           {item.note && <span className="work-row__note">{item.note}</span>}
         </td>
+        {statuses.length > 0 && (
+          <td className="work-row__status">
+            {!item.checked && (
+              <span className={`status-tag${itemStatus(item, statuses)?.id === statuses[0]!.id ? ' status-tag--first' : ''}`}>
+                {itemStatus(item, statuses)?.name}
+              </span>
+            )}
+          </td>
+        )}
         <td className={`work-row__due${fmt?.overdue && !item.checked ? ' work-row__due--overdue' : fmt?.today ? ' work-row__due--today' : ''}`}>
           {fmt?.label ?? ''}
         </td>
@@ -149,6 +161,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen }: Pr
             <tr>
               <th className="work-row__check" aria-label="Erledigt" />
               <th>Aufgabe</th>
+              {statuses.length > 0 && <th className="work-row__status">Status</th>}
               <th>Fällig</th>
               <th>Wer</th>
               <th>Bereich</th>
@@ -159,7 +172,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen }: Pr
           {done.length > 0 && (
             <tbody>
               <tr className="work-table__group">
-                <td colSpan={6}>
+                <td colSpan={statuses.length ? 7 : 6}>
                   <button type="button" className="link" onClick={() => setShowDone((s) => !s)} aria-expanded={showDone}>
                     {showDone ? '▾' : '▸'} Erledigt ({done.length})
                   </button>

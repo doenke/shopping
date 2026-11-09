@@ -29,6 +29,7 @@ const ItemObject = z.object({
   assignee: z.string().max(40).nullable().optional().describe('ToDo-Liste: wer sich kümmert'),
   area: z.string().max(40).nullable().optional().describe('ToDo-Liste: Bereich, z. B. „Garten“'),
   url: z.string().url().max(2000).nullable().optional().describe('Link, z. B. zum Film, Rezept oder Produkt (leer = keiner)'),
+  status: z.string().max(60).nullable().optional().describe('ToDo-Liste: Status einer offenen Aufgabe, z. B. „In Arbeit“ (aus den Status der Liste)'),
 });
 const ListType = z
   .enum(['shopping', 'packing', 'memo', 'todo'])

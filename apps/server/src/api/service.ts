@@ -12,6 +12,9 @@ import {
   withPacking,
   withPeople,
   withUrl,
+  findStatus,
+  listStatuses,
+  withStatus,
   listPersons,
   peopleOnItems,
   resolvePeople,
@@ -57,6 +60,8 @@ export type ItemInput =
       area?: string | null;
       /** A web link (film, recipe, product …); shown as 🔗 on the item. */
       url?: string | null;
+      /** ToDo lists: status by name or id ("In Arbeit"). */
+      status?: string | null;
     };
 
 /**
@@ -318,12 +323,14 @@ export class ShoppingApi {
       );
     return {
       ...toApiList(list, userId, await this.mainListId(userId), items.filter((i) => !i.checked).length),
-      items: shown.map((i) => toApiItem(i, names, list.listType, custom)),
+      items: shown.map((i) => toApiItem(i, names, list.listType, custom, listStatuses(list))),
     };
   }
 
   async item(userId: string, ref: string, listRef?: string): Promise<ApiItem> {
-    return toApiItem(await this.resolveItem(userId, ref, listRef), await this.userNames(), undefined, await this.sync.visibleCategories(userId));
+    const item = await this.resolveItem(userId, ref, listRef);
+    const list = (await this.accessibleLists(userId)).find((l) => l.id === item.listId);
+    return toApiItem(item, await this.userNames(), list?.listType, await this.sync.visibleCategories(userId), list ? listStatuses(list) : []);
   }
 
   /** Recently bought items – good suggestions for "what do we usually buy?". */
@@ -463,6 +470,19 @@ export class ShoppingApi {
       }
     }
     if (input.url !== undefined) patch.attributes = withUrl(patch.attributes ?? item.attributes, input.url);
+    if (input.status !== undefined) {
+      const list = (await this.accessibleLists(userId)).find((l) => l.id === item.listId);
+      const statuses = list ? listStatuses(list) : [];
+      const st = input.status ? findStatus(statuses, input.status) : null;
+      if (input.status && !st) {
+        throw new ApiError(
+          400,
+          'unknown_status',
+          statuses.length ? `Unbekannter Status – möglich: ${statuses.map((x) => x.name).join(', ')}` : 'Diese Liste hat keine Status',
+        );
+      }
+      patch.attributes = withStatus(patch.attributes ?? item.attributes, st?.id ?? null, statuses);
+    }
     if (input.category !== undefined) {
       const list = (await this.accessibleLists(userId)).find((l) => l.id === item.listId);
       const cat = categoriesFor(list?.listType ?? 'shopping', await this.sync.visibleCategories(userId)).find(

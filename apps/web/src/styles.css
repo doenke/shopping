@@ -2594,3 +2594,39 @@ kbd {
 .snackbar--toast {
   bottom: calc(76px + env(safe-area-inset-bottom));
 }
+
+/* List settings: the statuses of a ToDo list */
+.status-editor {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 1.4em;
+}
+.status-editor li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.status-editor input {
+  flex: 1;
+  min-width: 0;
+}
+.status-editor .icon-btn:disabled {
+  opacity: 0.3;
+}
+.status-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.82em;
+  white-space: nowrap;
+}
+.status-tag--first {
+  color: var(--muted);
+}
+.work-table th.work-row__status {
+  width: 130px;
+}
