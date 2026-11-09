@@ -91,11 +91,13 @@
   Eingabezeile gezogen landet der Link wie gewohnt als Text.
 - **Arbeitsmodus** 💼 (*Arbeitsmodus* unten in der Seitenleiste oder Strg+Shift+A, pro Gerät gemerkt): blendet
   Listen aus – Seitenleiste, Suche und Start zeigen nur noch die ToDo-Listen der Kategorie „Arbeit“
-  (umstellbar auf alle ToDo-Listen). Neue Listen sind dann ToDo-Listen in „Arbeit“. Die installierte App
+  (umstellbar auf alle ToDo-Listen). Neue Listen sind dann ToDo-Listen in „Arbeit“; oben links steht „To-Do“
+  statt „Shopping“. Die installierte App
   bietet per Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ als Sprungziele.
 - **ToDo-Listen am Rechner** (breites Fenster, jede ToDo-Liste, ob Arbeit oder nicht): Aufgaben als Tabelle
   (Fällig, Wer, Bereich, Link) und rechts die gewählte Aufgabe zum direkten Bearbeiten, in einem sachlichen
   Design (Grau mit gedecktem Blau, Segoe UI, hell/dunkel nach System). Andere Listen behalten ihr Aussehen.
+- **Maus:** Doppelklick öffnet einen Eintrag (wie langes Drücken auf dem Handy), Rechtsklick ebenso.
 - **Tastatur** (in jedem Modus): N neuer Eintrag, Pfeiltasten zwischen Einträgen (auch im Kachelraster),
   Leertaste abhaken, Enter öffnen, Entf löschen mit „Rückgängig“, Strg+K Listen und Einträge suchen,
   Strg+Shift+A Arbeitsmodus, ? zeigt alle Kürzel.

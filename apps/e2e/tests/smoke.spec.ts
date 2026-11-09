@@ -200,3 +200,19 @@ test('Arbeitsmodus hides lists; ToDo lists on the desktop are a table', async ({
   await page.keyboard.press('Control+Shift+A');
   await expect(page.locator('.sidebar')).toContainText('Wocheneinkauf');
 });
+
+test('mouse: double click opens an entry; the Arbeitsmodus is called To-Do', async ({ page }, info) => {
+  test.skip(phone(page), 'mouse on the desktop');
+  await login(page, `Ida ${info.project.name}`);
+  const memo = await (await page.request.post('/api/v1/lists', { data: { name: 'Filme', type: 'memo' } })).json();
+  await page.request.post(`/api/v1/lists/${memo.id}/items`, { data: { text: 'Dune' } });
+  await page.goto(`/#/list/${memo.id}`);
+  await tile(page, 'Dune').dblclick();
+  await expect(page.locator('dialog[open]').getByRole('textbox', { name: 'Name' })).toHaveValue('Dune');
+  await page.keyboard.press('Escape');
+  // Not ticked off by the two clicks.
+  await expect(tile(page, 'Dune')).not.toHaveClass(/tile--done/);
+  await expect(page.locator('.sidebar__head')).toContainText('Shopping');
+  await page.keyboard.press('Control+Shift+A');
+  await expect(page.locator('.sidebar__head')).toContainText('To-Do');
+});

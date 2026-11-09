@@ -163,6 +163,9 @@ function Shell({ me }: { me: Me }) {
     }
   }, []);
 
+  useEffect(() => {
+    document.title = workMode ? 'To-Do' : 'Shopping';
+  }, [workMode]);
   // Arbeitsmodus on while a hidden list is open: go to the first work list.
   useEffect(() => {
     if (workMode && route.page === 'list' && list && !isWorkList(list, scope))
@@ -201,7 +204,7 @@ function Shell({ me }: { me: Me }) {
         }}
       >
         <img src="/icon.svg" alt="" width={28} height={28} />
-        <strong>Shopping</strong>
+        <strong>{workMode ? 'To-Do' : 'Shopping'}</strong>
       </a>
       {!guest && (
         <button type="button" className="btn btn--primary sidebar__new" onClick={() => newList()}>

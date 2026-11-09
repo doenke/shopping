@@ -74,7 +74,11 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
   // New icon drafts wait for review (shared free-text pictures count by their own entry only).
   const unreviewed = (item.catalogItemId && icons.pending.has(item.catalogItemId)) || (!!item.id && icons.pending.has(item.id));
 
-  const start = () => {
+  /** Mouse: a click waits a moment, so a double click can open the item instead (no long press with a mouse). */
+  const mouse = useRef(false);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const start = (e: React.PointerEvent) => {
+    mouse.current = e.pointerType === 'mouse';
     longPressed.current = false;
     if (!onLongPress) return;
     timer.current = setTimeout(() => {
@@ -96,8 +100,18 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
       onPointerUp={cancel}
       onPointerLeave={cancel}
       onPointerCancel={cancel}
-      onClick={() => {
-        if (!longPressed.current) onTap();
+      onClick={(e) => {
+        if (longPressed.current) return;
+        // Keyboard "clicks" (detail 0) and touch act at once.
+        if (!mouse.current || !onLongPress || e.detail === 0) return onTap();
+        if (e.detail > 1) return;
+        clearTimeout(clickTimer.current);
+        clickTimer.current = setTimeout(onTap, 250);
+      }}
+      onDoubleClick={() => {
+        if (!onLongPress) return;
+        clearTimeout(clickTimer.current);
+        onLongPress();
       }}
       onContextMenu={(e) => {
         if (!onLongPress) return;
