@@ -275,6 +275,11 @@ function Shell({ me }: { me: Me }) {
     <>
       {palette && <CommandPalette lists={workMode ? workLists : ordered} onClose={() => setPalette(false)} />}
       {shortcutHelp && <ShortcutHelp onClose={() => setShortcutHelp(false)} />}
+      {wide && (
+        <button type="button" className="kbd-hint" onClick={() => setShortcutHelp(true)} title="Tastenkürzel anzeigen">
+          <kbd>H</kbd> Tastenkürzel
+        </button>
+      )}
       <Toast />
     </>
   );

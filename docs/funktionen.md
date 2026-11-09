@@ -114,7 +114,7 @@
 - **Maus:** Doppelklick öffnet einen Eintrag (wie langes Drücken auf dem Handy), Rechtsklick ebenso.
 - **Tastatur** (in jedem Modus): N neuer Eintrag, Pfeiltasten zwischen Einträgen (auch im Kachelraster),
   Leertaste abhaken, Enter öffnen, Entf löschen mit „Rückgängig“, Strg+K Listen und Einträge suchen,
-  Strg+Shift+A Arbeitsmodus, ? zeigt alle Kürzel.
+  Strg+Shift+A Arbeitsmodus, H (oder ?) zeigt alle Kürzel – am Laptop steht unten rechts dezent ein Hinweis darauf.
 - **In Erinnerungen & Co.** (CalDAV, JMAP): alle Listen als Aufgabenlisten in Apple Erinnerungen,
   Thunderbird oder DAVx⁵ + Tasks.org – Abhaken, Ändern und Neues in beide Richtungen. Einrichtung:
   [api-und-ki.md](api-und-ki.md#aufgaben-apps-caldav-und-jmap).

@@ -6,7 +6,7 @@ import { showToast } from './toast';
 /**
  * Keyboard use, in every mode:
  * N new entry · ↑↓←→ move between entries · Space tick off · Enter open · Entf delete (with undo)
- * Strg+K search · Strg+Shift+A Arbeitsmodus · ? overview.
+ * Strg+K search · Strg+Shift+A Arbeitsmodus · ? or H overview.
  * Space and Enter are handled by the entries themselves (tiles, rows); entries carry `data-item-id`.
  */
 
@@ -127,7 +127,7 @@ export function useShortcuts(handlers: Handlers): void {
       if (mod || e.altKey || typing(e.target) || dialogOpen()) return;
       if (e.key === 'n' || e.key === 'N') {
         if (focusAddField()) e.preventDefault();
-      } else if (e.key === '?') {
+      } else if (e.key === '?' || e.key === 'h' || e.key === 'H') {
         e.preventDefault();
         ref.current.onHelp();
       } else if (e.key.startsWith('Arrow')) {

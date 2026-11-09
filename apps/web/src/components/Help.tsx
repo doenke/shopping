@@ -149,7 +149,7 @@ function UserHelp({ me }: { me: Me }) {
       <h3>Am Rechner</h3>
       <p>
         <kbd>N</kbd> neuer Eintrag, <kbd>↑</kbd>
-        <kbd>↓</kbd> wechseln, <kbd>Leertaste</kbd> abhaken, <kbd>Entf</kbd> löschen (mit Rückgängig), <kbd>Strg</kbd>+<kbd>K</kbd> suchen, <kbd>?</kbd> alle
+        <kbd>↓</kbd> wechseln, <kbd>Leertaste</kbd> abhaken, <kbd>Entf</kbd> löschen (mit Rückgängig), <kbd>Strg</kbd>+<kbd>K</kbd> suchen, <kbd>H</kbd> alle
         Kürzel.
       </p>
       <p>

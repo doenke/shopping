@@ -170,6 +170,10 @@ test('keyboard: arrows, space and delete with undo on a shopping list', async ({
   await expect(tile(page, next)).toHaveCount(0);
   await page.locator('.snackbar--toast').getByRole('button', { name: 'Rückgängig' }).click();
   await expect(tile(page, next)).toBeVisible();
+  // H shows the shortcuts (the hint at the bottom says so).
+  await expect(page.locator('.kbd-hint')).toBeVisible();
+  await page.keyboard.press('h');
+  await expect(page.getByRole('heading', { name: 'Tastenkürzel' })).toBeVisible();
 });
 
 test('Arbeitsmodus hides lists; ToDo lists on the desktop are a table', async ({ page }, info) => {

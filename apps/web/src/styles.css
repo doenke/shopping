@@ -2831,3 +2831,27 @@ kbd {
 .work-row td.work-row__status {
   overflow: visible;
 }
+
+/* Laptop: a quiet hint at the bottom that H shows the shortcuts */
+.kbd-hint {
+  position: fixed;
+  right: 14px;
+  bottom: 10px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+  opacity: 0.6;
+  cursor: pointer;
+}
+.kbd-hint:hover {
+  opacity: 1;
+}
+.kbd-hint kbd {
+  font-size: 0.7rem;
+}
