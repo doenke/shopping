@@ -8,6 +8,7 @@ import {
   itemUrl,
   listDefaultStatus,
   listStatuses,
+  kanbanShowsDone,
   packingInfo,
   peopleLabel,
   withStatus,
@@ -45,6 +46,7 @@ const DONE_SHOWN = 30;
  */
 export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, viewSwitch, onEditList }: Props) {
   const own = listStatuses(list);
+  const showDone = kanbanShowsDone(list);
   const statuses = own.length ? own : [OPEN];
   const defaultStatus = own.length ? listDefaultStatus(list, own) : OPEN;
   /** Where a dragged card would land: the column and the place in it. */
@@ -244,12 +246,14 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
       )}
       <div className="kanban">
         {columns.open.map((c) => column(c.status.id, c.status.name, c.items))}
-        {column(
-          DONE,
-          'Erledigt',
-          doneShown,
-          columns.done.length > DONE_SHOWN ? <p className="muted kanban-col__more">+ {columns.done.length - DONE_SHOWN} ältere (in der Tabelle)</p> : null,
-        )}
+        {/* "Erledigt" only when the list settings say so; otherwise done cards just leave the board. */}
+        {showDone &&
+          column(
+            DONE,
+            'Erledigt',
+            doneShown,
+            columns.done.length > DONE_SHOWN ? <p className="muted kanban-col__more">+ {columns.done.length - DONE_SHOWN} ältere (in der Tabelle)</p> : null,
+          )}
       </div>
       {drag && dragItem && (
         <div className="kanban-ghost" style={{ left: drag.x - drag.dx, top: drag.y - drag.dy, width: drag.width }} aria-hidden>

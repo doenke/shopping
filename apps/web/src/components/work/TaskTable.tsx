@@ -4,7 +4,6 @@ import {
   formatDue,
   itemPersons,
   itemUrl,
-  itemStatus,
   listDescription,
   listStatuses,
   listDefaultStatus,
@@ -19,6 +18,7 @@ import { useMemo, useState } from 'react';
 import { addItems, setChecked } from '../../actions';
 import { entryKeys } from '../../keyboard';
 import { PeopleDots, PersonCheckDialog } from '../People';
+import { StatusPicker } from './StatusPicker';
 
 interface Props {
   list: ListRow;
@@ -88,13 +88,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
           {item.note && <span className="work-row__note">{item.note}</span>}
         </td>
         {statuses.length > 0 && (
-          <td className="work-row__status">
-            {!item.checked && (
-              <span className={`status-tag${itemStatus(item, statuses, defaultStatus)?.id === defaultStatus?.id ? ' status-tag--first' : ''}`}>
-                {itemStatus(item, statuses, defaultStatus)?.name}
-              </span>
-            )}
-          </td>
+          <td className="work-row__status">{!item.checked && <StatusPicker item={item} statuses={statuses} defaultStatus={defaultStatus} />}</td>
         )}
         <td className={`work-row__due${fmt?.overdue && !item.checked ? ' work-row__due--overdue' : fmt?.today ? ' work-row__due--today' : ''}`}>
           {fmt?.label ?? ''}

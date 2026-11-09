@@ -12,6 +12,11 @@ export interface ListStatus {
   name: string;
 }
 
+/** Kanban: "Erledigt" as the last column (list setting, off by default). */
+export function kanbanShowsDone(list: { settings: Record<string, unknown> }): boolean {
+  return list.settings.kanbanDone === true;
+}
+
 export const SUGGESTED_STATUSES = ['Neu', 'In Arbeit', 'Wartet'];
 
 /** The statuses of a list, in order (empty: the list does not use them). */

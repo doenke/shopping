@@ -12,6 +12,7 @@ import {
   type Me,
   type ResetEvery,
   listStatuses,
+  kanbanShowsDone,
   listDefaultStatus,
   SUGGESTED_STATUSES,
   type ListStatus,
@@ -45,6 +46,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
   const [reset, setReset] = useState<ResetEvery | null>(listReset(list));
   const [icon, setIcon] = useState<'idle' | 'queued' | 'error'>('idle');
   const [statuses, setStatuses] = useState<ListStatus[]>(listStatuses(list));
+  const [kanbanDone, setKanbanDone] = useState(kanbanShowsDone(list));
   const [defaultStatus, setDefaultStatus] = useState<string | null>(listDefaultStatus(list)?.id ?? null);
   const todo = list.listType === 'todo';
 
@@ -60,7 +62,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
           await editList(list, {
             name,
             description,
-            ...(todo ? { group, statuses, defaultStatus } : {}),
+            ...(todo ? { group, statuses, defaultStatus, kanbanDone } : {}),
             ...(canAutoReset(list) ? { reset } : {}),
             ...(templates.length ? { askTemplates } : {}),
           });
@@ -102,6 +104,11 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
         )}
 
         {todo && <StatusEditor value={statuses} onChange={setStatuses} defaultId={defaultStatus} onDefault={setDefaultStatus} />}
+        {todo && (
+          <label className="check field">
+            <input type="checkbox" checked={kanbanDone} onChange={(e) => setKanbanDone(e.target.checked)} /> Erledigte als Spalte im Kanban-Board anzeigen
+          </label>
+        )}
 
         {templates.length > 0 && (
           <div className="field">

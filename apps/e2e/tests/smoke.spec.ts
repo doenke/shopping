@@ -233,8 +233,13 @@ test('a ToDo list gets statuses; tasks get one', async ({ page }, info) => {
   await page.locator('.work-row', { hasText: 'Konzept' }).click();
   await page.locator('.work-detail').getByRole('combobox', { name: 'Status' }).selectOption({ label: 'Wartet' });
   await expect(page.locator('.work-row', { hasText: 'Konzept' })).toContainText('Wartet');
-  await page.locator('.work-row', { hasText: 'Konzept' }).click();
-  await page.locator('.work-detail').getByRole('combobox', { name: 'Status' }).selectOption({ label: 'Neu' });
+  // In the table: click the status pill, pick from the pills underneath.
+  await page
+    .locator('.work-row', { hasText: 'Konzept' })
+    .getByRole('button', { name: /Status: Wartet/ })
+    .click();
+  await page.getByRole('listbox', { name: 'Status wählen' }).getByRole('option', { name: 'Neu' }).click();
+  await expect(page.getByRole('listbox', { name: 'Status wählen' })).toHaveCount(0);
 
   // Default "In Arbeit": new entries get it, existing ones keep theirs.
   await page.getByRole('button', { name: 'Listenmenü' }).click();
@@ -256,13 +261,17 @@ test('Kanban: cards move between status columns and to Erledigt', async ({ page 
   await page.request.post(`/api/v1/lists/${list.id}/items`, { data: { items: ['Konzept', 'Rechnung'] } });
   await page.goto(`/#/list/${list.id}`);
   await page.getByRole('button', { name: 'Kanban' }).click();
-  // Without statuses: "Offen" and "Erledigt", and a way to the settings.
-  await expect(page.locator('.kanban-col__title')).toHaveText(['Offen 2', 'Erledigt 0']);
+  // Without statuses: just "Offen" ("Erledigt" is off by default), and a way to the settings.
+  await expect(page.locator('.kanban-col__title')).toHaveText(['Offen 2']);
   await page.getByRole('button', { name: /Status in den Listeneinstellungen/ }).click();
   await page
     .locator('dialog[open]')
     .getByRole('button', { name: /übernehmen/ })
     .click();
+  await page
+    .locator('dialog[open]')
+    .getByRole('checkbox', { name: /Erledigte als Spalte/ })
+    .check();
   await page.locator('dialog[open]').getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.kanban-col__title')).toHaveText(['Neu 2', 'In Arbeit 0', 'Wartet 0', 'Erledigt 0']);
   const col = (name: string) => page.locator('.kanban-col', { has: page.locator('.kanban-col__title', { hasText: name }) });
@@ -292,4 +301,9 @@ test('Kanban: the order within a column is set by hand', async ({ page }, info) 
   // Kept after a reload (it is synced).
   await page.reload();
   await expect(page.locator('.kanban-col').first().locator('.kanban-card__title')).toHaveText(['Drittens', 'Erstens', 'Zweitens']);
+  // A click only selects; the details open on double click.
+  await page.locator('.kanban-card', { hasText: 'Erstens' }).click();
+  await expect(page.locator('.work-detail')).toHaveCount(0);
+  await page.locator('.kanban-card', { hasText: 'Erstens' }).dblclick();
+  await expect(page.getByRole('textbox', { name: 'Titel' })).toHaveValue('Erstens');
 });

@@ -27,6 +27,7 @@ import { useLinkDrop } from '../linkDrop';
 import { ItemEditor } from './ItemEditor';
 import { entryKeys } from '../keyboard';
 import { PeopleDots, PersonCheckDialog } from './People';
+import { StatusPicker } from './work/StatusPicker';
 
 type GroupBy = 'none' | 'due' | 'area' | 'who' | 'status';
 
@@ -187,13 +188,11 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
             {!many && !itemPersons(item).length && p.person && shown !== 'who' && <span>@{peopleLabel(item)}</span>}
             {many && <PeopleDots item={item} />}
             {p.container && shown !== 'area' && <span>#{p.container}</span>}
-            {statuses.length > 0 && shown !== 'status' && !item.checked && itemStatus(item, statuses, defaultStatus)?.id !== defaultStatus?.id && (
-              <span className="status-tag">{itemStatus(item, statuses, defaultStatus)?.name}</span>
-            )}
             {item.note && <span className="muted">{item.note}</span>}
             {remote && <span>✓ {users.get(remote.by)?.displayName}</span>}
           </span>
         </button>
+        {statuses.length > 0 && !item.checked && <StatusPicker item={item} statuses={statuses} defaultStatus={defaultStatus} />}
         {itemUrl(item) && (
           <a
             className="task__link"

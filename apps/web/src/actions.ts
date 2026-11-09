@@ -230,6 +230,8 @@ export async function editList(
     reset?: ResetEvery | null;
     askTemplates?: boolean;
     statuses?: ListStatus[];
+    /** Kanban: "Erledigt" as a column. */
+    kanbanDone?: boolean;
     defaultStatus?: string | null;
   },
 ): Promise<void> {
@@ -243,6 +245,10 @@ export async function editList(
   if (edit.askTemplates !== undefined) {
     if (edit.askTemplates) delete settings.askTemplates;
     else settings.askTemplates = false;
+  }
+  if (edit.kanbanDone !== undefined) {
+    if (edit.kanbanDone) settings.kanbanDone = true;
+    else delete settings.kanbanDone;
   }
   if (edit.statuses !== undefined) {
     const statuses = edit.statuses.map((st) => ({ id: st.id, name: st.name.trim() })).filter((st) => st.name);

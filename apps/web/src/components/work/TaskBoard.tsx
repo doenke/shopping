@@ -51,14 +51,20 @@ export function TaskBoard({ list, items, index, users, onEditList }: Props) {
   /** Enter/double click: edit this task's title (a plain selection leaves the focus in the table). */
   const [opened, setOpened] = useState<{ id: string; n: number } | null>(null);
   const item = items.find((i) => i.id === selected) ?? null;
+  /** Kanban: a click only selects; the details open on double click / Enter and stay until closed. */
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const showDetails = view === 'table' || (detailsOpen && !!item);
 
-  useEffect(() => setSelected(null), [list.id]);
+  useEffect(() => {
+    setSelected(null);
+    setDetailsOpen(false);
+  }, [list.id]);
   // Kanban: Esc closes the details (not while typing or in a dialog).
   useEffect(() => {
     if (view !== 'kanban') return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || document.querySelector('dialog[open]') || (e.target as HTMLElement).closest('input, textarea, select')) return;
-      setSelected(null);
+      setDetailsOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -70,12 +76,13 @@ export function TaskBoard({ list, items, index, users, onEditList }: Props) {
   };
   const open = (id: string) => {
     setSelected(id);
+    setDetailsOpen(true);
     setOpened((o) => ({ id, n: (o?.n ?? 0) + 1 }));
   };
 
   return (
-    // Kanban needs the width: the details only show while a card is selected.
-    <div className={`task-board${view === 'kanban' && !item ? ' task-board--full' : ''}`}>
+    // Kanban needs the width: the details only show once opened (double click / Enter).
+    <div className={`task-board${!showDetails ? ' task-board--full' : ''}`}>
       <div className="task-board__main">
         {view === 'kanban' ? (
           <KanbanBoard
@@ -92,7 +99,7 @@ export function TaskBoard({ list, items, index, users, onEditList }: Props) {
           <TaskTable list={list} items={items} index={index} selected={selected} onSelect={select} onOpen={open} viewSwitch={viewSwitch} />
         )}
       </div>
-      {(item || view === 'table') && (
+      {showDetails && (
         <div className="task-board__side">
           {item ? (
             <TaskDetail
@@ -102,7 +109,7 @@ export function TaskBoard({ list, items, index, users, onEditList }: Props) {
               items={items}
               users={users}
               focusTitle={opened?.id === item.id ? opened.n : 0}
-              onClose={view === 'kanban' ? () => setSelected(null) : undefined}
+              onClose={view === 'kanban' ? () => setDetailsOpen(false) : undefined}
             />
           ) : (
             <p className="work-empty">Eine Aufgabe auswählen – mit der Maus oder ↑ ↓.</p>

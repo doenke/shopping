@@ -2787,3 +2787,47 @@ kbd {
   border-radius: 2px;
   background: var(--primary);
 }
+
+/* Status pill that opens the statuses as pills underneath */
+.status-picker {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+.status-tag--button {
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82em;
+  line-height: 1.5;
+}
+.status-tag--button:hover {
+  border-color: var(--primary);
+}
+.status-tag--on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+.status-picker__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.14);
+}
+.task .status-picker__menu {
+  left: auto;
+  right: 0;
+  align-items: flex-end;
+}
+.work-row td.work-row__status {
+  overflow: visible;
+}

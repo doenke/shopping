@@ -92,15 +92,17 @@
 - **Status für Aufgaben** (ToDo-Listen): unter *⋮ → Bearbeiten …* eigene Status festlegen und sortieren
   (Vorschlag: Neu · In Arbeit · Wartet) und einen **Standard** wählen, den jeder neue Eintrag bekommt (bestehende
   behalten ihren, wenn der Standard wechselt); „Erledigt“ ist der Haken, kein Status.
-  Am Rechner eine eigene Spalte in der Tabelle und eine Auswahl in den Details, auf dem Handy im Editor und als
+  Am Rechner eine eigene Spalte in der Tabelle (Klick auf den Status zeigt alle als Pillen untereinander zur
+  Auswahl, ebenso in der Handy-Liste) und eine Auswahl in den Details, auf dem Handy im Editor und als
   Gruppierung „Status“. Gespeichert wird der Status pro Eintrag (auch REST/MCP: `status`), umbenennen
   verliert nichts.
 - **Kanban** (ToDo-Listen am Rechner, Umschalter *Tabelle | Kanban* oben rechts, pro Liste gemerkt): eine
-  Spalte pro Status, „Erledigt“ als letzte (die 30 neuesten). Karten mit Fälligkeit, Bereich, Personen und
+  Spalte pro Status; „Erledigt“ als letzte (die 30 neuesten) nur mit dem Haken *Erledigte als Spalte im
+  Kanban-Board anzeigen* in den Listeneinstellungen, sonst verlassen erledigte Karten das Board. Karten mit Fälligkeit, Bereich, Personen und
   Link; mit Maus oder Stift in eine andere Spalte ziehen setzt den Status bzw. hakt ab, innerhalb einer
   Spalte ändert Ziehen die Reihenfolge (eine Linie zeigt, wo die Karte landet; gilt für alle) – zurück aus „Erledigt“ öffnet
-  wieder. Klick zeigt die Details rechts (✕ oder Esc schließt sie), Doppelklick/Enter bearbeitet,
-  Leertaste hakt ab, Pfeiltasten wandern über die Karten. Ohne eigene Status: „Offen“ und „Erledigt“.
+  wieder. Klick wählt eine Karte nur aus; Doppelklick/Enter öffnet rechts die Details (✕ oder Esc schließt sie),
+  Leertaste hakt ab, Pfeiltasten wandern über die Karten. Ohne eigene Status gibt es eine Spalte „Offen“.
 - **Arbeitsmodus** 💼 (*Arbeitsmodus* unten in der Seitenleiste oder Strg+Shift+A, pro Gerät gemerkt): blendet
   Listen aus – Seitenleiste, Suche und Start zeigen nur noch die ToDo-Listen der Kategorie „Arbeit“
   (umstellbar auf alle ToDo-Listen). Neue Listen sind dann ToDo-Listen in „Arbeit“; oben links steht „To-Do“
