@@ -15,11 +15,10 @@ import {
   type CatalogIndex,
   type ItemRow,
   type ListRow,
-  type ListStatus,
 } from '@shopping/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { setChecked, updateItem } from '../../actions';
-import { entryKeys } from '../../keyboard';
+import { entryKeys, focusItem } from '../../keyboard';
 import { PeopleDots, PersonCheckDialog } from '../People';
 import { TaskAdd, TaskHeader } from './TaskTable';
 
@@ -31,24 +30,21 @@ interface Props {
   onSelect: (id: string) => void;
   onOpen: (id: string) => void;
   viewSwitch?: React.ReactNode;
-  onEditList?: () => void;
 }
 
 const DONE = '__done__';
-/** Without statuses of its own a list still has "Offen" and "Erledigt". */
-const OPEN: ListStatus = { id: '', name: 'Offen' };
 /** The done column shows the latest ones; older ones stay in the table. */
 const DONE_SHOWN = 30;
 
 /**
- * Kanban: one column per status, "Erledigt" last. Drag a card to another column (or Space to tick
- * off); click selects it for the detail column, double click / Enter edits it.
+ * Kanban (lists with statuses): one column per status, optionally "Erledigt" last. Drag a card to another
+ * column or place (Alt + arrow keys do the same), Space ticks off; a click selects, double click / Enter
+ * opens the details.
  */
-export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, viewSwitch, onEditList }: Props) {
-  const own = listStatuses(list);
+export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, viewSwitch }: Props) {
+  const statuses = listStatuses(list);
   const showDone = kanbanShowsDone(list);
-  const statuses = own.length ? own : [OPEN];
-  const defaultStatus = own.length ? listDefaultStatus(list, own) : OPEN;
+  const defaultStatus = listDefaultStatus(list, statuses);
   /** Where a dragged card would land: the column and the place in it. */
   const [over, setOver] = useState<{ column: string; index: number } | null>(null);
   /**
@@ -59,13 +55,20 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
   const [drag, setDrag] = useState<{ id: string; x: number; y: number; dx: number; dy: number; width: number } | null>(null);
   const dragged = useRef(false);
   const [checking, setChecking] = useState<string | null>(null);
+  /** A card moved by keyboard: give it the focus back after it was re-drawn. */
+  const refocus = useRef<string | null>(null);
+  useEffect(() => {
+    if (!refocus.current) return;
+    focusItem(refocus.current);
+    refocus.current = null;
+  }, [items]);
 
   const columns = useMemo(() => {
     const byStatus = new Map<string, ItemRow[]>(statuses.map((s) => [s.id, []]));
     const done: ItemRow[] = [];
     for (const i of items) {
       if (i.checked) done.push(i);
-      else byStatus.get((own.length ? itemStatus(i, own, defaultStatus) : OPEN)!.id)!.push(i);
+      else byStatus.get(itemStatus(i, statuses, defaultStatus)!.id)!.push(i);
     }
     return {
       // Open columns in the hand-made order (drag a card up or down); new ones come last.
@@ -74,7 +77,6 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
     };
   }, [items, list.settings]);
 
-  /** Into a column: a status (open again if it was done), or done. One change, so it syncs as one. */
   /** Into a column (at a place in it): status, done/open and order as one change. */
   const moveTo = (item: ItemRow, column: string, index?: number) => {
     if (column === DONE) {
@@ -82,7 +84,7 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
       if (itemPersons(item).length) return setChecking(item.id);
       return void setChecked(item, true);
     }
-    const attributes = own.length ? withStatus(item.attributes, column, own, defaultStatus) : item.attributes;
+    const attributes = withStatus(item.attributes, column, statuses, defaultStatus);
     const same = JSON.stringify(attributes) === JSON.stringify(item.attributes);
     let position: string | undefined;
     if (index !== undefined) {
@@ -144,11 +146,33 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
 
   const toggle = (item: ItemRow) => (item.checked ? moveTo(item, defaultStatus!.id) : moveTo(item, DONE));
 
+  /** Alt + arrow keys: ←/→ into the neighbouring column, ↑/↓ one place up or down. The card keeps the focus. */
+  const moveByKey = (item: ItemRow, key: string) => {
+    const ids = [...statuses.map((s) => s.id), ...(showDone ? [DONE] : [])];
+    const here = item.checked ? DONE : itemStatus(item, statuses, defaultStatus)!.id;
+    if (key === 'ArrowLeft' || key === 'ArrowRight') {
+      const target = ids[ids.indexOf(here) + (key === 'ArrowRight' ? 1 : -1)];
+      if (target === undefined) return;
+      moveTo(item, target);
+    } else if (here !== DONE) {
+      const cards = columns.open.find((c) => c.status.id === here)?.items ?? [];
+      const at = cards.indexOf(item) + (key === 'ArrowDown' ? 1 : -1);
+      if (at < 0 || at >= cards.length) return;
+      moveTo(item, here, at);
+    }
+    // The card is re-drawn in its new place once the change is in: focus it there (see the effect below).
+    refocus.current = item.id;
+  };
+
   const card = (item: ItemRow) => {
     const due = dueOf(item);
     const fmt = due ? formatDue(due) : null;
     const area = packingInfo(item).container;
     const url = itemUrl(item);
+    const keys = entryKeys(
+      () => toggle(item),
+      () => onOpen(item.id),
+    );
     return (
       <article
         key={item.id}
@@ -166,10 +190,13 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
           if (!dragged.current) onSelect(item.id);
         }}
         onDoubleClick={() => onOpen(item.id)}
-        {...entryKeys(
-          () => toggle(item),
-          () => onOpen(item.id),
-        )}
+        onKeyDown={(e) => {
+          if (e.altKey && e.key.startsWith('Arrow')) {
+            e.preventDefault();
+            moveByKey(item, e.key);
+          } else keys.onKeyDown(e);
+        }}
+        onKeyUp={keys.onKeyUp}
       >
         <div className="kanban-card__title">{item.name}</div>
         {item.note && <div className="kanban-card__note">{item.note}</div>}
@@ -231,19 +258,6 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
     <section className="work-tasks work-tasks--kanban" aria-label={list.name}>
       <TaskHeader list={list} open={items.length - columns.done.length} done={columns.done.length} viewSwitch={viewSwitch} />
       <TaskAdd list={list} index={index} />
-      {!own.length && (
-        <p className="kanban-hint">
-          Eigene Spalten wie „In Arbeit“ oder „Wartet“:{' '}
-          {onEditList ? (
-            <button type="button" className="link" onClick={onEditList}>
-              Status in den Listeneinstellungen festlegen
-            </button>
-          ) : (
-            'Status in den Listeneinstellungen festlegen'
-          )}
-          .
-        </p>
-      )}
       <div className="kanban">
         {columns.open.map((c) => column(c.status.id, c.status.name, c.items))}
         {/* "Erledigt" only when the list settings say so; otherwise done cards just leave the board. */}

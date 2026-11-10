@@ -334,7 +334,14 @@ export async function setListOrder(ids: string[]): Promise<void> {
 /** Recurring checklists: everything open again (also done by the server at the start of each period). */
 export async function resetList(listId: string): Promise<number> {
   const checked = (await db.items.where('listId').equals(listId).toArray()).filter((i) => i.checked && !i.deleted);
-  await sync.mutateItems(checked.map((i) => ({ id: i.id, patch: { checked: false } })));
+  // Open again in the list's default status (like the automatic reset).
+  await sync.mutateItems(
+    checked.map((i) => {
+      if (i.attributes.status === undefined) return { id: i.id, patch: { checked: false } };
+      const { status: _s, ...attributes } = i.attributes;
+      return { id: i.id, patch: { checked: false, attributes } };
+    }),
+  );
   return checked.length;
 }
 

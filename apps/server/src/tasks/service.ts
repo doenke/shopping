@@ -1,6 +1,19 @@
 import { comparePositions } from '@shopping/shared';
 import { randomUUID } from 'node:crypto';
-import { generateKeyBetween, parseItem, taskPatch, withUrl, type IncomingTask, type ItemPatch, type ItemRow, type ListRow } from '@shopping/shared';
+import {
+  generateKeyBetween,
+  listDefaultStatus,
+  listStatuses,
+  parseItem,
+  taskPatch,
+  withStatus,
+  withUrl,
+  type TaskStatuses,
+  type IncomingTask,
+  type ItemPatch,
+  type ItemRow,
+  type ListRow,
+} from '@shopping/shared';
 import { and, eq, gt, inArray, sql } from 'drizzle-orm';
 import type { ShoppingApi } from '../api/service.js';
 import type { Db } from '../db/index.js';
@@ -54,6 +67,12 @@ export class TaskService {
     return Math.max(Number(i?.seq ?? 0), Number(l?.seq ?? 0));
   }
 
+  /** The list's statuses for task apps (default = "needs action", others = "in process"). */
+  static statusesOf(list: ListRow): TaskStatuses {
+    const statuses = listStatuses(list);
+    return { statuses, defaultStatus: listDefaultStatus(list, statuses) };
+  }
+
   /** File name of an entry in a CalDAV collection: the app's own name if it created it, else "<id>.ics". */
   static fileName(item: Pick<ItemRow, 'id' | 'attributes'>): string {
     return typeof item.attributes.davName === 'string' ? item.attributes.davName : `${item.id}.ics`;
@@ -105,6 +124,10 @@ export class TaskService {
     if (opts.fileName && opts.fileName !== `${id}.ics`) attributes.davName = opts.fileName;
     if (task.due && list.listType === 'todo') attributes.due = task.due;
     if (task.url) attributes = withUrl(attributes, task.url);
+    // Created as "in process": the first status after the default.
+    const st = TaskService.statusesOf(list);
+    const other = st.statuses.find((s) => s.id !== st.defaultStatus?.id);
+    if (task.inProcess && !task.completed && other) attributes = withStatus(attributes, other.id, st.statuses, st.defaultStatus);
     const patch: ItemPatch = {
       listId: list.id,
       name: parsed.name,
@@ -123,7 +146,7 @@ export class TaskService {
 
   /** A task app changed an entry. */
   async update(userId: string, list: ListRow, item: ItemRow, task: IncomingTask): Promise<void> {
-    const patch = taskPatch(item, list.listType, task, await this.parser(list));
+    const patch = taskPatch(item, list.listType, task, await this.parser(list), TaskService.statusesOf(list));
     if (Object.keys(patch).length) await this.api.applyItems(userId, [{ id: item.id, patch }]);
   }
 

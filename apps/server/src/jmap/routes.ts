@@ -1,5 +1,5 @@
 import { comparePositions } from '@shopping/shared';
-import { dueOf, itemUrl, lastModified, taskTitle, taskUid, type IncomingTask, type ItemRow, type ListRow } from '@shopping/shared';
+import { dueOf, inProcessStatus, itemStatus, itemUrl, lastModified, taskTitle, taskUid, type IncomingTask, type ItemRow, type ListRow } from '@shopping/shared';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
@@ -8,7 +8,7 @@ import { credentialPrincipal, type Principal } from '../auth/principal.js';
 import type { Config } from '../config.js';
 import type { Db } from '../db/index.js';
 import { users } from '../db/schema.js';
-import type { TaskService } from '../tasks/service.js';
+import { TaskService } from '../tasks/service.js';
 
 /**
  * JMAP (RFC 8620) with JMAP for Tasks (draft-ietf-jmap-tasks): lists as TaskList, entries as Task
@@ -179,7 +179,8 @@ export async function jmapRoutes(app: FastifyInstance, opts: { config: Config; d
       description: i.note ?? '',
       due: due ? `${due}T00:00:00` : null,
       showWithoutTime: true,
-      progress: i.checked ? 'completed' : 'needs-action',
+      progress: i.checked ? 'completed' : inProcessStatus(i, TaskService.statusesOf(l)) ? 'in-process' : 'needs-action',
+      'shopping:status': i.checked ? null : (itemStatus(i, TaskService.statusesOf(l).statuses, TaskService.statusesOf(l).defaultStatus)?.name ?? null),
       progressUpdated: i.checkedAt ?? lastModified(i).toISOString(),
       created: i.createdAt,
       updated: lastModified(i).toISOString(),
@@ -196,8 +197,10 @@ export async function jmapRoutes(app: FastifyInstance, opts: { config: Config; d
       if (k === 'title' && typeof v === 'string') t.summary = v;
       else if (k === 'description') t.description = typeof v === 'string' && v.trim() ? v : null;
       else if (k === 'due') t.due = typeof v === 'string' ? v.slice(0, 10) : null;
-      else if (k === 'progress') t.completed = v === 'completed';
-      else if (k === 'uid' && typeof v === 'string') t.uid = v;
+      else if (k === 'progress') {
+        t.completed = v === 'completed';
+        t.inProcess = v === 'in-process';
+      } else if (k === 'uid' && typeof v === 'string') t.uid = v;
       else if (k === 'links') {
         const first = v && typeof v === 'object' ? Object.values(v as Record<string, { href?: unknown }>)[0] : undefined;
         t.url = typeof first?.href === 'string' ? first.href : null;

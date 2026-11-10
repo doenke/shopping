@@ -1,4 +1,4 @@
-import type { CatalogIndex, ItemRow, ListRow, UserInfo } from '@shopping/shared';
+import { listStatuses, type CatalogIndex, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { useEffect, useState } from 'react';
 import { TaskDetail } from './TaskDetail';
 import { TaskTable } from './TaskTable';
@@ -9,8 +9,6 @@ interface Props {
   items: ItemRow[];
   index: CatalogIndex;
   users: Map<string, UserInfo>;
-  /** Opens the list settings (statuses). */
-  onEditList?: () => void;
 }
 
 type View = 'table' | 'kanban';
@@ -27,8 +25,11 @@ function loadView(listId: string): View {
  * ToDo lists on the desktop: the tasks as a table, the selected task edited in place on the right.
  * Shown for every ToDo list (work or not) – the Arbeitsmodus only decides which lists are in the sidebar.
  */
-export function TaskBoard({ list, items, index, users, onEditList }: Props) {
-  const [view, setView] = useState<View>(() => loadView(list.id));
+export function TaskBoard({ list, items, index, users }: Props) {
+  // Kanban needs columns: without statuses of its own a list is just the table (no switch).
+  const hasStatuses = listStatuses(list).length > 0;
+  const [stored, setView] = useState<View>(() => loadView(list.id));
+  const view: View = hasStatuses ? stored : 'table';
   useEffect(() => setView(loadView(list.id)), [list.id]);
   const choose = (v: View) => {
     setView(v);
@@ -38,7 +39,7 @@ export function TaskBoard({ list, items, index, users, onEditList }: Props) {
       // Only a convenience.
     }
   };
-  const viewSwitch = (
+  const viewSwitch = !hasStatuses ? undefined : (
     <div className="segmented" role="group" aria-label="Ansicht">
       {(['table', 'kanban'] as const).map((v) => (
         <button key={v} type="button" className={v === view ? 'active' : ''} aria-pressed={v === view} onClick={() => choose(v)}>
@@ -85,16 +86,7 @@ export function TaskBoard({ list, items, index, users, onEditList }: Props) {
     <div className={`task-board${!showDetails ? ' task-board--full' : ''}`}>
       <div className="task-board__main">
         {view === 'kanban' ? (
-          <KanbanBoard
-            list={list}
-            items={items}
-            index={index}
-            selected={selected}
-            onSelect={select}
-            onOpen={open}
-            viewSwitch={viewSwitch}
-            onEditList={onEditList}
-          />
+          <KanbanBoard list={list} items={items} index={index} selected={selected} onSelect={select} onOpen={open} viewSwitch={viewSwitch} />
         ) : (
           <TaskTable list={list} items={items} index={index} selected={selected} onSelect={select} onOpen={open} viewSwitch={viewSwitch} />
         )}

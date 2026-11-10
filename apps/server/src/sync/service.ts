@@ -660,7 +660,7 @@ export class SyncService {
         const every = listReset(toListRow(list));
         if (!every) continue;
         const ts = this.clock.tick();
-        const stamp = { checked: ts, checkedAt: ts, checkedBy: ts };
+        const stamp = { checked: ts, checkedAt: ts, checkedBy: ts, attributes: ts };
         const start = resetPeriodStart(every, now).toISOString();
         const rows = await this.db
           .update(listItems)
@@ -669,7 +669,8 @@ export class SyncService {
             checkedAt: null,
             checkedBy: null,
             // Multi-person items: everyone open again (their clocks move on, so older ticks do not come back).
-            attributes: sql`${listItems.attributes} - 'done' - 'doneAt'`,
+            // …and back to the list's default status (a daily task starts the day as new again).
+            attributes: sql`${listItems.attributes} - 'done' - 'doneAt' - 'status'`,
             hlc: sql`${listItems.hlc} || ${JSON.stringify(stamp)}::jsonb || coalesce((SELECT jsonb_object_agg('done:' || lower(p), ${ts}::text) FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(${listItems.attributes} -> 'persons') = 'array' THEN ${listItems.attributes} -> 'persons' ELSE '[]'::jsonb END) AS p), '{}'::jsonb)`,
             seq: nextSeq,
           })

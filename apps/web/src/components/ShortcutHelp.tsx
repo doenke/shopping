@@ -6,6 +6,8 @@ const KEYS: [string, string][] = [
   ['Leertaste', 'Abhaken (bzw. wieder öffnen)'],
   ['Enter', 'Eintrag öffnen / bearbeiten'],
   ['Entf', 'Eintrag löschen (mit Rückgängig)'],
+  ['Alt + ← →', 'Kanban: Karte in die Nachbarspalte'],
+  ['Alt + ↑ ↓', 'Kanban: Karte einen Platz hoch/runter'],
   ['Strg + K', 'Liste oder Eintrag suchen'],
   ['Strg + Shift + A', 'Arbeitsmodus: nur die Arbeitslisten zeigen (an/aus)'],
   ['H', 'Diese Übersicht (auch ?)'],

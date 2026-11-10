@@ -36,8 +36,6 @@ interface Props {
   remoteChecks: Map<string, RemoteCheck>;
   /** Wide screen: ToDo lists as a table with details. */
   desktop?: boolean;
-  /** Opens the list settings (Kanban: "Status festlegen"). */
-  onEditList?: () => void;
 }
 
 const RECENT_LIMIT = 40;
@@ -48,7 +46,7 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView(pr
   if (props.list.listType === 'memo') return <MemoView ref={addRef} {...props} />;
   // ToDo lists on the desktop: table + details (every ToDo list, work or not).
   if (props.list.listType === 'todo' && props.desktop && !props.list.isTemplate)
-    return <TaskBoard list={props.list} items={props.items} index={props.index} users={props.users} onEditList={props.onEditList} />;
+    return <TaskBoard list={props.list} items={props.items} index={props.index} users={props.users} />;
   if (props.list.listType === 'todo') return <TodoView ref={addRef} {...props} />;
   return <ShoppingView ref={addRef} {...props} />;
 });

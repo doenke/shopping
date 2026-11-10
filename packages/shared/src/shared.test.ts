@@ -618,3 +618,57 @@ describe('order of entries', () => {
     expect([...keys].sort(comparePositions)).toEqual(['Zz', 'a0', 'a0V', 'a1']);
   });
 });
+
+describe('statuses in task apps', () => {
+  const info = {
+    statuses: [
+      { id: 'n', name: 'Neu' },
+      { id: 'w', name: 'In Arbeit' },
+      { id: 'x', name: 'Wartet' },
+    ],
+    defaultStatus: { id: 'n', name: 'Neu' },
+  };
+  const base: ItemRow = {
+    id: '22222222-2222-4222-8222-222222222222',
+    listId: 'l',
+    catalogItemId: null,
+    name: 'Angebot',
+    amounts: [],
+    properties: [],
+    note: null,
+    categoryId: null,
+    checked: false,
+    checkedAt: null,
+    checkedBy: null,
+    position: 'a0',
+    optional: false,
+    attributes: { status: 'x' },
+    createdBy: null,
+    createdAt: '2026-11-01T10:00:00.000Z',
+    deleted: false,
+    mergedInto: null,
+    hlc: {},
+    seq: 1,
+  };
+  const parse = (t: string) => parseItem(t, undefined, 'todo');
+
+  it('exports other statuses as IN-PROCESS with their name', () => {
+    const ics = itemToIcal(base, { name: 'Projekt', listType: 'todo' }, new Date(), info);
+    expect(ics).toContain('STATUS:IN-PROCESS');
+    expect(ics).toContain('X-SHOPPING-STATUS:Wartet');
+    expect(parseIcalTodo(ics)).toMatchObject({ inProcess: true, completed: false });
+    // Back unchanged: the status stays "Wartet".
+    expect(taskPatch(base, 'todo', parseIcalTodo(ics)!, parse, info)).toEqual({});
+  });
+
+  it('takes over "in process" switched on or off', () => {
+    const newOne = { ...base, attributes: {} };
+    const started = parseIcalTodo('BEGIN:VTODO\r\nSUMMARY:Angebot\r\nSTATUS:IN-PROCESS\r\nEND:VTODO')!;
+    expect(taskPatch(newOne, 'todo', started, parse, info).attributes).toEqual({ status: 'w' });
+    const stopped = parseIcalTodo('BEGIN:VTODO\r\nSUMMARY:Angebot\r\nSTATUS:NEEDS-ACTION\r\nX-SHOPPING-STATUS:Wartet\r\nEND:VTODO')!;
+    expect(taskPatch(base, 'todo', stopped, parse, info).attributes).toEqual({});
+    // An app that rewrote everything (no X-SHOPPING-STATUS) does not reset the status.
+    const rewritten = parseIcalTodo('BEGIN:VTODO\r\nSUMMARY:Angebot\r\nSTATUS:NEEDS-ACTION\r\nEND:VTODO')!;
+    expect(taskPatch(base, 'todo', rewritten, parse, info)).toEqual({});
+  });
+});

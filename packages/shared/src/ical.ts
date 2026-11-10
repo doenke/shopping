@@ -5,6 +5,25 @@ import type { ItemPatch, ItemRow, ListRow, ListType } from './model.js';
 import { packingInfo } from './packing.js';
 import { peopleLabel } from './people.js';
 import type { ParsedItem } from './parser.js';
+import { itemStatus, withStatus, type ListStatus } from './status.js';
+
+/**
+ * Statuses of a list for task apps. iCalendar knows "needs action", "in process" and "completed": the
+ * default status is "needs action", every other status "in process" (its name goes along as
+ * X-SHOPPING-STATUS). Back from an app: "in process" on a task in the default status moves it to the
+ * first other status, "needs action" on one in another status back to the default.
+ */
+export interface TaskStatuses {
+  statuses: ListStatus[];
+  defaultStatus: ListStatus | null;
+}
+
+/** The status of an open item as far as task apps see it: null (default / none) or the other status. */
+export function inProcessStatus(item: ItemRow, info?: TaskStatuses): ListStatus | null {
+  if (!info?.statuses.length || item.checked) return null;
+  const st = itemStatus(item, info.statuses, info.defaultStatus);
+  return st && st.id !== info.defaultStatus?.id ? st : null;
+}
 
 /**
  * Entries as tasks for other apps – iCalendar VTODO (CalDAV: Apple Erinnerungen, Thunderbird, DAVx⁵ + Tasks.org)
@@ -63,7 +82,8 @@ const stamp = (d: Date) =>
     .replace(/\.\d{3}/, '');
 
 /** One item as a complete iCalendar object with one VTODO. */
-export function itemToIcal(item: ItemRow, list: Pick<ListRow, 'name' | 'listType'>, now = new Date()): string {
+export function itemToIcal(item: ItemRow, list: Pick<ListRow, 'name' | 'listType'>, now = new Date(), statuses?: TaskStatuses): string {
+  const inProcess = inProcessStatus(item, statuses);
   const p = packingInfo(item);
   const due = dueOf(item);
   const url = itemUrl(item);
@@ -83,7 +103,8 @@ export function itemToIcal(item: ItemRow, list: Pick<ListRow, 'name' | 'listType
     ...(due ? [`DUE;VALUE=DATE:${due.replace(/-/g, '')}`] : []),
     ...(url ? [`URL:${url}`] : []),
     ...(categories.length ? [`CATEGORIES:${categories.map(escapeText).join(',')}`] : []),
-    `STATUS:${item.checked ? 'COMPLETED' : 'NEEDS-ACTION'}`,
+    `STATUS:${item.checked ? 'COMPLETED' : inProcess ? 'IN-PROCESS' : 'NEEDS-ACTION'}`,
+    ...(inProcess ? [`X-SHOPPING-STATUS:${escapeText(inProcess.name)}`] : []),
     ...(item.checked ? [`COMPLETED:${stamp(new Date(item.checkedAt ?? lastModified(item)))}`, 'PERCENT-COMPLETE:100'] : []),
     `X-SHOPPING-LIST:${escapeText(list.name)}`,
     'END:VTODO',
@@ -98,6 +119,8 @@ export interface IncomingTask {
   summary: string;
   description: string | null;
   completed: boolean;
+  /** STATUS:IN-PROCESS (JMAP: progress "in-process") – started, not done. */
+  inProcess?: boolean;
   /** YYYY-MM-DD */
   due: string | null;
   url: string | null;
@@ -132,6 +155,9 @@ export function parseIcalTodo(text: string): IncomingTask | null {
     summary: text_('SUMMARY') ?? '',
     description: text_('DESCRIPTION'),
     completed: status ? status === 'COMPLETED' : props.has('COMPLETED'),
+    // "Not in process" only counts when the app kept our X-SHOPPING-STATUS (it really changed the status);
+    // apps that rewrite everything (and know no "in process") leave the status as it is.
+    inProcess: status === 'IN-PROCESS' ? true : status === 'NEEDS-ACTION' && props.has('X-SHOPPING-STATUS') ? false : undefined,
     due: due ? `${due[1]}-${due[2]}-${due[3]}` : null,
     url: text_('URL'),
   };
@@ -144,8 +170,9 @@ export function parseIcalTodo(text: string): IncomingTask | null {
 export function taskPatch(
   item: ItemRow,
   listType: ListType,
-  task: Pick<IncomingTask, 'summary' | 'description' | 'completed' | 'due' | 'url'>,
+  task: Pick<IncomingTask, 'summary' | 'description' | 'completed' | 'due' | 'url' | 'inProcess'>,
   parse: (text: string) => ParsedItem | null,
+  statuses?: TaskStatuses,
 ): ItemPatch {
   const patch: ItemPatch = {};
   const summary = task.summary.trim();
@@ -174,6 +201,13 @@ export function taskPatch(
     else delete attributes.due;
   }
   if ((task.url ?? null) !== itemUrl(item)) attributes = withUrl(attributes, task.url);
+  // "In process" switched on or off in the app: first other status, or back to the default.
+  if (statuses?.statuses.length && !task.completed && task.inProcess !== undefined) {
+    const now = inProcessStatus({ ...item, checked: false }, statuses);
+    const other = statuses.statuses.find((st) => st.id !== statuses.defaultStatus?.id);
+    if (task.inProcess && !now && other) attributes = withStatus(attributes, other.id, statuses.statuses, statuses.defaultStatus);
+    if (!task.inProcess && now) attributes = withStatus(attributes, null, statuses.statuses, statuses.defaultStatus);
+  }
   if (attributes !== item.attributes) patch.attributes = attributes;
   return patch;
 }

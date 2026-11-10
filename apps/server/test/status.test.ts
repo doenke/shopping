@@ -47,4 +47,30 @@ describe('status of tasks', () => {
     // Done tasks have no status (done is the tick, the last Kanban column).
     expect((await call('PATCH', `/api/v1/items/${konzept.id}`, { checked: true })).json().status).toBeNull();
   });
+
+  it('a recurring list opens tasks again in the default status', async () => {
+    const list = (await call('POST', '/api/v1/lists', { name: 'Täglich', type: 'todo' })).json();
+    await t.sync.apply(userId, [
+      {
+        mid: crypto.randomUUID(),
+        entity: 'list',
+        id: list.id,
+        hlc: t.sync.clock.tick(),
+        patch: {
+          settings: {
+            reset: 'daily',
+            statuses: [
+              { id: 'n', name: 'Neu' },
+              { id: 'w', name: 'Wartet' },
+            ],
+          },
+        },
+      },
+    ]);
+    const task = (await call('POST', `/api/v1/lists/${list.id}/items`, { items: ['Post holen'] })).json().added[0];
+    await call('PATCH', `/api/v1/items/${task.id}`, { status: 'Wartet' });
+    await call('PATCH', `/api/v1/items/${task.id}`, { checked: true });
+    expect((await t.sync.resetRecurring(new Date(Date.now() + 2 * 86_400_000))).size).toBe(1);
+    expect((await call('GET', `/api/v1/items/${task.id}`)).json()).toMatchObject({ checked: false, status: 'Neu' });
+  });
 });
