@@ -69,3 +69,26 @@ test('"*" attaches the current location, with the address', async ({ page, conte
   await expect(tile(page, 'Parkhaus Mitte')).toBeVisible();
   await expect(tile(page, 'Parkhaus Mitte').locator('.tile__link--place')).toBeVisible();
 });
+
+test('a ToDo list as main list; "Standort merken" (app shortcut) puts the location there', async ({ page, context }, info) => {
+  await login(page, `Ines ${info.project.name}`);
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 53.5511, longitude: 9.9937 });
+  await fakePlaces(page);
+  await page.request.post('/api/v1/lists', { data: { name: 'Einkauf', type: 'shopping' } });
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Erledigen', type: 'todo' } })).json();
+  await page.goto(`/#/list/${list.id}`);
+  await page.getByRole('button', { name: 'Listenmenü' }).click();
+  await page.getByRole('menuitem', { name: /Als Hauptliste festlegen/ }).click();
+  await expect.poll(async () => (await (await page.request.get(`/api/v1/lists/${list.id}`)).json()).isMain).toBe(true);
+
+  await page.goto('/?action=here');
+  await expect(page).toHaveURL(new RegExp(`#/list/${list.id}$`));
+  await expect(page.locator('.work-row', { hasText: 'Parkhaus Mitte' })).toBeVisible();
+  await expect
+    .poll(async () => (await (await page.request.get(`/api/v1/lists/${list.id}`)).json()).items[0]?.attachments)
+    .toEqual([expect.objectContaining({ type: 'place', name: 'Parkhaus Mitte', lat: 53.5511, lon: 9.9937 })]);
+  // Taken once: reloading does not save it again.
+  await page.reload();
+  await expect(page.locator('.work-row', { hasText: 'Parkhaus Mitte' })).toHaveCount(1);
+});

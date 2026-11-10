@@ -82,6 +82,21 @@ body.resizing-details {
 .work-add__key {
   opacity: 0.7;
 }
+/* 🎤 for tasks: like the one in the shopping input, inside the field. */
+.work-add__mic {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+.work-add__mic--on {
+  background: color-mix(in srgb, var(--danger, #c0392b) 18%, transparent);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
 .work-table {
   width: 100%;
   border-collapse: collapse;

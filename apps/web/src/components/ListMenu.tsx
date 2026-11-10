@@ -109,7 +109,7 @@ export function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose
           {list.archivedAt ? 'Aus dem Archiv holen' : 'Archivieren'}
         </button>
       )}
-      {list.id !== me.defaultListId && list.listType === 'shopping' && !list.isTemplate && !list.archivedAt && !guest && (
+      {list.id !== me.defaultListId && !list.isTemplate && !list.archivedAt && !guest && (
         <button
           type="button"
           role="menuitem"

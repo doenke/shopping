@@ -1,6 +1,7 @@
-import { categoriesInOrder, groupLists, inUserOrder, listGroup, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
+import { categoriesInOrder, groupLists, parseInput, inUserOrder, listGroup, type ListRow, type ListType, type Me, type SectionKey } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
-import { setCategoryOrder, setListOrder, setSectionOrder } from './actions';
+import { addItems, setCategoryOrder, setListOrder, setSectionOrder } from './actions';
+import { showToast } from './toast';
 import { CatalogPanel } from './components/CatalogPanel';
 import { IconReview } from './components/IconReview';
 import { startShopping, stopShopping, useShopping, useWakeLock } from './shopMode';
@@ -144,8 +145,10 @@ function Shell({ me }: { me: Me }) {
       ))}
     </ul>
   );
-  const mainList = shoppingLists.find((l) => l.id === me.defaultListId) ?? shoppingLists[0];
-  const listId = route.page === 'list' ? (route.listId ?? (workMode ? workLists[0] : (mainList ?? packingLists[0]))?.id) : undefined;
+  // Any list can be the main list (shopping, packing, Merk- or ToDo list); without one, the first shopping list.
+  const mainList = ordered.find((l) => l.id === me.defaultListId && !l.isTemplate && !l.archivedAt) ?? shoppingLists[0];
+  const workStart = mainList && isWorkList(mainList) ? mainList : workLists[0];
+  const listId = route.page === 'list' ? (route.listId ?? (workMode ? workStart : (mainList ?? packingLists[0]))?.id) : undefined;
   const addRef = useRef<HTMLInputElement>(null);
 
   const list = lists.find((l) => l.id === listId);
@@ -165,6 +168,17 @@ function Shell({ me }: { me: Me }) {
     history.replaceState(null, '', '/');
     setShared(got);
   }, []);
+
+  // "Standort merken" (long press on the app icon): the current location as a new entry in the main list,
+  // like a lone "*" typed there. Waits until the lists are loaded.
+  const [hereAction, setHereAction] = useState(() => takeHereAction());
+  useEffect(() => {
+    if (!hereAction || !mainList || guest) return;
+    setHereAction(false);
+    navigate({ page: 'list', listId: mainList.id });
+    void addItems(mainList.id, parseInput('*', undefined, mainList.listType));
+    showToast(`Standort wird in „${mainList.name}“ gemerkt …`);
+  }, [hereAction, mainList?.id]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -541,4 +555,13 @@ function GroupToggle({ className, label, open, onToggle }: { className: string; 
       {label}
     </button>
   );
+}
+
+/** "/?action=here" (app shortcut „Standort merken“): taken once, and gone from the address. */
+function takeHereAction(): boolean {
+  const url = new URL(location.href);
+  if (url.searchParams.get('action') !== 'here') return false;
+  url.searchParams.delete('action');
+  history.replaceState(null, '', url.pathname + url.search + url.hash);
+  return true;
 }

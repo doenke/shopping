@@ -36,6 +36,7 @@ export default defineConfig({
         shortcuts: [
           { name: 'Arbeitsmodus', short_name: 'Arbeit', url: '/?mode=work', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
           { name: 'Einkaufslisten', short_name: 'Einkauf', url: '/?mode=home', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
+          { name: 'Standort in der Hauptliste merken', short_name: 'Standort merken', url: '/?action=here', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
         ],
         // Links, text and files (photos, PDFs, …); the service worker takes the POST (see sw.ts).
         share_target: {

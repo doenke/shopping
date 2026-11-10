@@ -28,6 +28,7 @@ import { useLinkDrop } from '../../linkDrop';
 import { PeopleDots, PersonCheckDialog } from '../People';
 import { StatusPicker } from './StatusPicker';
 import { useSelection } from '../../selection';
+import { MicButton, useVoice } from '../../voice';
 import { GROUP_LABEL, groupOptions, groupTasks, shownGroup, useGroupBy, type TaskEntry } from '../../todoGroups';
 
 interface Props {
@@ -251,6 +252,7 @@ export function TaskHeader({ list, open, done, viewSwitch }: { list: ListRow; op
 /** The field for new tasks (N focuses it); "!Fr" due, "@Ben" who, "#Kunde" area. */
 export function TaskAdd({ list, index }: { list: ListRow; index: CatalogIndex }) {
   const [text, setText] = useState('');
+  const voice = useVoice(setText, () => setText(''));
   const add = async () => {
     const parsed = parseInput(text, index, 'todo');
     if (!parsed.length) return;
@@ -278,6 +280,7 @@ export function TaskAdd({ list, index }: { list: ListRow; index: CatalogIndex })
         placeholder={taskExample(list)}
         aria-label="Neue Aufgabe"
       />
+      <MicButton voice={voice} className="work-add__mic" />
       {/* The hint is for an empty field; once typing it would only be in the way. */}
       {!text && (
         <kbd className="work-add__key" aria-hidden>

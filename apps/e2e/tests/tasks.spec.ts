@@ -290,3 +290,34 @@ test('the task details get wider or narrower with the mouse', async ({ page }, i
   await page.getByRole('separator', { name: 'Breite der Details' }).dblclick();
   await expect.poll(async () => Math.round((await side.boundingBox())!.width)).toBe(Math.round(before));
 });
+
+test('tasks by voice: 🎤 in the field for new tasks', async ({ page }, info) => {
+  // The browser's speech recognition, answering with a fixed sentence.
+  await page.addInitScript(() => {
+    class FakeRecognition {
+      onresult: ((e: unknown) => void) | null = null;
+      onend: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      start() {
+        setTimeout(() => {
+          this.onresult?.({ results: [[{ transcript: 'Reifen wechseln !morgen' }]] });
+          this.onend?.();
+        }, 50);
+      }
+      stop() {
+        this.onend?.();
+      }
+      abort() {}
+    }
+    const w = window as unknown as { SpeechRecognition: unknown; webkitSpeechRecognition: unknown };
+    w.SpeechRecognition = w.webkitSpeechRecognition = FakeRecognition;
+  });
+  await login(page, `Uwe ${info.project.name}`);
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Zuhause', type: 'todo' } })).json();
+  await page.goto(`/#/list/${list.id}`);
+  await page.getByRole('button', { name: 'Sprechen' }).click();
+  const field = page.getByRole('textbox', { name: 'Neue Aufgabe' });
+  await expect(field).toHaveValue('Reifen wechseln !morgen');
+  await field.press('Enter');
+  await expect(page.locator('.work-row', { hasText: 'Reifen wechseln' })).toContainText('Morgen');
+});

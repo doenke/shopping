@@ -10,10 +10,11 @@ import {
   type CatalogItem,
   type ListType,
 } from '@shopping/shared';
-import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useMemo, useState } from 'react';
 import { addItems, catalogToParsed, linkTitle, stopAskingForTemplates, templatesMissing, type NewItem } from '../actions';
 import { useLists, useTileView } from '../hooks';
 import { RecipeUrlDialog } from './RecipeUrlDialog';
+import { MicButton, useVoice } from '../voice';
 import { Tile } from './Tile';
 
 interface Props {
@@ -104,30 +105,11 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
     ]);
   };
 
-  // Voice input (Chrome/Android, Safari; not Firefox): what is said lands in the field, Enter or a tap adds it.
-  const [listening, setListening] = useState(false);
-  const recognition = useRef<SpeechRecognitionLike | null>(null);
-  const Recognition = speechRecognition();
-  useEffect(() => () => recognition.current?.abort(), []);
-  const listen = () => {
-    if (listening) return recognition.current?.stop();
-    if (!Recognition) return;
-    const r = new Recognition();
-    r.lang = 'de-DE';
-    r.interimResults = true;
-    r.continuous = false;
-    r.onresult = (e) => {
-      const said = Array.from({ length: e.results.length }, (_, i) => e.results[i]![0]!.transcript).join(' ');
-      // "Milch und Butter" are two things on shopping and packing lists ("Krieg und Frieden" on a Merkliste is one).
-      setText(listType === 'shopping' || listType === 'packing' ? said.replace(/\s+und\s+/gi, ', ') : said);
-    };
-    r.onend = () => setListening(false);
-    r.onerror = () => setListening(false);
-    recognition.current = r;
-    setText('');
-    setListening(true);
-    r.start();
-  };
+  // "Milch und Butter" are two things on shopping and packing lists ("Krieg und Frieden" on a Merkliste is one).
+  const voice = useVoice(
+    (said) => setText(listType === 'shopping' || listType === 'packing' ? said.replace(/\s+und\s+/gi, ', ') : said),
+    () => setText(''),
+  );
 
   // Found only via a synonym or a guess ("Stirnlampe" → Taschenlampe): also offer exactly what was typed.
   const asTyped = useMemo(() => {
@@ -174,17 +156,7 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
             }}
             aria-label="Artikel hinzufügen"
           />
-          {Recognition && (
-            <button
-              type="button"
-              className={`addbar__mic${listening ? ' addbar__mic--on' : ''}`}
-              aria-label={listening ? 'Zuhören beenden' : 'Sprechen'}
-              aria-pressed={listening}
-              onClick={listen}
-            >
-              🎤
-            </button>
-          )}
+          <MicButton voice={voice} className="addbar__mic" />
         </div>
         {listType !== 'todo' && <ViewToggle />}
       </form>
@@ -280,24 +252,6 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
 });
 
 const NO_CATALOG = new CatalogIndex([]);
-
-/** The bits of the Web Speech API used here (not in TypeScript's DOM types everywhere). */
-interface SpeechRecognitionLike {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-  start(): void;
-  stop(): void;
-  abort(): void;
-}
-
-function speechRecognition(): (new () => SpeechRecognitionLike) | null {
-  const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
-}
 
 /** Tiles ↔ rows, right next to the input (stays in reach while scrolling). Remembered per device. */
 function ViewToggle() {

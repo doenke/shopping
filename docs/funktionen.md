@@ -34,8 +34,9 @@
   Eingabezeile einer Einkaufsliste einfügen oder *Teilen → Shopping* wählen. Shopping liest die Zutaten aus
   den Rezeptdaten der Seite und zeigt sie als Checkliste: Portionen anpassen, Vorrat wie Salz und Öl ist
   vorab abgewählt. Ohne Rezept auf der Seite gibt es „Als Eintrag mit Link hinzufügen“.
-- **Spracheingabe**: 🎤 in der Eingabezeile, „zwei Liter Milch und Butter“ – auf Einkaufs- und Packlisten
-  wird „und“ zum Trenner (Chrome/Android, Safari; braucht Netz).
+- **Spracheingabe**: 🎤 in der Eingabezeile aller Listen, auch im Aufgabenfeld der ToDo-Listen
+  („Reifen wechseln Freitag“), „zwei Liter Milch und Butter“ – auf Einkaufs- und Packlisten wird „und“ zum
+  Trenner (Chrome/Android, Safari; braucht Netz).
 - **Doppelte Einträge** werden zusammengeführt (1 l + 2 l Milch = 3 l); zuletzt gekaufte kommen zurück statt
   doppelt.
 - **Eigenschaften je Listentyp**: Einkauf „bio“, „TK“, „festkochend“; Packliste „Handgepäck“, „aufladen“,
@@ -56,8 +57,11 @@
 - **🏠 Zuhause / 🛒 Einkaufen** (pro Gerät): Zu Hause öffnet Antippen den Eintrag; im Einkaufen-Modus
   (🛒 in der Titelzeile) hakt Antippen ab und der Bildschirm bleibt an. Zurück geht es von selbst, wenn
   alles gekauft ist oder eine Stunde nichts passiert.
-- **Hauptliste** ⭐: die Liste, die ohne weitere Angabe gemeint ist (Teilen aus anderen Apps, Home Assistant,
-  KI-Assistenten).
+- **Hauptliste** ⭐: die Liste, die ohne weitere Angabe gemeint ist (Start der App, Teilen aus anderen Apps,
+  Home Assistant, KI-Assistenten). Jede Liste kann es sein, auch eine ToDo-, Pack- oder Merkliste
+  (⋮ → *Als Hauptliste festlegen*).
+- **Standort merken**: langes Drücken auf das App-Symbol (installierte App) → *Standort merken* legt den
+  aktuellen Standort als Eintrag in der Hauptliste an, wie ein einzelnes `*` in der Eingabezeile.
 - **Zuletzt verwendet**: Gekauftes wandert nach unten und lässt sich mit einem Tipp zurückholen. Pro Liste
   bleiben die letzten 100 erledigten Einträge (auch in Merk- und ToDo-Listen).
 - **Kacheln oder Liste** (runder Knopf neben dem Eingabefeld): am Handy startet die Liste, am Laptop die
