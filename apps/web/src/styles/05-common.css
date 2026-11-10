@@ -181,6 +181,10 @@
   border: 1px solid var(--border);
   background: var(--surface);
 }
+.share-link {
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
 .row--center {
   align-items: center;
   margin: 10px 0;

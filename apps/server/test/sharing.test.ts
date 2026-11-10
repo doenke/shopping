@@ -37,6 +37,8 @@ describe('sharing by link', () => {
 
   it('only lets members fetch the link, and keeps it stable', async () => {
     expect((await shareUrl(member)).statusCode).toBe(404);
+    const peek = await t.app.inject({ method: 'GET', url: `/api/v1/lists/${listId}/share-link?peek=1`, headers: { cookie: owner.cookie } });
+    expect(peek.json()).toEqual({ url: null });
     const first = (await shareUrl(owner)).json().url as string;
     expect(first).toMatch(/^http:\/\/localhost:3000\/s\/[A-Za-z0-9_-]+$/);
     expect((await shareUrl(owner)).json().url).toBe(first);

@@ -75,3 +75,23 @@ test('one item for two people is ticked off per person', async ({ page }, info) 
   await expect(dialog).toBeHidden();
   await expect(page.getByText(/Einkauf fertig/)).toBeVisible();
 });
+
+test('Berechtigungen: the invitation link is shown, created on demand, copied and renewed', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => undefined);
+  await login(page, 'Linkus');
+  await page.goto('/');
+  await newList(page, 'Mit Link');
+  await page.getByRole('button', { name: 'Listenmenü' }).click();
+  await page.getByRole('menuitem', { name: /Berechtigungen/ }).click();
+  const dialog = page.locator('dialog[open]');
+  await dialog.getByRole('button', { name: 'Link erstellen' }).click();
+  const field = dialog.getByRole('textbox', { name: 'Einladungslink' });
+  const first = await field.inputValue();
+  expect(first).toMatch(/^https?:\/\//);
+  await dialog.getByRole('button', { name: 'Kopieren' }).click();
+  await expect(dialog.getByRole('button', { name: 'Kopiert ✓' })).toBeVisible();
+  page.once('dialog', (d) => void d.accept());
+  await dialog.getByRole('button', { name: 'Erneuern' }).click();
+  await expect(field).not.toHaveValue(first);
+  await page.screenshot({ path: test.info().outputPath('link.png') });
+});

@@ -172,7 +172,7 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
   rückgängig machen. Der Status bleibt dabei in der alten Liste (in der neuen gilt deren Standard).
 - **⋮ → Bearbeiten …**: Name, Beschreibung, Kategorie, Status, Kanban-Einstellung, Icon.
 - **⋮ → Berechtigungen …**: für den Haushalt oder nur für dich, **mit anderen Haushalten oder Personen
-  teilen**, Link teilen und erneuern. In der Seitenleiste: 🔗 per Link, 👥 mit anderen geteilt (🔒 privat steht in der Liste selbst).
+  teilen**, Einladungslink sehen, kopieren, teilen, erneuern (oder erst erstellen). In der Seitenleiste: 🔗 per Link, 👥 mit anderen geteilt (🔒 privat steht in der Liste selbst).
 - **⋮ → Als Text teilen …**: die offenen Einträge als Text, auf dem Handy in den Teilen-Dialog, am Laptop in
   die Zwischenablage; geht auch offline.
 - **Reihenfolge der Listen und Abschnitte** in der Seitenleiste: *Einstellungen → Reihenfolge*, je Benutzer.

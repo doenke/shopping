@@ -43,7 +43,8 @@ geteilt ist. Ob eine Liste privat ist (🔒), steht in der Liste selbst.
 
 ## Teilen per Link
 
-*⋮ → Berechtigungen … → Link teilen* öffnet den Teilen-Dialog des Handys mit einem Link zur Liste. Wer den Link angemeldet öffnet,
+*⋮ → Berechtigungen …* zeigt unter *Einladungslink* den Link zur Liste mit *Kopieren*, *Teilen …* (Teilen-Dialog des
+Handys) und – für den Besitzer – *Erneuern*. Gibt es noch keinen, steht dort *Link erstellen*. Wer den Link angemeldet öffnet,
 ist dabei – auch aus einem anderen Haushalt. Der Besitzer kann den Link dort auch erneuern,
 Mitglieder können die Liste verlassen.
 

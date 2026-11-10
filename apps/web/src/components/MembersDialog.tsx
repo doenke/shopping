@@ -28,6 +28,9 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
   const [shared, setShared] = useState<{ id: string; name: string }[]>([]);
   const [households, reloadHouseholds] = useHouseholds();
   const [picking, setPicking] = useState(false);
+  /** The share link: undefined while loading, null if there is none yet, false offline. */
+  const [link, setLink] = useState<string | null | false | undefined>(undefined);
+  const [copied, setCopied] = useState(false);
 
   const load = () => {
     void fetch(`/api/v1/lists/${list.id}/households`)
@@ -55,6 +58,10 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
   useEffect(() => {
     ref.current?.showModal();
     void load();
+    void fetch(`/api/v1/lists/${list.id}/share-link?peek=1`)
+      .then((r) => (r.ok ? (r.json() as Promise<{ url: string | null }>) : Promise.reject(new Error())))
+      .then((r) => setLink(r.url))
+      .catch(() => setLink(false));
   }, []);
 
   const remove = async (m: Member) => {
@@ -195,31 +202,72 @@ export function MembersDialog({ list, me, onClose }: { list: ListRow; me: Me; on
             </li>
           ))}
         </ul>
-        <h3>Link</h3>
+        <h3>Einladungslink</h3>
         <p className="muted">
           {list.visibility === 'private' ? 'Diese Liste ist privat. ' : 'Der ganze Haushalt sieht diese Liste. '}
-          Andere kommen über den Link dazu, auch ohne Konto als Gast.
-          {isOwner && ' Ein neuer Link macht den alten ungültig: Gäste fliegen raus, wer ein Konto hat, bleibt.'}
+          Wer diesen Link öffnet, kommt dazu – auch ohne Konto als Gast.
         </p>
-        <footer className="sheet__actions">
-          {isOwner && (
+        {link === undefined ? (
+          <p className="muted">Link wird geladen …</p>
+        ) : link ? (
+          <>
+            <input className="input share-link" readOnly value={link} aria-label="Einladungslink" onFocus={(e) => e.currentTarget.select()} />
+            <footer className="sheet__actions">
+              {isOwner && (
+                <button
+                  type="button"
+                  className="link danger"
+                  title="Neuer Link; der alte funktioniert dann nicht mehr"
+                  onClick={async () => {
+                    if (!confirm('Neuen Link erzeugen? Der alte funktioniert dann nicht mehr. Gäste ohne Konto fliegen raus, wer ein Konto hat, bleibt.'))
+                      return;
+                    const res = await fetch(`/api/v1/lists/${list.id}/share-link/renew`, { method: 'POST' }).catch(() => null);
+                    if (!res?.ok) return setError('Dafür wird eine Verbindung zum Server gebraucht.');
+                    setLink(((await res.json()) as { url: string }).url);
+                    void load();
+                  }}
+                >
+                  Erneuern
+                </button>
+              )}
+              <span className="spacer" />
+              <button
+                type="button"
+                className="btn"
+                onClick={() =>
+                  void navigator.clipboard
+                    ?.writeText(link)
+                    .then(() => setCopied(true))
+                    .catch(() => prompt('Zum Kopieren:', link))
+                }
+              >
+                {copied ? 'Kopiert ✓' : 'Kopieren'}
+              </button>
+              {'share' in navigator && (
+                <button type="button" className="btn btn--primary" onClick={() => void shareList(list)}>
+                  Teilen …
+                </button>
+              )}
+            </footer>
+          </>
+        ) : link === null ? (
+          <footer className="sheet__actions">
+            <span className="spacer" />
             <button
               type="button"
-              className="link danger"
+              className="btn btn--primary"
               onClick={async () => {
-                if (!confirm('Neuen Link erzeugen? Der alte funktioniert dann nicht mehr. Gäste ohne Konto fliegen raus.')) return;
-                await shareList(list, true);
-                void load();
+                const res = await fetch(`/api/v1/lists/${list.id}/share-link`).catch(() => null);
+                if (!res?.ok) return setError('Dafür wird eine Verbindung zum Server gebraucht.');
+                setLink(((await res.json()) as { url: string }).url);
               }}
             >
-              Link erneuern
+              Link erstellen
             </button>
-          )}
-          <span className="spacer" />
-          <button type="button" className="btn btn--primary" onClick={() => void shareList(list)}>
-            Link teilen …
-          </button>
-        </footer>
+          </footer>
+        ) : (
+          <p className="muted">Der Link braucht eine Verbindung zum Server.</p>
+        )}
       </div>
     </dialog>
   );

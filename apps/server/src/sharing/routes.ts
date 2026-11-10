@@ -73,6 +73,8 @@ export async function sharingRoutes(app: FastifyInstance, opts: Options): Promis
     const { id } = listParams.parse(request.params);
     if (!(await sync.isMember(request.userId, id))) return reply.code(404).send({ error: 'not_found' });
     const [existing] = await db.select().from(shareLinks).where(eq(shareLinks.listId, id));
+    // ?peek=1: only look, do not create one (the Berechtigungen dialog offers "Link erstellen").
+    if (!existing && (request.query as { peek?: string }).peek === '1') return { url: null };
     const token = existing ? secrets.open(existing.tokenSealed) : await issue(id, request.userId);
     return { url: linkUrl(token) };
   });
