@@ -267,3 +267,26 @@ test('lists are sorted by dragging them in the sidebar', async ({ page }, info) 
   await page.reload();
   await expect(names).toHaveText([/Gamma/, /Alpha/, /Beta/]);
 });
+
+test('the task details get wider or narrower with the mouse', async ({ page }, info) => {
+  test.skip(phone(page), 'the details column is for the desktop');
+  await login(page, `Noah ${info.project.name}`);
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Projekt Z', type: 'todo' } })).json();
+  await page.request.post(`/api/v1/lists/${list.id}/items`, { data: { items: ['Konzept'] } });
+  await page.goto(`/#/list/${list.id}`);
+  await page.locator('.work-row', { hasText: 'Konzept' }).click();
+  const side = page.locator('.task-board__side');
+  const before = (await side.boundingBox())!.width;
+  const handle = (await page.getByRole('separator', { name: 'Breite der Details' }).boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(handle.x - 150, handle.y + 200, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(async () => (await side.boundingBox())!.width).toBeGreaterThan(before + 100);
+  // Kept after a reload; a double click goes back to the default.
+  await page.reload();
+  await page.locator('.work-row', { hasText: 'Konzept' }).click();
+  expect((await side.boundingBox())!.width).toBeGreaterThan(before + 100);
+  await page.getByRole('separator', { name: 'Breite der Details' }).dblclick();
+  await expect.poll(async () => Math.round((await side.boundingBox())!.width)).toBe(Math.round(before));
+});

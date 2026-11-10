@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TaskDetail } from './TaskDetail';
 import { TaskTable } from './TaskTable';
 import { KanbanBoard } from './KanbanBoard';
+import { useDetailWidth } from './DetailResizer';
 
 interface Props {
   list: ListRow;
@@ -56,6 +57,7 @@ export function TaskBoard({ list, items, index, users, compact = false }: Props)
   const item = items.find((i) => i.id === selected) ?? null;
   /** Kanban: a click only selects; the details open on double click / Enter and stay until closed. */
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const detailWidth = useDetailWidth();
   const showDetails = view === 'table' || (detailsOpen && !!item);
 
   useEffect(() => {
@@ -95,7 +97,7 @@ export function TaskBoard({ list, items, index, users, compact = false }: Props)
 
   return (
     // Kanban needs the width: the details only show once opened (double click / Enter).
-    <div className={`task-board${!showDetails ? ' task-board--full' : ''}`}>
+    <div className={`task-board${!showDetails ? ' task-board--full' : ''}`} style={detailWidth.style}>
       <div className="task-board__main">
         {view === 'kanban' ? (
           <KanbanBoard list={list} items={items} index={index} selected={selected} onSelect={select} onOpen={open} viewSwitch={viewSwitch} />
@@ -103,6 +105,7 @@ export function TaskBoard({ list, items, index, users, compact = false }: Props)
           <TaskTable list={list} items={items} index={index} selected={selected} onSelect={select} onOpen={open} viewSwitch={viewSwitch} />
         )}
       </div>
+      {showDetails && detailWidth.handle}
       {showDetails && (
         <div className="task-board__side">
           {item ? (
