@@ -107,10 +107,17 @@
 }
 .work-row__link,
 .work-table th.work-row__link {
-  width: 34px;
+  width: 56px;
   text-align: center;
 }
+/* 🔗 and 📍 side by side, never cut off with "…". */
+.work-row td.work-row__link {
+  padding-inline: 4px;
+  text-overflow: clip;
+}
 .work-row__link a {
+  display: inline-block;
+  margin: 0 2px;
   text-decoration: none;
 }
 .work-row__title {
@@ -483,6 +490,9 @@ kbd {
 .work-table--compact .work-row__area,
 .work-table--compact .work-row__link {
   font-size: 0.85em;
+}
+.work-table--compact .work-row__link {
+  width: auto;
 }
 .work-table--compact .work-table__group td {
   display: block;
