@@ -43,10 +43,12 @@ cd ha-tests && python -m pytest -q
 | --- | --- |
 | `packages/shared` | Datenmodell, Eingabe-Parser, Einheiten, Kategorien, Sync-Logik (HLC, Feld-LWW), Grundkatalog |
 | `apps/server` | Fastify: OIDC, Sync (WebSocket + HTTP), REST-API, MCP, Mealie, Icons, Postgres via Drizzle |
-| `apps/web` | React-PWA: Dexie (IndexedDB), Sync-Engine, Service Worker |
+| `apps/web` | React-PWA: Dexie (IndexedDB), Sync-Engine, Service Worker; Styles in `src/styles/` (Reihenfolge der Dateien zählt) |
+| `apps/e2e` | Browsertests (Playwright), nach Themen: `lists`, `links`, `input`, `tasks`; gemeinsame Helfer in `tests/helpers.ts` |
 | `custom_components/shopping` | Home-Assistant-Integration (HACS) |
 | `ha-tests` | Tests der Integration gegen einen echten Server |
 | `scripts/version.mjs` | berechnet die Versionen (siehe [betrieb.md](betrieb.md#versionen)) |
+| `apps/server/src/dav`, `src/jmap` | Listen für Aufgaben-Apps (CalDAV, JMAP), gemeinsam über `src/tasks` |
 | `.github/workflows/ci.yml` | Tests, Image, Releases der Integration |
 
 ## Veröffentlichen

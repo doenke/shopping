@@ -1,0 +1,137 @@
+/* Buttons, fields, chips. */
+
+/* ---- Buttons & fields ---- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn--primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+  font-weight: 600;
+}
+.btn--danger {
+  color: var(--danger);
+}
+.btn--ghost {
+  border-style: dashed;
+  background: transparent;
+}
+.btn--large {
+  min-height: 52px;
+  font-size: 1.05rem;
+  padding: 0 28px;
+}
+.link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.icon-btn:hover {
+  background: var(--surface-2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.field > span {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.field input,
+.field select,
+.field textarea,
+.catalog-panel select,
+.own-categories li input,
+.new-category input {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  width: 100%;
+}
+.field__row {
+  display: flex;
+  gap: 8px;
+}
+/* Only the amount next to its unit is narrow; fields side by side (Tipp von / Wo …) share the row. */
+.field__row > input {
+  width: 35%;
+}
+.field__row > input[type='date'] {
+  width: auto;
+  flex: 1;
+}
+.field__row > .field {
+  flex: 1;
+  min-width: 0;
+}
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+}
+.chip--on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+.field .chip--input,
+.chip--input {
+  width: 120px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 18px;
+  cursor: text;
+}

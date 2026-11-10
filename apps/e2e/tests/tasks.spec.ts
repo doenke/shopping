@@ -125,13 +125,17 @@ test('Kanban by keyboard: Alt + arrows move a card', async ({ page }, info) => {
   const col = (name: string) => page.locator('.kanban-col', { has: page.locator('.kanban-col__title', { hasText: name }) });
   await page.locator('.kanban-card', { hasText: 'Zwei' }).focus();
   // Up one place, then one column to the right – the card keeps the focus.
+  const focused = page.locator('.kanban-card:focus');
+  // Each move re-draws the card in its new place; it gets the focus back before the next key.
   await page.keyboard.press('Alt+ArrowUp');
   await expect(col('Neu').locator('.kanban-card__title')).toHaveText(['Zwei', 'Eins']);
+  await expect(focused).toContainText('Zwei');
   await page.keyboard.press('Alt+ArrowRight');
   await expect(col('In Arbeit')).toContainText('Zwei');
-  await expect(page.locator('.kanban-card:focus')).toContainText('Zwei');
+  await expect(focused).toContainText('Zwei');
   await page.keyboard.press('Alt+ArrowRight');
   await expect(col('Wartet')).toContainText('Zwei');
+  await expect(focused).toContainText('Zwei');
   await page.keyboard.press('Alt+ArrowLeft');
   await expect(col('In Arbeit')).toContainText('Zwei');
 });

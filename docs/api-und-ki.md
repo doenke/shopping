@@ -36,6 +36,11 @@ Thunderbird, DAVx⁵ mit Tasks.org oder jtx Board auf Android:
 - Jede Liste ist ein Aufgabenkalender (VTODO), jeder Eintrag eine Aufgabe. Titel: Name, dahinter Menge,
   Eigenschaften und Personen („Milch – 2 l · bio“). Dazu Notiz, Fälligkeit (ToDo-Listen), Link und
   Packstück/Bereich als Kategorie.
+- **Status** (ToDo-Listen mit eigenen Status): der Standard-Status ist „offen“ (NEEDS-ACTION), jeder andere
+  „in Bearbeitung“ (IN-PROCESS, der Name steht in `X-SHOPPING-STATUS`). Stellt eine App eine Aufgabe auf
+  „in Bearbeitung“, kommt sie in den ersten Status nach dem Standard; zurück auf „offen“ heißt Standard –
+  aber nur, wenn die App `X-SHOPPING-STATUS` mitgeschickt hat (Apps, die alles neu schreiben, setzen den
+  Status so nicht versehentlich zurück). JMAP: `progress` „in-process“ genauso, dazu `shopping:status`.
 - Zurück kommen: erledigt/offen, Titel (wie eingetippt gelesen – „2 l Hafermilch“ ändert auch die Menge),
   Notiz, Fälligkeit, Link; neue Aufgaben werden Einträge, gelöschte verschwinden. Was eine App ändert, ist
   in Shopping mit dem Namen des Tokens gekennzeichnet.

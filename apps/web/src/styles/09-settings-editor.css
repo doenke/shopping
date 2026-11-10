@@ -1,0 +1,459 @@
+/* Settings, item editor, help, households. */
+
+/* ---- Settings: overview with sections ---- */
+.settings {
+  max-width: 640px;
+}
+.settings .account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.settings-heading {
+  margin: 20px 4px 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.settings-group {
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.settings-group--flat {
+  border: none;
+  border-radius: 0;
+  margin: 0 -16px -16px;
+  border-top: 1px solid var(--border);
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+.settings-row + .settings-row {
+  border-top: 1px solid var(--border);
+}
+.settings-row:hover {
+  background: var(--surface-2);
+}
+.settings-row__icon {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 1.05rem;
+}
+.settings-row__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.settings-row__text small {
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.settings-row__chevron {
+  color: var(--muted);
+  font-size: 1.4rem;
+}
+.settings-back {
+  display: inline-block;
+  margin: 0 0 12px;
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+/* The page title already says what it is. */
+.settings--section .card > h2:first-child {
+  display: none;
+}
+
+/* Item editor: on phones the actions sit in a sticky bar on top (the bottom is under the keyboard). */
+.sheet__quick {
+  display: none;
+}
+@media (max-width: 599px) {
+  .sheet__header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: -18px -18px 0;
+    padding: 10px 18px 0;
+    background: var(--surface);
+  }
+  .sheet__quick {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .sheet__body--editor > .sheet__actions {
+    display: none;
+  }
+}
+
+/* "Angebot": a % badge instead of the word */
+.tile__offer {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #d2544b;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+}
+
+/* Item editor: "Auf Vorlage setzen" */
+.sheet__meta .row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.sheet__meta select {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.95rem;
+}
+
+/* Item editor: icon drafts waiting for review */
+.icon-check {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.icon-check p {
+  margin: 0 0 8px;
+}
+.icon-check__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.icon-check figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.icon-check img {
+  border-radius: 12px;
+  background: var(--surface);
+}
+.icon-check__current {
+  padding: 4px;
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+}
+.icon-check__current figcaption {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.icon-check__doubtful img {
+  opacity: 0.6;
+}
+
+/* Tile: new icon drafts wait for review */
+.tile__unreviewed {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 0 0 2px var(--warn, #e3b505);
+  font-size: 0.7rem;
+}
+
+/* Phones: smaller tiles, more on the screen (text stays the same size) */
+@media (max-width: 599px) {
+  .tiles {
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    gap: 6px;
+  }
+  .tile {
+    min-height: 84px;
+    padding: 8px 4px 6px;
+    gap: 3px;
+  }
+  .tile .item-icon--md {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+  }
+  .tile .item-icon--img.item-icon--md {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* List view (toggle next to the input): picture left, text next to it */
+.listview--rows .group .tiles {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 4px;
+}
+.listview--rows .group .tile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 1px;
+  align-items: center;
+  align-content: center;
+  justify-items: start;
+  min-height: 52px;
+  padding: 6px 12px;
+}
+.listview--rows .group .tile > .item-icon {
+  grid-row: 1 / span 2;
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+}
+.listview--rows .group .tile__name,
+.listview--rows .group .tile__spec {
+  grid-column: 2;
+  text-align: left;
+}
+.listview--rows .group .tile__spec + .tile__spec {
+  grid-row: auto;
+}
+.listview--rows .group .tile__offer {
+  top: 50%;
+  left: auto;
+  right: 10px;
+  transform: translateY(-50%);
+}
+.listview--rows .group .tile__unreviewed {
+  bottom: auto;
+  top: 50%;
+  right: 42px;
+  transform: translateY(-50%);
+}
+/* Only a name: one line next to the picture. */
+.listview--rows .group .tile:not(:has(.tile__spec)) > .item-icon {
+  grid-row: 1;
+}
+
+/* Item editor: the templates this thing is on */
+.on-templates {
+  margin: 6px 0 0;
+}
+.on-templates a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+/* "Rezept übernehmen" */
+.recipe-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.recipe-head img {
+  border-radius: 10px;
+  object-fit: cover;
+}
+.recipe-head a {
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.sheet__actions select {
+  min-height: 44px;
+  max-width: 50%;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* A pasted list in the add bar */
+.addbar__block textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+.addbar__block .row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+/* "auch in die Vorlage?" after adding to a list made from templates */
+.template-offer p {
+  margin: 0 0 8px;
+}
+.template-offer .row {
+  margin-top: 8px;
+}
+
+/* Settings: rename the household */
+.household-rename {
+  flex-wrap: wrap;
+  cursor: default;
+}
+.household-rename:hover {
+  background: none;
+}
+.household-rename input {
+  flex: 1;
+  min-width: 0;
+}
+.household-rename__error {
+  flex-basis: 100%;
+}
+.household-members {
+  cursor: default;
+  align-items: flex-start;
+}
+.household-members:hover {
+  background: none;
+}
+.household-members ul {
+  flex: 1;
+  margin: 0;
+  padding: 4px 0 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.household-members li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Berechtigungen: share with other households and people */
+.chip__remove {
+  margin-left: 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.share-picker {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.share-picker__household ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0 0 0 4px;
+  display: grid;
+  gap: 6px;
+}
+.share-picker__household li {
+  gap: 8px;
+}
+
+/* Marks the owner household */
+.owner-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+
+/* Help page */
+.help {
+  max-width: 680px;
+  line-height: 1.5;
+}
+.help h2 {
+  margin: 20px 0 6px;
+}
+.help h3 {
+  margin: 18px 0 4px;
+}
+.help ul,
+.help ol {
+  padding-left: 20px;
+}
+.help li {
+  margin: 4px 0;
+}
+.help code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-size: 0.9em;
+}
+.help__examples {
+  list-style: none;
+  padding-left: 0 !important;
+}
+.help__rules li {
+  margin-bottom: 10px;
+}
+.help__callout {
+  margin-top: 20px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+}
+.help__callout p {
+  margin: 4px 0 0;
+}
+
+.admin-badge {
+  background: color-mix(in srgb, var(--muted, #69716c) 16%, transparent);
+  color: var(--text);
+}
+.household-members .settings-row__icon {
+  background: none;
+}
