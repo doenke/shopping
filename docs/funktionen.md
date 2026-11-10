@@ -138,7 +138,8 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
   Eintrag mit den Initialen beider; ein Tipp fragt „Für wen?“, „Alle“ hakt alle ab. Gruppiert nach Person
   steht er bei jeder Person einzeln. Kommt jemand dazu, wird der Eintrag erweitert. In Vorlagen heißt es
   „für jeden“ („@alle“): Beim Anlegen aus der Vorlage fragt „+ Neu“, für wen die Liste ist (vorausgewählt:
-  der eigene Haushalt). Gleichzeitiges Abhaken von zwei Handys überschreibt sich nicht.
+  der eigene Haushalt). Gleichzeitiges Abhaken von zwei Handys überschreibt sich nicht. Zur Auswahl stehen
+  in den Details nur die Personen mit Zugriff auf die Liste und die Namen, die schon eingegeben wurden.
 - **Anhänge** 📎: In den Details steht ohne Anhang nur der Knopf *📎 Anhang*, sonst genau die Anhänge, die
   es gibt, und ein dezentes *+ Anhang*. Ein Tipp öffnet sie, × entfernt sie. Gleichzeitiges Anhängen auf
   zwei Geräten überschreibt sich nicht.

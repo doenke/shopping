@@ -18,13 +18,15 @@ export interface Household {
 }
 
 /** All households with their people (needs a connection; null while loading or offline). */
-export function useHouseholds(deps: unknown[] = []): [Household[] | null, () => void] {
+export function useHouseholds(deps: unknown[] = [], enabled = true): [Household[] | null, () => void] {
   const [data, setData] = useState<Household[] | null>(null);
-  const load = () =>
+  const load = () => {
+    if (!enabled) return;
     void fetch('/api/v1/households')
       .then((r) => (r.ok ? (r.json() as Promise<Household[]>) : null))
       .then(setData)
       .catch(() => setData(null));
-  useEffect(load, deps);
+  };
+  useEffect(load, [...deps, enabled]);
   return [data, load];
 }

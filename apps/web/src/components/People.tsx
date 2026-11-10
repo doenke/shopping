@@ -7,29 +7,61 @@ import { useMe } from '../hooks';
 const firstName = (displayName: string) => displayName.trim().split(/\s+/)[0] ?? displayName;
 
 /**
- * People to pick from: my household (first names), then who the list is for and who is on its items.
- * Others can be typed in. Without a connection only the names from the lists remain.
+ * People to pick from: who has access to the list (first names), then who the list is for and who is on
+ * its items. Without a list (new list) my household. Others can be typed in. Without a connection only the
+ * names from the list remain.
  */
-export function usePeopleSuggestions(list?: Pick<ListRow, 'settings'>, items: Pick<ItemRow, 'attributes' | 'deleted'>[] = []): string[] {
-  const own = useHouseholdNames();
+export function usePeopleSuggestions(
+  list?: Pick<ListRow, 'id' | 'settings'> | Pick<ListRow, 'settings'>,
+  items: Pick<ItemRow, 'attributes' | 'deleted'>[] = [],
+): string[] {
+  const listId = list && 'id' in list ? list.id : undefined;
+  const household = useHouseholdNames(!listId);
+  const members = useListMemberNames(listId);
   return useMemo(() => {
     const out: string[] = [];
-    for (const n of [...(own ?? []), ...(list ? listPersons(list) : []), ...peopleOnItems(items)]) {
+    for (const n of [...((listId ? members : household) ?? []), ...(list ? listPersons(list) : []), ...peopleOnItems(items)]) {
       if (n && !out.some((o) => o.toLowerCase() === n.toLowerCase())) out.push(n);
     }
     return out;
-  }, [own, list, items]);
+  }, [household, members, listId, list, items]);
+}
+
+/** Last known members per list, so the suggestions stay while offline. */
+const memberCache = new Map<string, string[]>();
+
+/** First names of the people who have access to a list (null while loading or offline). */
+export function useListMemberNames(listId: string | undefined): string[] | null {
+  const [names, setNames] = useState<string[] | null>(listId ? (memberCache.get(listId) ?? null) : null);
+  useEffect(() => {
+    if (!listId) return setNames(null);
+    setNames(memberCache.get(listId) ?? null);
+    let live = true;
+    void fetch(`/api/v1/lists/${listId}/members`)
+      .then((r) => (r.ok ? (r.json() as Promise<{ displayName: string }[]>) : null))
+      .then((rows) => {
+        if (!rows) return;
+        const n = rows.map((m) => firstName(m.displayName)).filter(Boolean);
+        memberCache.set(listId, n);
+        if (live) setNames(n);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [listId]);
+  return names;
 }
 
 /** First names of my household's members (null while loading or offline). */
-export function useHouseholdNames(): string[] | null {
+export function useHouseholdNames(enabled = true): string[] | null {
   const me = useMe();
-  const [households] = useHouseholds([me?.isGuest]);
+  const [households] = useHouseholds([me?.isGuest], enabled);
   return useMemo(() => {
-    if (me?.isGuest) return [];
+    if (me?.isGuest || !enabled) return [];
     const own = households?.find((h) => h.own);
     return own ? own.members.map((m) => firstName(m.displayName)) : null;
-  }, [households, me?.isGuest]);
+  }, [households, me?.isGuest, enabled]);
 }
 
 interface PickerProps {
