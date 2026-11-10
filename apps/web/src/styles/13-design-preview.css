@@ -14,7 +14,7 @@ html.design-preview {
   --primary-text: #ffffff;
   --danger: #b4372f;
   --radius: 10px;
-  --tile-alpha: 9%;
+  --tile-alpha: 15%;
   --shadow: 0 1px 2px rgb(16 24 40 / 0.06);
   --work-hover: #f3f5f8;
   --work-selected: color-mix(in srgb, var(--primary) 12%, var(--surface));
@@ -49,7 +49,7 @@ html.design-preview[data-accent='todo'] {
     --text: #e5e7eb;
     --muted: #9aa1ac;
     --border: #31363e;
-    --tile-alpha: 14%;
+    --tile-alpha: 24%;
     --work-hover: #23272d;
   }
   html.design-preview,
@@ -122,12 +122,12 @@ html.design-preview .work-add {
   border: 1px solid var(--border);
 }
 
-/* Tiles: flatter, a thin category line instead of a coloured block. */
+/* Tiles: flatter, fully tinted in the category colour with a matching thin edge. */
 html.design-preview .tile {
   min-height: 92px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--cat) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cat) 28%, var(--border));
+  background: color-mix(in srgb, var(--cat) var(--tile-alpha), var(--surface));
+  box-shadow: none;
 }
 html.design-preview .tile .item-icon {
   width: 40px;
@@ -140,7 +140,4 @@ html.design-preview .group__title {
   font-size: 0.75rem;
   letter-spacing: 0.06em;
   color: var(--muted);
-}
-html.design-preview .listview--rows .group .tile {
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--cat) 70%, transparent);
 }
