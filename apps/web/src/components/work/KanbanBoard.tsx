@@ -8,6 +8,7 @@ import {
   itemStatus,
   itemUrl,
   itemPlaces,
+  itemFiles,
   placeLabel,
   placeUrl,
   listDefaultStatus,
@@ -23,6 +24,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { setChecked, updateItem } from '../../actions';
 import { entryKeys, focusItem } from '../../keyboard';
+import { useLinkDrop } from '../../linkDrop';
 import { selectedOr, useSelection } from '../../selection';
 import { listAt, markList } from '../../listDrop';
 import { moveAndTell } from '../MoveDialog';
@@ -55,6 +57,7 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
   const defaultStatus = listDefaultStatus(list, statuses);
   /** Where a dragged card would land: the column and the place in it. */
   const [over, setOver] = useState<{ column: string; index: number } | null>(null);
+  const linkDrop = useLinkDrop(list.id, items);
   /**
    * Dragging with the mouse (or a pen): own pointer handling instead of the browser's drag and drop,
    * which in Chrome can report the previously dragged card after cards moved columns.
@@ -205,6 +208,7 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
     const area = packingInfo(item).container;
     const url = itemUrl(item);
     const place = itemPlaces(item)[0];
+    const files = itemFiles(item);
     const keys = entryKeys(
       () => toggle(item),
       () => onOpen(item.id),
@@ -236,7 +240,7 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
       >
         <div className="kanban-card__title">{item.name}</div>
         {item.note && <div className="kanban-card__note">{item.note}</div>}
-        {(fmt || area || url || place || itemPersons(item).length || peopleLabel(item)) && (
+        {(fmt || area || url || place || files.length || itemPersons(item).length || peopleLabel(item)) && (
           <div className="kanban-card__meta">
             {fmt && (
               <span className={`kanban-card__due${fmt.overdue && !item.checked ? ' work-row__due--overdue' : fmt.today ? ' work-row__due--today' : ''}`}>
@@ -262,6 +266,11 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
               >
                 📍
               </a>
+            )}
+            {files.length > 0 && (
+              <span className="work-files" title={files.map((f) => f.name).join(', ')} aria-label={`${files.length} Datei${files.length > 1 ? 'en' : ''}`}>
+                📎
+              </span>
             )}
           </div>
         )}
@@ -304,7 +313,7 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
   const doneShown = columns.done.slice(0, DONE_SHOWN);
 
   return (
-    <section className="work-tasks work-tasks--kanban" aria-label={list.name}>
+    <section className="work-tasks work-tasks--kanban" aria-label={list.name} {...linkDrop}>
       <TaskHeader list={list} open={items.length - columns.done.length} done={columns.done.length} viewSwitch={viewSwitch} />
       <TaskAdd list={list} index={index} />
       <div className="kanban">

@@ -412,3 +412,24 @@ export const idempotencyKeys = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.key] })],
 );
+
+/**
+ * Files attached to entries (pictures, PDFs, …). Who may read one follows from the entries that point to it
+ * (`attributes.attachments[].fileId`); files no entry points to any more are removed after a while.
+ */
+export const files = pgTable(
+  'files',
+  {
+    /** Chosen by the device that attaches it, so the entry can point to it before it is uploaded. */
+    id: uuid('id').primaryKey(),
+    name: text('name').notNull(),
+    mime: text('mime').notNull(),
+    size: integer('size').notNull(),
+    data: bytea('data').notNull(),
+    /** Small WebP preview of a picture. */
+    thumb: bytea('thumb'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('files_created_idx').on(t.createdAt)],
+);

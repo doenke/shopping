@@ -15,6 +15,7 @@ import {
   type UserInfo,
 } from '@shopping/shared';
 import { Attachments } from '../Attachments';
+import { useFileDropOn } from '../../files';
 import { useEffect, useRef, useState } from 'react';
 import { deleteItem, restoreItem, setChecked, updateItem } from '../../actions';
 import { showToast } from '../../toast';
@@ -40,6 +41,7 @@ export function TaskDetail({ item, list, items, users, focusTitle, onClose }: Pr
   const [note, setNote] = useState(item.note ?? '');
   const [area, setArea] = useState(packingInfo(item).container ?? '');
   const [checking, setChecking] = useState(false);
+  const fileDrop = useFileDropOn(item.id);
   const titleRef = useRef<HTMLInputElement>(null);
   const suggestions = usePeopleSuggestions(list, items);
   const people = peopleOf(item);
@@ -88,7 +90,7 @@ export function TaskDetail({ item, list, items, users, focusTitle, onClose }: Pr
   const due = dueOf(item);
 
   return (
-    <aside className="work-detail" aria-label="Details">
+    <aside className="work-detail" aria-label="Details" {...fileDrop}>
       <div className="work-detail__head">
         <button
           type="button"

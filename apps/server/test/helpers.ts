@@ -27,7 +27,7 @@ export async function createTestApp({ env = {}, ...extra }: { fetchImpl?: typeof
     WEB_DIST: '/nonexistent',
     ...env,
   });
-  const { app, sync, icons, avatars, webhooks } = await buildApp({ config, db, ...extra });
+  const { app, sync, icons, avatars, webhooks, files } = await buildApp({ config, db, ...extra });
   await app.ready();
 
   return {
@@ -37,6 +37,7 @@ export async function createTestApp({ env = {}, ...extra }: { fetchImpl?: typeof
     icons,
     avatars,
     webhooks,
+    files,
     /** Dev login; `household` is the household claim (default: none), `groups` the OIDC groups. */
     async login(userName: string, household = '', groups: string[] = []) {
       const res = await app.inject({ method: 'POST', url: '/auth/dev', payload: { name: userName, household, groups } });

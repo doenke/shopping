@@ -37,10 +37,17 @@ export default defineConfig({
           { name: 'Arbeitsmodus', short_name: 'Arbeit', url: '/?mode=work', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
           { name: 'Einkaufslisten', short_name: 'Einkauf', url: '/?mode=home', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
         ],
+        // Links, text and files (photos, PDFs, …); the service worker takes the POST (see sw.ts).
         share_target: {
-          action: '/',
-          method: 'GET',
-          params: { text: 'share_text', title: 'share_title', url: 'share_url' },
+          action: '/share',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            text: 'share_text',
+            title: 'share_title',
+            url: 'share_url',
+            files: [{ name: 'share_files', accept: ['image/*', 'video/*', 'audio/*', 'text/*', 'application/*', '*/*'] }],
+          },
         },
       },
       devOptions: { enabled: false },

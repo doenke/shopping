@@ -173,7 +173,7 @@ export async function davRoutes(app: FastifyInstance, opts: { config: Config; db
           .type('text/calendar; charset=utf-8')
           .header('ETag', current)
           .header('Last-Modified', lastModified(item).toUTCString())
-          .send(itemToIcal(item, list, new Date(), TaskService.statusesOf(list)));
+          .send(itemToIcal(item, list, new Date(), TaskService.statusesOf(list), config.PUBLIC_URL));
       }
       case 'PROPFIND':
         if (!item) return notFound();
@@ -281,7 +281,7 @@ export async function davRoutes(app: FastifyInstance, opts: { config: Config; db
         case key(P.getlastmodified):
           return lastModified(r.item).toUTCString();
         case key(P.calendarData):
-          return withData ? escapeXml(itemToIcal(r.item, r.list, new Date(), TaskService.statusesOf(r.list))) : undefined;
+          return withData ? escapeXml(itemToIcal(r.item, r.list, new Date(), TaskService.statusesOf(r.list), config.PUBLIC_URL)) : undefined;
       }
     }
     return undefined;

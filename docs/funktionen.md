@@ -146,6 +146,18 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
     öffnet ein Tipp die Karten-App, am Rechner OpenStreetMap. Ohne `*` wird der Standort nie abgefragt.
     Die Ortssuche läuft über den eigenen Photon-Server (`PHOTON_URL`); ohne ihn gibt es nur „hier“, ohne
     Adresse. In CalDAV-Apps erscheint der erste Ort als Ort der Aufgabe.
+  - **Foto** 📷 und **Datei** 📄 (bis 25 MB): *📷 Foto* öffnet auf dem Handy die Kamera, *📄 Datei* nimmt
+    beliebige Dateien. Bilder erscheinen als Vorschaubilder, ein Tipp zeigt sie groß (mit *Herunterladen*);
+    andere Dateien stehen mit Name und Größe da und öffnen bzw. laden herunter. Offline angehängt ist die
+    Datei sofort sichtbar (⏳) und wird hochgeladen, sobald wieder Verbindung da ist.
+  - **Ziehen und Einfügen** (Rechner): Dateien auf einen Eintrag ziehen hängt sie an, auf freie Fläche legt
+    je Datei einen neuen Eintrag mit ihrem Namen an (auch im Arbeitsmodus, auch auf die offenen Details).
+    `Strg+V` mit einem Bild oder kopierten Dateien hängt sie an die offenen Details bzw. den markierten
+    Eintrag, sonst entstehen neue Einträge.
+  - **Teilen → Shopping** auf dem Handy nimmt auch Fotos und Dateien: Name und Liste wählen, alle geteilten
+    Dateien hängen an dem einen Eintrag.
+  - In CalDAV-Apps kommen Dateien als Anhang (`ATTACH`) mit, abgerufen mit demselben API-Token. Dateien, an
+    denen kein Eintrag mehr hängt, löscht der Server nach einer Woche.
 - **Links** 🔗: im Text („Dune https://…“) oder in den Details als Anhang. Die Kachel zeigt ein 🔗 (und 📍
   bei einem Ort), ein Tipp darauf öffnet die Seite bzw. die Karte, ohne abzuhaken. Nur ein Link eingetippt: Der Eintrag heißt wie die Seite.
   Am Laptop lassen sich Links und Browser-Tabs **auf die Liste ziehen** – auf einen Eintrag (bekommt den Link)

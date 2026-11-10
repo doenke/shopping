@@ -267,3 +267,97 @@ section.listview {
   margin: 0;
   font-size: 0.85em;
 }
+
+/* ---- Pictures and files on an entry ---- */
+
+.attachments__pictures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.attachment-picture {
+  position: relative;
+  width: 88px;
+  height: 88px;
+}
+.attachment-picture__open {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  cursor: zoom-in;
+}
+.attachment-picture__open img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.attachment-picture.is-pending img {
+  opacity: 0.6;
+}
+.attachment-picture__pending {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  font-size: 0.8rem;
+}
+.attachment-picture__remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  line-height: 1;
+  cursor: pointer;
+}
+.attachment-picture__remove:hover {
+  color: var(--text);
+}
+.picture-view {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  background: rgb(0 0 0 / 0.92);
+  cursor: zoom-out;
+}
+.picture-view img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+}
+.picture-view__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  color: #fff;
+}
+.picture-view__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Files dropped onto an entry or the details. */
+.sheet.drop-files,
+.work-detail.drop-files {
+  outline: 3px dashed var(--primary);
+  outline-offset: -6px;
+}

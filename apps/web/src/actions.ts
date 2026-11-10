@@ -24,6 +24,7 @@ import {
   type ListRow,
   type ListType,
   type NewItem,
+  type PlannedChange,
   type ParsedItem,
   type ResetEvery,
   type ListStatus,
@@ -40,7 +41,7 @@ export type { NewItem };
  * Adds parsed items to a list (see planAdd): open items get
  * the amount added, recently bought ones come back, the rest is new.
  */
-export async function addItems(listId: string, parsed: NewItem[]): Promise<void> {
+export async function addItems(listId: string, parsed: NewItem[]): Promise<PlannedChange[]> {
   const existing = await db.items.where('listId').equals(listId).toArray();
   // "@alle" / "für jeden": everyone the list is made for (or who is on it already); templates keep "für jeden".
   const list = await db.lists.get(listId);
@@ -61,6 +62,17 @@ export async function addItems(listId: string, parsed: NewItem[]): Promise<void>
         // Just "*": the entry is called after the place ("Bahnhofstraße 3") once that is known.
         if (p.nameFromPlace && place && place.name !== 'Standort') void updateItem(id, { name: place.name });
       });
+  }
+  return changes;
+}
+
+/** Files dropped onto a list (or shared to the app): one entry each, named after the file, with the file attached. */
+export async function addFileEntries(listId: string, files: File[]): Promise<void> {
+  const { attachFiles } = await import('./files');
+  for (const file of files) {
+    const name = file.name.replace(/\.[a-z0-9]{1,5}$/i, '').trim() || 'Datei';
+    const [change] = await addItems(listId, [{ name, catalogItemId: null, categoryId: null, amounts: [], properties: [], note: null }]);
+    if (change) await attachFiles(change.id, [file]);
   }
 }
 

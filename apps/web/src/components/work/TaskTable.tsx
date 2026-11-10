@@ -7,6 +7,7 @@ import {
   itemPersons,
   itemUrl,
   itemPlaces,
+  itemFiles,
   placeLabel,
   placeUrl,
   listDescription,
@@ -23,6 +24,7 @@ import {
 import { useMemo, useState } from 'react';
 import { addItems, setChecked, setPersonChecked } from '../../actions';
 import { entryKeys } from '../../keyboard';
+import { useLinkDrop } from '../../linkDrop';
 import { PeopleDots, PersonCheckDialog } from '../People';
 import { StatusPicker } from './StatusPicker';
 import { useSelection } from '../../selection';
@@ -47,6 +49,7 @@ const byDue = (a: ItemRow, b: ItemRow) => (dueOf(a) ?? '9999').localeCompare(due
 /** The middle column: a field for new tasks and the tasks as a table (open ones, then "Erledigt"). */
 export function TaskTable({ list, items, index, selected, onSelect, onOpen, viewSwitch, compact = false }: Props) {
   const [showDone, setShowDone] = useState(false);
+  const linkDrop = useLinkDrop(list.id, items);
   const [checking, setChecking] = useState<string | null>(null);
   const open = useMemo(() => items.filter((i) => !i.checked).sort(byDue), [items]);
   const done = useMemo(() => items.filter((i) => i.checked).sort((a, b) => (b.checkedAt ?? '').localeCompare(a.checkedAt ?? '')), [items]);
@@ -58,7 +61,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
     due: items.some((i) => dueOf(i)),
     who: items.some((i) => peopleLabel(i)),
     area: items.some((i) => packingInfo(i).container),
-    link: items.some((i) => itemUrl(i) || itemPlaces(i).length),
+    link: items.some((i) => itemUrl(i) || itemPlaces(i).length || itemFiles(i).length),
   };
   const defaultStatus = listDefaultStatus(list, statuses);
   // Groups like the phone list used to have: Fällig, Status, Bereich, Wer – or all in one.
@@ -90,6 +93,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
     const area = packingInfo(item).container;
     const url = itemUrl(item);
     const place = itemPlaces(item)[0];
+    const files = itemFiles(item);
     return (
       <tr
         key={`${item.id}:${person ?? ''}`}
@@ -153,6 +157,11 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
                 📍
               </a>
             )}
+            {files.length > 0 && (
+              <span className="work-files" title={files.map((f) => f.name).join(', ')} aria-label={`${files.length} Datei${files.length > 1 ? 'en' : ''}`}>
+                📎
+              </span>
+            )}
           </td>
         )}
       </tr>
@@ -162,7 +171,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
   const checkItem = items.find((i) => i.id === checking);
 
   return (
-    <section className="work-tasks" aria-label={list.name}>
+    <section className="work-tasks" aria-label={list.name} {...linkDrop}>
       <TaskHeader
         list={list}
         open={open.length}

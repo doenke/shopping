@@ -6,31 +6,67 @@ import {
   removeAttachmentPatch,
   withUrl,
   itemUrl,
+  isImage,
+  formatSize,
   type Attachment,
+  type FileAttachment,
   type ItemRow,
   type PlaceData,
 } from '@shopping/shared';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { updateItem } from '../actions';
+import { attachFiles, useFileSrc, usePendingUpload } from '../files';
 import { attachHere, attachPlace, mobile, searchPlaces } from '../places';
 
 type Adding = null | 'menu' | 'link' | 'place';
 
+const attachmentLabel = (a: Attachment) => (a.type === 'link' ? (a.title ?? a.url) : a.type === 'place' ? placeLabel(a) : a.name);
+
 /**
  * The attachments of an entry in its details: without any just a button, otherwise exactly the ones there
- * are (links, places) and a small "+ Anhang". Changes save right away.
+ * are (pictures as previews, links, places, files) and a small "+ Anhang". Changes save right away.
+ * Files can also be dropped onto the details or pasted (Strg+V).
  */
 export function Attachments({ item }: { item: ItemRow }) {
   const all = itemAttachments(item);
+  const pictures = all.filter((a): a is FileAttachment => a.type === 'file' && isImage(a));
+  const rest = all.filter((a) => !(a.type === 'file' && isImage(a)));
   const [adding, setAdding] = useState<Adding>(null);
+  const [viewing, setViewing] = useState<FileAttachment | null>(null);
+  const closeView = useCallback(() => setViewing(null), []);
+  const photo = useRef<HTMLInputElement>(null);
+  const file = useRef<HTMLInputElement>(null);
 
   const remove = (a: Attachment) => void updateItem(item.id, removeAttachmentPatch(item, a.id));
+  const take = (files: FileList | null) => {
+    if (files?.length) void attachFiles(item.id, Array.from(files));
+    setAdding(null);
+  };
+
+  // Strg+V with a picture or file while the details are open.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const files = Array.from(e.clipboardData?.files ?? []);
+      if (!files.length) return;
+      e.preventDefault();
+      void attachFiles(item.id, files);
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [item.id]);
 
   return (
     <div className="attachments" aria-label="Anhänge">
-      {all.length > 0 && (
+      {pictures.length > 0 && (
+        <ul className="attachments__pictures" aria-label="Bilder">
+          {pictures.map((a) => (
+            <Picture key={a.id} file={a} onOpen={() => setViewing(a)} onRemove={() => remove(a)} />
+          ))}
+        </ul>
+      )}
+      {rest.length > 0 && (
         <ul className="attachments__list">
-          {all.map((a) => (
+          {rest.map((a) => (
             <li key={a.id} className={`attachment attachment--${a.type}`}>
               {a.type === 'link' ? (
                 <a href={a.url} target="_blank" rel="noopener noreferrer" className="attachment__main" title={a.url}>
@@ -40,6 +76,8 @@ export function Attachments({ item }: { item: ItemRow }) {
                     <span className="attachment__sub">{a.url.replace(/^https?:\/\/(www\.)?/, '')}</span>
                   </span>
                 </a>
+              ) : a.type === 'file' ? (
+                <FileLink file={a} />
               ) : (
                 <a href={placeUrl(a, mobile)} target="_blank" rel="noopener noreferrer" className="attachment__main">
                   <span aria-hidden>📍</span>
@@ -49,12 +87,7 @@ export function Attachments({ item }: { item: ItemRow }) {
                   </span>
                 </a>
               )}
-              <button
-                type="button"
-                className="attachment__remove"
-                aria-label={`Anhang entfernen: ${a.type === 'link' ? (a.title ?? a.url) : placeLabel(a)}`}
-                onClick={() => remove(a)}
-              >
+              <button type="button" className="attachment__remove" aria-label={`Anhang entfernen: ${attachmentLabel(a)}`} onClick={() => remove(a)}>
                 ×
               </button>
             </li>
@@ -75,6 +108,12 @@ export function Attachments({ item }: { item: ItemRow }) {
           <button type="button" className="chip" onClick={() => setAdding('place')}>
             📍 Ort
           </button>
+          <button type="button" className="chip" onClick={() => photo.current?.click()}>
+            📷 Foto
+          </button>
+          <button type="button" className="chip" onClick={() => file.current?.click()}>
+            📄 Datei
+          </button>
           <button type="button" className="link" onClick={() => setAdding(null)}>
             Abbrechen
           </button>
@@ -82,6 +121,95 @@ export function Attachments({ item }: { item: ItemRow }) {
       )}
       {adding === 'link' && <LinkForm item={item} onDone={() => setAdding(null)} />}
       {adding === 'place' && <PlaceForm item={item} onDone={() => setAdding(null)} />}
+      {/* On phones "Foto" offers the camera; both pick several at once. */}
+      <input
+        ref={photo}
+        type="file"
+        accept="image/*"
+        capture={mobile ? 'environment' : undefined}
+        multiple
+        hidden
+        aria-label="Foto"
+        onChange={(e) => take(e.target.files)}
+      />
+      <input ref={file} type="file" multiple hidden aria-label="Datei" onChange={(e) => take(e.target.files)} />
+      {viewing && <PictureView file={viewing} onClose={closeView} />}
+    </div>
+  );
+}
+
+function Picture({ file, onOpen, onRemove }: { file: FileAttachment; onOpen: () => void; onRemove: () => void }) {
+  const src = useFileSrc(file.fileId, true);
+  const pending = usePendingUpload(file.fileId);
+  return (
+    <li className={`attachment-picture${pending ? ' is-pending' : ''}`}>
+      <button type="button" className="attachment-picture__open" onClick={onOpen} aria-label={`Bild ansehen: ${file.name}`} title={file.name}>
+        <img src={src} alt="" loading="lazy" />
+      </button>
+      {pending && (
+        <span className="attachment-picture__pending" title="Wird hochgeladen, sobald eine Verbindung da ist">
+          ⏳
+        </span>
+      )}
+      <button type="button" className="attachment-picture__remove" aria-label={`Anhang entfernen: ${file.name}`} onClick={onRemove}>
+        ×
+      </button>
+    </li>
+  );
+}
+
+function FileLink({ file }: { file: FileAttachment }) {
+  const src = useFileSrc(file.fileId);
+  const pending = usePendingUpload(file.fileId);
+  return (
+    <a href={src} target="_blank" rel="noopener noreferrer" download={pending ? file.name : undefined} className="attachment__main" title={file.name}>
+      <span aria-hidden>📄</span>
+      <span className="attachment__text">
+        <span className="attachment__title">{file.name}</span>
+        <span className="attachment__sub">
+          {formatSize(file.size)}
+          {pending ? ' · wird hochgeladen, sobald eine Verbindung da ist' : ''}
+        </span>
+      </span>
+    </a>
+  );
+}
+
+/**
+ * A picture large, over everything; a tap or Esc closes it. Not a dialog of its own: inside the details (a
+ * modal dialog) a second one would be closed together with them by the same Esc.
+ */
+function PictureView({ file, onClose }: { file: FileAttachment; onClose: () => void }) {
+  const src = useFileSrc(file.fileId);
+  const close = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const before = document.activeElement as HTMLElement | null;
+    close.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      // Keeps the details open (their Esc is the default action of this key).
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      before?.focus();
+    };
+  }, [onClose]);
+  return (
+    <div className="picture-view" role="dialog" aria-modal="true" aria-label={file.name} onClick={onClose}>
+      <img src={src} alt={file.name} />
+      <div className="picture-view__bar" onClick={(e) => e.stopPropagation()}>
+        <span className="picture-view__name">{file.name}</span>
+        <a className="btn" href={`${src}${src.startsWith('blob:') ? '' : '?download=1'}`} download={file.name}>
+          Herunterladen
+        </a>
+        <button ref={close} type="button" className="btn" onClick={onClose}>
+          Schließen
+        </button>
+      </div>
     </div>
   );
 }

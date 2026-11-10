@@ -8,6 +8,23 @@ export interface OutboxEntry {
   mutation: Mutation;
 }
 
+/** A file attached on this device that is not on the server yet (offline queue). */
+export interface UploadEntry {
+  fileId: string;
+  name: string;
+  mime: string;
+  blob: Blob;
+  /** When it was queued (ms). */
+  at: number;
+}
+
+/** Files shared to the app ("Teilen → Shopping"), held by the service worker until the app picks a list. */
+export interface SharedFilesEntry {
+  id: string;
+  files: { name: string; type: string; blob: Blob }[];
+  at: number;
+}
+
 export interface MetaEntry {
   key: string;
   value: unknown;
@@ -23,6 +40,8 @@ export class ShoppingDb extends Dexie {
   categories!: EntityTable<CategoryRow, 'id'>;
   outbox!: EntityTable<OutboxEntry, 'n'>;
   meta!: EntityTable<MetaEntry, 'key'>;
+  uploads!: EntityTable<UploadEntry, 'fileId'>;
+  shared!: EntityTable<SharedFilesEntry, 'id'>;
 
   constructor(name = 'shopping') {
     super(name);
@@ -35,6 +54,7 @@ export class ShoppingDb extends Dexie {
       meta: 'key',
     });
     this.version(2).stores({ categories: 'id' });
+    this.version(3).stores({ uploads: 'fileId', shared: 'id' });
   }
 }
 

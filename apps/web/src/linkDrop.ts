@@ -1,10 +1,15 @@
 import { findUrl, itemUrl, withUrl, type ItemRow } from '@shopping/shared';
-import { useRef } from 'react';
-import { addLink, updateItem } from './actions';
+import { useEffect, useRef } from 'react';
+import { selection } from './selection';
+import { addFileEntries, addLink, updateItem } from './actions';
+import { attachFiles } from './files';
 
-/** The dragged thing carries something that may be a link (from a browser tab, the address bar, a page). */
+/** Files from the desktop, the file manager or a mail program. */
+export const hasFiles = (dt: DataTransfer | null): boolean => !!dt && dt.types.includes('Files');
+
+/** The dragged thing carries something that may be a link (from a browser tab, the address bar, a page) – or files. */
 function mayBeLink(dt: DataTransfer | null): boolean {
-  return !!dt && (dt.types.includes('text/uri-list') || dt.types.includes('text/plain'));
+  return !!dt && (hasFiles(dt) || dt.types.includes('text/uri-list') || dt.types.includes('text/plain'));
 }
 
 /** The dropped link, and the text of the dragged anchor as name where there is one. */
@@ -27,13 +32,33 @@ function droppedLink(dt: DataTransfer): { url: string; name: string | null } | n
 const HOVER = 'drop-target';
 
 /**
- * A list as drop target for links (laptop: drag a tab or a link onto the list):
- * onto an entry without link → the entry gets the link; onto an entry with a link → after asking, it is replaced;
+ * A list as drop target for links and files (laptop: drag a tab, a link or a file onto the list):
+ * a link onto an entry without link → the entry gets the link; onto an entry with a link → after asking, it is replaced;
  * onto free space → a new entry, named after the dragged link's text or the page title.
+ * Files onto an entry are attached to it; onto free space each becomes a new entry named after the file.
  * Entries are found by their `data-item-id`.
  */
 export function useLinkDrop(listId: string, items: ItemRow[]) {
   const hovered = useRef<Element | null>(null);
+  const known = useRef(items);
+  known.current = items;
+
+  // Strg+V with files (a screenshot, files copied in the file manager): onto the marked or focused entry,
+  // else each as a new entry. With the details open, they take it (see Attachments).
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const files = Array.from(e.clipboardData?.files ?? []);
+      if (!files.length || e.defaultPrevented || document.querySelector('.attachments')) return;
+      const focused = (document.activeElement as HTMLElement | null)?.closest?.('[data-item-id]')?.getAttribute('data-item-id');
+      const marked = [...selection()];
+      const id = marked.length === 1 ? marked[0] : focused;
+      e.preventDefault();
+      if (id && known.current.some((i) => i.id === id)) void attachFiles(id, files);
+      else void addFileEntries(listId, files);
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [listId]);
   const section = useRef<Element | null>(null);
 
   const mark = (el: Element | null, area: Element | null) => {
@@ -56,7 +81,7 @@ export function useLinkDrop(listId: string, items: ItemRow[]) {
     onDragOver: (e: React.DragEvent<HTMLElement>) => {
       if (!mayBeLink(e.dataTransfer) || ownDrop(e)) return mark(null, null);
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'link';
+      e.dataTransfer.dropEffect = hasFiles(e.dataTransfer) ? 'copy' : 'link';
       const tile = target(e);
       mark(tile, tile ? null : e.currentTarget);
     },
@@ -68,6 +93,14 @@ export function useLinkDrop(listId: string, items: ItemRow[]) {
       const tile = target(e);
       mark(null, null);
       if (ownDrop(e)) return;
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length) {
+        e.preventDefault();
+        const id = tile?.getAttribute('data-item-id');
+        if (id && items.some((i) => i.id === id)) void attachFiles(id, files);
+        else void addFileEntries(listId, files);
+        return;
+      }
       const link = droppedLink(e.dataTransfer);
       if (!link) return;
       e.preventDefault();

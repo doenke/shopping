@@ -36,6 +36,8 @@ import { SyncHub } from './sync/hub.js';
 import { toCatalogItem, toMe } from './sync/rows.js';
 import { SyncService } from './sync/service.js';
 import { webhookRoutes } from './webhooks/routes.js';
+import { fileRoutes } from './files/routes.js';
+import { FileService } from './files/service.js';
 import { WebhookService } from './webhooks/service.js';
 
 declare module 'fastify' {
@@ -269,6 +271,12 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
     });
   });
 
+  // Files attached to entries (pictures, PDFs, …).
+  const files = new FileService(db);
+  await app.register(fileRoutes, { files, db, requireUser });
+  files.start(app.log);
+  app.addHook('onClose', async () => files.stop());
+
   const mealie = new MealieService(db, secrets, sync, hub, app.log, fetchImpl);
   const api = new ShoppingApi(db, sync, hub, places);
   await app.register(apiRoutes, { config, db, api, sync, hub, requireUser });
@@ -313,5 +321,5 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
     app.log.warn('Kein Web-Build gefunden – es läuft nur die API.');
   }
 
-  return { app, sync, hub, mealie, api, icons, avatars, webhooks };
+  return { app, sync, hub, mealie, api, icons, avatars, webhooks, files };
 }

@@ -30,6 +30,16 @@ const AttachmentSchema = z.discriminatedUnion('type', [
     lat: z.number().min(-90).max(90),
     lon: z.number().min(-180).max(180),
   }),
+  z.object({
+    id: z.string().min(1).max(40),
+    at: z.string().max(40),
+    by: z.string().max(64).nullish(),
+    type: z.literal('file'),
+    fileId: z.string().uuid(),
+    name: z.string().max(200),
+    mime: z.string().max(100),
+    size: z.number().int().min(0),
+  }),
 ]);
 
 export const ListPatchSchema = z

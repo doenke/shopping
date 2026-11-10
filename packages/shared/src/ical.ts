@@ -1,5 +1,5 @@
 import { formatAmounts } from './amounts.js';
-import { itemPlaces } from './attachments.js';
+import { fileUrl, itemFiles, itemPlaces } from './attachments.js';
 import { dueOf } from './due.js';
 import { itemUrl, withUrl } from './links.js';
 import type { ItemPatch, ItemRow, ListRow, ListType } from './model.js';
@@ -83,12 +83,20 @@ const stamp = (d: Date) =>
     .replace(/\.\d{3}/, '');
 
 /** One item as a complete iCalendar object with one VTODO. */
-export function itemToIcal(item: ItemRow, list: Pick<ListRow, 'name' | 'listType'>, now = new Date(), statuses?: TaskStatuses): string {
+export function itemToIcal(
+  item: ItemRow,
+  list: Pick<ListRow, 'name' | 'listType'>,
+  now = new Date(),
+  statuses?: TaskStatuses,
+  /** The server's address ("https://shopping.example"): files go out as ATTACH links to it. */
+  baseUrl?: string,
+): string {
   const inProcess = inProcessStatus(item, statuses);
   const p = packingInfo(item);
   const due = dueOf(item);
   const url = itemUrl(item);
   const place = itemPlaces(item)[0];
+  const files = baseUrl ? itemFiles(item) : [];
   const categories = [p.container].filter((c): c is string => !!c);
   const lines = [
     'BEGIN:VCALENDAR',
@@ -106,6 +114,8 @@ export function itemToIcal(item: ItemRow, list: Pick<ListRow, 'name' | 'listType
     ...(url ? [`URL:${url}`] : []),
     // The first place: as text for every app, with the position for maps.
     ...(place ? [`LOCATION:${escapeText([place.name, place.address].filter(Boolean).join(', '))}`, `GEO:${place.lat.toFixed(6)};${place.lon.toFixed(6)}`] : []),
+    // Files as links (the app fetches them with the same token); FILENAME is what Apple and Thunderbird show.
+    ...files.map((f) => `ATTACH;FMTTYPE=${f.mime};FILENAME=${paramValue(f.name)}:${baseUrl!.replace(/\/$/, '')}${fileUrl(f.fileId)}`),
     ...(categories.length ? [`CATEGORIES:${categories.map(escapeText).join(',')}`] : []),
     `STATUS:${item.checked ? 'COMPLETED' : inProcess ? 'IN-PROCESS' : 'NEEDS-ACTION'}`,
     ...(inProcess ? [`X-SHOPPING-STATUS:${escapeText(inProcess.name)}`] : []),
@@ -115,6 +125,11 @@ export function itemToIcal(item: ItemRow, list: Pick<ListRow, 'name' | 'listType
     'END:VCALENDAR',
   ];
   return `${lines.map(fold).join('\r\n')}\r\n`;
+}
+
+/** A parameter value: quoted, without the characters iCalendar does not allow there. */
+function paramValue(v: string): string {
+  return `"${v.replace(/["\r\n]/g, '').replace(/[\u0000-\u001f]/g, '')}"`;
 }
 
 /** What a task app sent (the fields Shopping takes over). */

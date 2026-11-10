@@ -25,6 +25,41 @@ registerRoute(
   }),
 );
 
+/**
+ * "Teilen → Shopping" with files: the share sheet POSTs them here. They wait in IndexedDB, and the app opens
+ * with the usual share parameters plus `share_files` (see ShareDialog).
+ */
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'POST' || url.origin !== self.location.origin || url.pathname !== '/share') return;
+  event.respondWith(receiveShare(event.request));
+});
+
+async function receiveShare(request: Request): Promise<Response> {
+  const params = new URLSearchParams();
+  try {
+    const form = await request.formData();
+    for (const key of ['share_title', 'share_text', 'share_url']) {
+      const v = form.get(key);
+      if (typeof v === 'string' && v.trim()) params.set(key, v.trim());
+    }
+    const files = form.getAll('share_files').filter((f): f is File => f instanceof File && f.size > 0);
+    if (files.length) {
+      const id = crypto.randomUUID();
+      const db = new ShoppingDb();
+      try {
+        await db.shared.put({ id, at: Date.now(), files: files.map((f) => ({ name: f.name, type: f.type, blob: f })) });
+      } finally {
+        db.close();
+      }
+      params.set('share_files', id);
+    }
+  } catch {
+    // Nothing readable: the app just opens.
+  }
+  return Response.redirect(`/?${params}`, 303);
+}
+
 // A new version takes over at once instead of waiting until every window of the app is closed
 // (an installed app practically never is). The page then reloads itself (see main.tsx).
 self.addEventListener('install', () => void self.skipWaiting());

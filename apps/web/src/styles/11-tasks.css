@@ -107,15 +107,16 @@
 }
 .work-row__link,
 .work-table th.work-row__link {
-  width: 56px;
+  width: 76px;
   text-align: center;
 }
-/* 🔗 and 📍 side by side, never cut off with "…". */
+/* 🔗, 📍 and 📎 side by side, never cut off with "…". */
 .work-row td.work-row__link {
   padding-inline: 4px;
   text-overflow: clip;
 }
-.work-row__link a {
+.work-row__link a,
+.work-row__link .work-files {
   display: inline-block;
   margin: 0 2px;
   text-decoration: none;

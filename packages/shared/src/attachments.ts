@@ -2,7 +2,7 @@ import type { ItemRow } from './model.js';
 import { itemUrl, withUrl } from './links.js';
 
 /**
- * Attachments of an entry, any list type: links and places (images and files follow).
+ * Attachments of an entry, any list type: links, places and files (pictures are files with an image type).
  *
  * They live in `attributes.attachments`, but every attachment has an own clock (`hlc["att:<id>"]`) and is
  * only changed through the `attachments` part of an item patch ({ id: attachment } adds or changes,
@@ -31,7 +31,12 @@ interface AttachmentBase {
 
 export type LinkAttachment = AttachmentBase & { type: 'link'; url: string; title?: string | null };
 export type PlaceAttachment = AttachmentBase & { type: 'place' } & PlaceData;
-export type Attachment = LinkAttachment | PlaceAttachment;
+/**
+ * A file stored on the server (`/api/v1/files/<fileId>`). The attachment is synced right away; the file
+ * itself may still be on its way (offline queue of the device that attached it).
+ */
+export type FileAttachment = AttachmentBase & { type: 'file'; fileId: string; name: string; mime: string; size: number };
+export type Attachment = LinkAttachment | PlaceAttachment | FileAttachment;
 export type AttachmentType = Attachment['type'];
 
 /** The id the item's first link (attributes.url) has as an attachment. */
@@ -51,7 +56,49 @@ export function toAttachment(v: unknown): Attachment | null {
   if (a.type === 'place' && typeof a.name === 'string' && isNum(a.lat) && isNum(a.lon) && Math.abs(a.lat) <= 90 && Math.abs(a.lon) <= 180) {
     return { ...base, type: 'place', name: a.name, address: typeof a.address === 'string' && a.address ? a.address : null, lat: a.lat, lon: a.lon };
   }
+  if (
+    a.type === 'file' &&
+    typeof a.fileId === 'string' &&
+    UUID.test(a.fileId) &&
+    typeof a.name === 'string' &&
+    typeof a.mime === 'string' &&
+    isNum(a.size) &&
+    a.size >= 0
+  ) {
+    return { ...base, type: 'file', fileId: a.fileId, name: a.name.slice(0, 200) || 'Datei', mime: a.mime.slice(0, 100), size: a.size };
+  }
   return null;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Largest file that can be attached (bytes). */
+export const MAX_FILE_SIZE = 25 * 1024 * 1024;
+
+/** Pictures get a preview and open large in the app. */
+export const isImage = (a: Pick<FileAttachment, 'mime'>): boolean => /^image\/(jpeg|png|gif|webp|avif|heic|heif|bmp)$/i.test(a.mime);
+
+/** The files (and pictures) of an entry. */
+export function itemFiles(item: Pick<ItemRow, 'attributes'>): FileAttachment[] {
+  return stored(item.attributes).filter((a): a is FileAttachment => a.type === 'file');
+}
+
+/** Where the app (and CalDAV clients) get a file; `thumb` for the small preview of a picture. */
+export function fileUrl(fileId: string, thumb = false): string {
+  return `/api/v1/files/${fileId}${thumb ? '?thumb=1' : ''}`;
+}
+
+/** "1,2 MB" */
+export function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`;
+}
+
+/** The patch that attaches a file (already uploaded or waiting in the queue). */
+export function addFilePatch(file: { fileId: string; name: string; mime: string; size: number }, by?: string | null): { attachments: AttachmentChanges } {
+  const id = newAttachmentId();
+  return { attachments: { [id]: { id, type: 'file', ...file, at: new Date().toISOString(), ...(by ? { by } : {}) } } };
 }
 
 /** The stored attachments (without the first link). */
@@ -82,10 +129,17 @@ export function itemPlaces(item: Pick<ItemRow, 'attributes'>): PlaceAttachment[]
   return stored(item.attributes).filter((a): a is PlaceAttachment => a.type === 'place');
 }
 
-/** One small symbol per kind of attachment the entry has (🔗, 📍), for tiles and rows. */
+/** One small symbol per kind of attachment the entry has (🔗, 📍, 🖼, 📄), for tiles and rows. */
 export function attachmentBadges(item: Pick<ItemRow, 'attributes'>): string[] {
-  const types = new Set(itemAttachments(item).map((a) => a.type));
-  return [...(types.has('link') ? ['🔗'] : []), ...(types.has('place') ? ['📍'] : [])];
+  const all = itemAttachments(item);
+  const types = new Set(all.map((a) => a.type));
+  const files = all.filter((a): a is FileAttachment => a.type === 'file');
+  return [
+    ...(types.has('link') ? ['🔗'] : []),
+    ...(types.has('place') ? ['📍'] : []),
+    ...(files.some(isImage) ? ['🖼'] : []),
+    ...(files.some((f) => !isImage(f)) ? ['📄'] : []),
+  ];
 }
 
 /** "Hornbach · Bahnhofstr. 3, Hamburg" (or the coordinates). */

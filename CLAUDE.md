@@ -55,7 +55,8 @@ genutzt), `apps/server` (Fastify 5, Drizzle, PostgreSQL), `apps/web` (React-PWA,
   `components/Attachments.tsx`, Tastatur `keyboard.ts`, Auswahl `selection.ts`, Ziehen `itemDrag.ts`.
   CSS in `apps/web/src/styles/NN-*.css` (Reihenfolge in `styles.css`), Farben in `13-design.css`.
 - **Server-Module**: `api/` (REST v1 + OpenAPI, `service.ts` ist die Logik für REST und MCP), `mcp/`,
-  `dav/` + `jmap/` (CalDAV/JMAP über `tasks/`), `icons/`, `mealie/`, `sharing/`, `places.ts` (Photon).
+  `dav/` + `jmap/` (CalDAV/JMAP über `tasks/`), `icons/`, `mealie/`, `sharing/`, `places.ts` (Photon),
+  `files/` (Datei-Anhänge in PostgreSQL; App-Seite mit Offline-Warteschlange in `apps/web/src/files.ts`).
 - **Tests**: Unit `packages/shared/src/shared.test.ts`, Server `apps/server/test/*.test.ts` (eigene DB je
   Datei über `test/helpers.ts`), Browser `apps/e2e/tests/*.spec.ts` (Projekte `phone` und `laptop`,
   Hilfen in `helpers.ts`; Netzwerk-Antworten wie Photon mit `page.route` nachbilden).

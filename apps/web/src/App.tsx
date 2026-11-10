@@ -47,6 +47,7 @@ export function App() {
     if (me === undefined) return;
     if (me) {
       void sync.start();
+      void import('./files').then((f) => f.startUploads());
       setChecking(false);
       return;
     }

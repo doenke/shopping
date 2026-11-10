@@ -25,6 +25,7 @@ import {
   type UserInfo,
 } from '@shopping/shared';
 import { Attachments } from './Attachments';
+import { useFileDropOn } from '../files';
 import { useEffect, useRef, useState } from 'react';
 import { addItems, createCategory, deleteItem, itemToNew, updateItem } from '../actions';
 import { useCustomCategories } from '../categories';
@@ -81,6 +82,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const [newCategory, setNewCategory] = useState<string | null>(null);
   const canCreateCategory = list.listType === 'shopping' || list.listType === 'packing';
   const ref = useRef<HTMLDialogElement>(null);
+  const fileDrop = useFileDropOn(item.id);
   const first = item.amounts[0];
   const [name, setName] = useState(item.name);
   const [quantity, setQuantity] = useState(first?.q != null ? String(first.q).replace('.', ',') : '');
@@ -246,7 +248,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const createdBy = item.createdBy ? users.get(item.createdBy) : undefined;
 
   return (
-    <dialog ref={ref} className="sheet" onClose={onClose} onClick={(e) => e.target === ref.current && ref.current?.close()}>
+    <dialog ref={ref} className="sheet" onClose={onClose} onClick={(e) => e.target === ref.current && ref.current?.close()} {...fileDrop}>
       <form
         method="dialog"
         className="sheet__body sheet__body--editor"
