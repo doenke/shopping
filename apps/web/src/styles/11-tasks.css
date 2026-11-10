@@ -482,6 +482,11 @@ kbd {
 
 /* ---- Phones: the ToDo table compact, details as a page of their own ---- */
 
+/* The whole width: the page has its own margin already. */
+.work-tasks--compact {
+  padding: 8px 0 80px;
+}
+
 .work-table--compact,
 .work-table--compact tbody {
   display: block;
@@ -492,7 +497,7 @@ kbd {
   flex-wrap: wrap;
   align-items: center;
   gap: 2px 8px;
-  padding: 9px 6px 9px 44px;
+  padding: 9px 4px 9px 38px;
   border-bottom: 1px solid var(--border);
 }
 .work-table--compact tr.work-row td {
@@ -506,7 +511,7 @@ kbd {
 }
 .work-table--compact .work-row__check {
   position: absolute;
-  left: 8px;
+  left: 4px;
   top: 10px;
   width: auto;
 }

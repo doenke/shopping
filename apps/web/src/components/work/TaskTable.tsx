@@ -172,7 +172,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
   const checkItem = items.find((i) => i.id === checking);
 
   return (
-    <section className="work-tasks" aria-label={list.name} {...linkDrop}>
+    <section className={`work-tasks${compact ? ' work-tasks--compact' : ''}`} aria-label={list.name} {...linkDrop}>
       <TaskHeader
         list={list}
         open={open.length}
