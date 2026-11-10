@@ -63,7 +63,7 @@ function parseNumber(s: string): number | undefined {
   return undefined;
 }
 
-/** Splits "a, b; c" into items, but keeps decimal commas like "1,5 kg". */
+/** Splits "a; b" into items. A comma does not split – it belongs to the entry ("Fenster zu, Herd aus"). */
 export function splitInput(text: string): string[] {
   // A pasted ingredient list (several lines, e.g. from a recipe page): one item per line; a comma
   // within a line is a note ("200 g Bergkäse, gerieben"), bullets and tabs are dropped.
@@ -80,7 +80,7 @@ export function splitInput(text: string): string[] {
       .filter(Boolean);
   }
   return text
-    .split(/[;\n]|,(?!\d)|(?<!\d),/)
+    .split(';')
     .map((s) => s.trim())
     .filter(Boolean);
 }
@@ -213,7 +213,7 @@ export function parseItem(text: string, catalog?: CatalogIndex, listType: ListTy
 
 /** Splits and parses an input line; the list type decides which words are properties. */
 export function parseInput(text: string, catalog?: CatalogIndex, listType: ListType = 'shopping'): ParsedItem[] {
-  // One line with a link is one entry: links may contain commas.
+  // One line with a link is one entry: links may contain semicolons.
   if (extractUrl(text).url && !text.trim().includes('\n')) {
     const one = parseItem(text.trim(), catalog, listType);
     return one ? [one] : [];

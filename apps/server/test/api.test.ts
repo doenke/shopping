@@ -59,7 +59,7 @@ describe('REST API', () => {
 
   it('adds free text and structured items, merging like the app', async () => {
     const res = await call('POST', '/api/v1/lists/default/items', {
-      text: '2 l Milch, 500g Hack gemischt bio',
+      text: '2 l Milch; 500g Hack gemischt bio',
       items: [{ name: 'Milch', quantity: 1, unit: 'Liter' }, 'Kaffee'],
     });
     expect(res.statusCode).toBe(200);

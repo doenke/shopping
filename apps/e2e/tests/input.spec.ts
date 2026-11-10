@@ -8,7 +8,7 @@ test('keyboard: arrows, space and delete with undo on a shopping list', async ({
   await page.goto('/');
   await newList(page, 'Tastatur');
   const input = page.getByRole('searchbox', { name: 'Artikel hinzufügen' });
-  await input.fill('Milch, Brot, Käse');
+  await input.fill('Milch; Brot; Käse');
   await input.press('Enter');
   await expect(tile(page, 'Käse')).toBeVisible();
   await input.blur();

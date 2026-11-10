@@ -22,7 +22,7 @@ describe('packing lists', () => {
     const tpl = (await call('POST', '/api/v1/lists', { name: 'Wochenend-Trip', type: 'packing', isTemplate: true })).json();
     expect(tpl).toMatchObject({ type: 'packing', isTemplate: true });
     const res = await call('POST', `/api/v1/lists/${tpl.id}/items`, {
-      text: '3 T-Shirts @Anna #Koffer, Zahnbürste @Ben #Kulturbeutel, Reisepass',
+      text: '3 T-Shirts @Anna #Koffer; Zahnbürste @Ben #Kulturbeutel; Reisepass',
       items: [{ name: 'Ladekabel', container: 'Rucksack' }],
     });
     expect(res.statusCode).toBe(200);
@@ -47,7 +47,7 @@ describe('packing lists', () => {
     expect(items.find((i: { name: string }) => i.name === 'T-Shirts')).toMatchObject({ person: 'Anna', container: 'Koffer', sources: ['Wochenend-Trip'] });
 
     // Packing: same item for another person is its own entry.
-    await call('POST', `/api/v1/lists/${created.id}/items`, { text: '2 T-Shirts @Ben, 1 T-Shirts @anna #Koffer' });
+    await call('POST', `/api/v1/lists/${created.id}/items`, { text: '2 T-Shirts @Ben; 1 T-Shirts @anna #Koffer' });
     const shirts = (await call('GET', `/api/v1/lists/${created.id}`)).json().items.filter((i: { name: string }) => i.name === 'T-Shirts');
     expect(shirts.map((i: { person: string; quantity: string }) => `${i.person}:${i.quantity}`).sort()).toEqual(['Anna:4', 'Ben:2']);
 

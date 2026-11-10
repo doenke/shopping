@@ -48,7 +48,7 @@ genutzt), `apps/server` (Fastify 5, Drizzle, PostgreSQL), `apps/web` (React-PWA,
 - **Listen verschieben**: Der Server ignoriert `listId`-Änderungen – Verschieben = Kopie anlegen + Original
   löschen (`moveItems` in `apps/web/src/actions.ts`).
 - **Eingabezeichen** (Parser `packages/shared/src/parser.ts`): `@` wer, `#` Packstück/Bereich/Wo, `!` fällig,
-  `*` Ort (allein: Standort), Link im Text. Komma trennt Einträge – Achtung beim Anlegen per MCP.
+  `*` Ort (allein: Standort), Link im Text. Semikolon (und neue Zeile) trennt Einträge, Komma nicht.
 - **Hinzufügen** überall über `planAdd` (`plan-add.ts`): legt zusammen statt zu verdoppeln.
 - **Web**: `App.tsx` (Routing, Seitenleiste), `components/ListView|PackingView|MemoView` (Kacheln),
   `components/work/*` (ToDo: Tabelle, Kanban, Details), `components/ItemEditor.tsx` (Details-Dialog),

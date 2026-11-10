@@ -61,7 +61,7 @@ describe('cleaning up checked entries', () => {
     const packing = await listWith('packing', 5);
     const template = await listWith('shopping', 5, { isTemplate: true });
     const open = (await as(anna, 'POST', '/api/v1/lists', { name: 'Offen' })).json().id as string;
-    await as(anna, 'POST', `/api/v1/lists/${open}/items`, { text: 'Milch, Brot, Eier, Butter' });
+    await as(anna, 'POST', `/api/v1/lists/${open}/items`, { text: 'Milch; Brot; Eier; Butter' });
 
     await t.sync.pruneDone(3);
     expect(await done(packing)).toHaveLength(5);
@@ -77,7 +77,7 @@ describe('cleaning up checked entries', () => {
 describe('recurring checklists', () => {
   it('open again what was checked before the current period', async () => {
     const list = (await as(anna, 'POST', '/api/v1/lists', { name: 'Haus verlassen', type: 'todo' })).json();
-    await as(anna, 'POST', `/api/v1/lists/${list.id}/items`, { text: 'Fenster zu, Herd aus, Licht aus' });
+    await as(anna, 'POST', `/api/v1/lists/${list.id}/items`, { text: 'Fenster zu; Herd aus; Licht aus' });
     const items = (await as(anna, 'GET', `/api/v1/lists/${list.id}`)).json().items as { id: string; name: string }[];
     for (const i of items) await as(anna, 'PATCH', `/api/v1/items/${i.id}`, { checked: true });
     // "Fenster zu" was checked last week, the others today.
