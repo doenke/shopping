@@ -2,6 +2,7 @@ import { comparePositions } from '@shopping/shared';
 import {
   dueOf,
   formatDue,
+  itemDone,
   itemPersons,
   itemUrl,
   listDescription,
@@ -16,11 +17,12 @@ import {
   type ListRow,
 } from '@shopping/shared';
 import { useMemo, useState } from 'react';
-import { addItems, setChecked } from '../../actions';
+import { addItems, setChecked, setPersonChecked } from '../../actions';
 import { entryKeys } from '../../keyboard';
 import { PeopleDots, PersonCheckDialog } from '../People';
 import { StatusPicker } from './StatusPicker';
 import { useSelection } from '../../selection';
+import { GROUP_LABEL, groupOptions, groupTasks, shownGroup, useGroupBy, type TaskEntry } from '../../todoGroups';
 
 interface Props {
   list: ListRow;
@@ -55,20 +57,37 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
     link: items.some((i) => itemUrl(i)),
   };
   const defaultStatus = listDefaultStatus(list, statuses);
+  // Groups like the phone list used to have: Fällig, Status, Bereich, Wer – or all in one.
+  const [groupBy, setGroupBy] = useGroupBy(list.id);
+  const options = groupOptions(open, statuses);
+  const shown = shownGroup(groupBy, options);
+  const groups = useMemo(() => groupTasks(open, shown, statuses, defaultStatus), [open, shown, list.settings]);
+  const grouping = (cols.status || cols.due || cols.who || cols.area) && (
+    <div className="segmented work-group" role="group" aria-label="Gruppieren nach">
+      {options.map((g) => (
+        <button key={g} type="button" className={g === shown ? 'active' : ''} aria-pressed={g === shown} onClick={() => setGroupBy(g)}>
+          {GROUP_LABEL[g]}
+        </button>
+      ))}
+    </div>
+  );
+  const colSpan = 2 + Object.values(cols).filter(Boolean).length;
 
-  const toggle = (item: ItemRow) => {
+  const toggle = ({ item, person }: TaskEntry) => {
+    if (person) return void setPersonChecked(item, { [person]: !itemDone(item).includes(person) });
     if (itemPersons(item).length && !item.checked) return setChecking(item.id);
     void setChecked(item, !item.checked);
   };
 
-  const row = (item: ItemRow) => {
+  const row = (entry: TaskEntry) => {
+    const { item, person } = entry;
     const due = dueOf(item);
     const fmt = due ? formatDue(due) : null;
     const area = packingInfo(item).container;
     const url = itemUrl(item);
     return (
       <tr
-        key={item.id}
+        key={`${item.id}:${person ?? ''}`}
         data-item-id={item.id}
         tabIndex={0}
         className={`work-row${item.id === selected ? ' work-row--selected' : ''}${picked.has(item.id) ? ' is-picked' : ''}${item.checked ? ' work-row--done' : ''}`}
@@ -78,7 +97,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
         onClick={() => (compact ? onOpen(item.id) : onSelect(item.id))}
         onDoubleClick={() => onOpen(item.id)}
         {...entryKeys(
-          () => toggle(item),
+          () => toggle(entry),
           () => onOpen(item.id),
         )}
       >
@@ -91,7 +110,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
             aria-pressed={item.checked}
             onClick={(e) => {
               e.stopPropagation();
-              toggle(item);
+              toggle(entry);
             }}
           >
             {item.checked ? '✓' : ''}
@@ -107,7 +126,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
             {fmt?.label ?? ''}
           </td>
         )}
-        {cols.who && <td className="work-row__who">{itemPersons(item).length ? <PeopleDots item={item} /> : peopleLabel(item)}</td>}
+        {cols.who && <td className="work-row__who">{person ?? (itemPersons(item).length ? <PeopleDots item={item} /> : peopleLabel(item))}</td>}
         {cols.area && <td className="work-row__area">{area ? <span className="work-tag">{area}</span> : null}</td>}
         {cols.link && (
           <td className="work-row__link">
@@ -126,7 +145,19 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
 
   return (
     <section className="work-tasks" aria-label={list.name}>
-      <TaskHeader list={list} open={open.length} done={done.length} viewSwitch={viewSwitch} />
+      <TaskHeader
+        list={list}
+        open={open.length}
+        done={done.length}
+        viewSwitch={
+          grouping || viewSwitch ? (
+            <div className="work-tasks__tools">
+              {grouping}
+              {viewSwitch}
+            </div>
+          ) : undefined
+        }
+      />
       <TaskAdd list={list} index={index} />
 
       {open.length === 0 && done.length === 0 ? (
@@ -144,17 +175,28 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
               {cols.link && <th className="work-row__link" aria-label="Link" />}
             </tr>
           </thead>
-          <tbody>{open.map(row)}</tbody>
+          {groups.map((g) => (
+            <tbody key={g.key}>
+              {g.title && (
+                <tr className={`work-table__group work-table__title${g.key === 'overdue' ? ' work-table__title--alert' : ''}`}>
+                  <td colSpan={colSpan}>
+                    {g.title} <span className="group__count">{g.items.length}</span>
+                  </td>
+                </tr>
+              )}
+              {g.items.map(row)}
+            </tbody>
+          ))}
           {done.length > 0 && (
             <tbody>
               <tr className="work-table__group">
-                <td colSpan={2 + Object.values(cols).filter(Boolean).length}>
+                <td colSpan={colSpan}>
                   <button type="button" className="link" onClick={() => setShowDone((s) => !s)} aria-expanded={showDone}>
                     {showDone ? '▾' : '▸'} Erledigt ({done.length})
                   </button>
                 </td>
               </tr>
-              {showDone && done.map(row)}
+              {showDone && done.map((item) => row({ item }))}
             </tbody>
           )}
         </table>

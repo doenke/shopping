@@ -186,3 +186,34 @@ test('phones: ToDo lists as a compact table, a tap opens the task', async ({ pag
   await page.getByRole('textbox', { name: 'Neue Aufgabe' }).fill('Report');
   await expect(page.locator('.addbar__results .tile')).toHaveCount(0);
 });
+
+test('the task table groups by Fällig, Bereich and Wer (one row per person)', async ({ page }, info) => {
+  await login(page, `Pia ${info.project.name}`);
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Gruppen', type: 'todo' } })).json();
+  await page.request.post(`/api/v1/lists/${list.id}/items`, {
+    data: { items: ['Vertrag senden !heute #Kunde', 'Hecke schneiden @Anna @Ben #Garten', 'Steuer machen'] },
+  });
+  await page.goto(`/#/list/${list.id}`);
+  const titles = page.locator('.work-table__title');
+  const group = page.getByRole('group', { name: 'Gruppieren nach' });
+  await expect(group.getByRole('button', { name: 'Fällig' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(titles).toHaveText([/Heute/, /Ohne Datum/]);
+  await group.getByRole('button', { name: 'Bereich' }).click();
+  await expect(titles).toHaveText([/Garten/, /Kunde/, /Ohne Bereich/]);
+  // "Wer": a task for two people shows up with each of them.
+  await group.getByRole('button', { name: 'Wer' }).click();
+  await expect(titles).toHaveText([/Anna/, /Ben/, /Ohne Zuständigkeit/]);
+  await expect(page.locator('.work-row', { hasText: 'Hecke schneiden' })).toHaveCount(2);
+  // Ticking off Anna's part leaves Ben's.
+  await page
+    .locator('tbody', { has: page.locator('.work-table__title', { hasText: 'Anna' }) })
+    .getByRole('button', { name: 'Erledigt' })
+    .click();
+  await expect(titles).toHaveText([/Ben/, /Ohne Zuständigkeit/]);
+  await group.getByRole('button', { name: 'Alle' }).click();
+  await expect(titles).toHaveCount(0);
+  await expect(page.locator('.work-row')).toHaveCount(3);
+  // Remembered for this list.
+  await page.reload();
+  await expect(group.getByRole('button', { name: 'Alle' })).toHaveAttribute('aria-pressed', 'true');
+});

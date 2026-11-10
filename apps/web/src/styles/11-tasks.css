@@ -507,3 +507,34 @@ kbd {
     display: none;
   }
 }
+
+/* Grouping of the table (Fällig, Status, Bereich, Wer, Alle) next to the Tabelle | Kanban switch. */
+.work-tasks__head {
+  flex-wrap: wrap;
+}
+.work-tasks__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.work-group button {
+  padding: 3px 10px;
+  font-size: 0.8rem;
+}
+.work-table__title td {
+  padding: 16px 8px 6px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.work-table__title--alert td {
+  color: var(--danger);
+}
+.work-table--compact .work-table__title td {
+  display: block;
+  padding: 14px 6px 4px;
+}

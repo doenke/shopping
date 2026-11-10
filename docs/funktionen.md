@@ -94,7 +94,10 @@
 
 Jede ToDo-Liste erscheint als **Tabelle** (Status, Fällig, Wer, Bereich, Link – nur die Spalten, die eine
 Aufgabe nutzt). Am Rechner steht die gewählte Aufgabe rechts zum direkten Bearbeiten, auf dem Handy sind die
-Zeilen kompakt (Angaben in einer zweiten Zeile) und ein Tipp öffnet die Aufgabe als eigene Seite.
+Zeilen kompakt (Angaben in einer zweiten Zeile) und ein Tipp öffnet die Aufgabe als eigene Seite. Oben
+rechts wird gruppiert: *Fällig* (Überfällig, Heute, Nächste 7 Tage, Später, Ohne Datum), *Status*,
+*Bereich*, *Wer* (eine Aufgabe für mehrere steht bei jeder Person, die noch dran ist; abhaken gilt nur für
+diese Person) oder *Alle* – pro Liste und Gerät gemerkt.
 
 **Design:** Alle Listen teilen ein ruhiges, neutrales Grundgerüst (hell/dunkel nach System). Jeder Listentyp
 hat eine eigene Akzentfarbe – Einkauf grün, Packliste blau, Merkliste ocker, ToDo blaugrau –, die Kacheln

@@ -1,16 +1,13 @@
-import { comparePositions } from '@shopping/shared';
 import {
   dueOf,
   listReset,
   RESET_LABEL,
   formatDue,
-  isoDate,
   listDescription,
   itemDone,
   itemPersons,
   itemUrl,
   packingInfo,
-  itemStatus,
   listStatuses,
   listDefaultStatus,
   peopleLabel,
@@ -30,16 +27,7 @@ import { PeopleDots, PersonCheckDialog } from './People';
 import { StatusPicker } from './work/StatusPicker';
 import { taskExample } from './work/TaskTable';
 import { useSelection } from '../selection';
-
-type GroupBy = 'none' | 'due' | 'area' | 'who' | 'status';
-
-/** A row: a task, or – grouped by "Wer" – one person's part of a task for several people. */
-interface Entry {
-  item: ItemRow;
-  person?: string;
-}
-
-const GROUP_LABEL: Record<GroupBy, string> = { none: 'Alle', due: 'Fällig', area: 'Bereich', who: 'Wer', status: 'Status' };
+import { GROUP_LABEL, groupOptions, groupTasks, shownGroup, useGroupBy, type TaskEntry } from '../todoGroups';
 
 interface Props {
   list: ListRow;
@@ -49,26 +37,7 @@ interface Props {
   remoteChecks: Map<string, RemoteCheck>;
 }
 
-function loadGroupBy(listId: string): GroupBy {
-  try {
-    const v = localStorage.getItem(`todo-group:${listId}`);
-    if (v === 'none' || v === 'due' || v === 'area' || v === 'who' || v === 'status') return v;
-  } catch {
-    // Storage unavailable: default grouping.
-  }
-  return 'due';
-}
-
 const noBoost = () => 0;
-
-/** Bucket of a due date relative to today. */
-function dueBucket(due: string | null, today: string, weekEnd: string): { key: string; title: string; order: number } {
-  if (!due) return { key: 'none', title: 'Ohne Datum', order: 5 };
-  if (due < today) return { key: 'overdue', title: 'Überfällig', order: 0 };
-  if (due === today) return { key: 'today', title: 'Heute', order: 1 };
-  if (due <= weekEnd) return { key: 'week', title: 'Nächste 7 Tage', order: 2 };
-  return { key: 'later', title: 'Später', order: 3 };
-}
 
 /** ToDo list: tasks as a checklist, sorted by due date; done ones move to "Erledigt". */
 export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ list, items, index, users, remoteChecks }, addRef) {
@@ -79,16 +48,8 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
   const [checking, setChecking] = useState<string | null>(null);
   const [undo, setUndo] = useState<ItemRow | null>(null);
   const [showDone, setShowDone] = useState(false);
-  const [groupBy, setGroupBy] = useState<GroupBy>(() => loadGroupBy(list.id));
+  const [groupBy, setGroupBy] = useGroupBy(list.id);
   const description = listDescription(list);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(`todo-group:${list.id}`, groupBy);
-    } catch {
-      // Not important.
-    }
-  }, [groupBy, list.id]);
 
   useEffect(() => {
     if (!undo) return;
@@ -105,60 +66,19 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
   const picked = useSelection();
   const defaultStatus = listDefaultStatus(list, statuses);
   const hasMeta = hasDue || statuses.length > 0 || open.some((i) => packingInfo(i).person || packingInfo(i).container);
-  const options: GroupBy[] = [...(hasDue ? (['due'] as const) : (['none'] as const)), ...(statuses.length ? (['status'] as const) : []), 'area', 'who'];
-  const shown: GroupBy = groupBy === 'due' && !hasDue ? 'none' : groupBy === 'none' && hasDue ? 'due' : groupBy;
+  const options = groupOptions(open, statuses);
+  const shown = shownGroup(groupBy, options);
 
-  const groups = useMemo(() => {
-    const now = new Date();
-    const today = isoDate(now);
-    // The coming seven days (not just until Sunday – on a Sunday "tomorrow" would otherwise be "later").
-    const weekEnd = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7));
-    const sorted = [...open].sort((a, b) => (dueOf(a) ?? '9999').localeCompare(dueOf(b) ?? '9999') || comparePositions(a.position, b.position));
-    if (shown === 'none') return [{ key: 'all', title: null as string | null, order: 0, items: sorted.map((i) => ({ item: i }) as Entry) }];
-    const byKey = new Map<string, { title: string | null; order: number; items: Entry[] }>();
-    // "Wer": a task for several people shows up with each of them who still has to do it.
-    const entries: Entry[] =
-      shown === 'who'
-        ? sorted.flatMap((i) =>
-            itemPersons(i).length
-              ? itemPersons(i)
-                  .filter((person) => !itemDone(i).includes(person))
-                  .map((person) => ({ item: i, person }))
-              : [{ item: i }],
-          )
-        : sorted.map((i) => ({ item: i }));
-    for (const e of entries) {
-      const i = e.item;
-      const p = packingInfo(i);
-      const who = e.person ?? p.person;
-      const g =
-        shown === 'due'
-          ? dueBucket(dueOf(i), today, weekEnd)
-          : shown === 'status'
-            ? (() => {
-                const st = itemStatus(i, statuses, defaultStatus);
-                return { key: st?.id ?? '', title: st?.name ?? '', order: statuses.findIndex((x) => x.id === st?.id) };
-              })()
-            : shown === 'area'
-              ? { key: p.container ?? '', title: p.container ?? 'Ohne Bereich', order: p.container ? 0 : 1 }
-              : { key: who ?? '', title: who ?? 'Ohne Zuständigkeit', order: who ? 0 : 1 };
-      const entry = byKey.get(g.key) ?? { title: g.title, order: g.order, items: [] };
-      entry.items.push(e);
-      byKey.set(g.key, entry);
-    }
-    return [...byKey.entries()]
-      .sort(([, a], [, b]) => a.order - b.order || (a.title ?? '').localeCompare(b.title ?? '', 'de'))
-      .map(([key, g]) => ({ key, ...g }));
-  }, [open, shown, list.settings]);
+  const groups = useMemo(() => groupTasks(open, shown, statuses, defaultStatus), [open, shown, list.settings]);
 
-  const toggle = ({ item, person }: Entry) => {
+  const toggle = ({ item, person }: TaskEntry) => {
     if (person) return void setPersonChecked(item, { [person]: !itemDone(item).includes(person) });
     if (itemPersons(item).length && !item.checked) return setChecking(item.id);
     void setChecked(item, !item.checked);
     if (!item.checked) setUndo(item);
   };
 
-  const row = (entry: Entry) => {
+  const row = (entry: TaskEntry) => {
     const { item, person } = entry;
     const p = packingInfo(item);
     const many = itemPersons(item).length > 0 && !person;
