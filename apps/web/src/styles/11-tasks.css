@@ -119,13 +119,9 @@ html.business body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.work-table th:nth-child(3) {
-  width: 120px;
-}
-.work-table th:nth-child(4) {
-  width: 120px;
-}
-.work-table th:nth-child(5) {
+.work-table th.work-row__due,
+.work-table th.work-row__who,
+.work-table th.work-row__area {
   width: 120px;
 }
 .work-row td {
@@ -504,4 +500,76 @@ kbd {
 }
 .status-editor__default input {
   margin: 0;
+}
+
+/* ---- Phones: the ToDo table compact, details as a page of their own ---- */
+
+.work-table--compact,
+.work-table--compact tbody {
+  display: block;
+}
+.work-table--compact tr.work-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 9px 6px 9px 44px;
+  border-bottom: 1px solid var(--border);
+}
+.work-table--compact tr.work-row td {
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  white-space: normal;
+}
+.work-table--compact tr.work-row td:empty {
+  display: none;
+}
+.work-table--compact .work-row__check {
+  position: absolute;
+  left: 8px;
+  top: 10px;
+  width: auto;
+}
+.work-table--compact .work-check {
+  width: 22px;
+  height: 22px;
+}
+.work-table--compact .work-row__title {
+  flex: 1 0 100%;
+  font-size: 1rem;
+}
+.work-table--compact .work-row__note {
+  display: block;
+  margin: 1px 0 0;
+}
+.work-table--compact .work-row__due,
+.work-table--compact .work-row__who,
+.work-table--compact .work-row__area,
+.work-table--compact .work-row__link {
+  font-size: 0.85em;
+}
+.work-table--compact .work-table__group td {
+  display: block;
+  padding: 14px 6px 6px;
+}
+.task-page {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--bg);
+}
+.task-page .work-detail {
+  padding: max(16px, env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+}
+/* Touch screens have no "N" to press. */
+@media (pointer: coarse) {
+  .work-add__key {
+    display: none;
+  }
 }

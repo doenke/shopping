@@ -28,6 +28,8 @@ import { ItemEditor } from './ItemEditor';
 import { entryKeys } from '../keyboard';
 import { PeopleDots, PersonCheckDialog } from './People';
 import { StatusPicker } from './work/StatusPicker';
+import { taskExample } from './work/TaskTable';
+import { useSelection } from '../selection';
 
 type GroupBy = 'none' | 'due' | 'area' | 'who' | 'status';
 
@@ -100,6 +102,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
   // Due dates stay out of sight until a task has one: then a plain checklist instead of "Ohne Datum".
   const hasDue = open.some((i) => dueOf(i));
   const statuses = listStatuses(list);
+  const picked = useSelection();
   const defaultStatus = listDefaultStatus(list, statuses);
   const hasMeta = hasDue || statuses.length > 0 || open.some((i) => packingInfo(i).person || packingInfo(i).container);
   const options: GroupBy[] = [...(hasDue ? (['due'] as const) : (['none'] as const)), ...(statuses.length ? (['status'] as const) : []), 'area', 'who'];
@@ -163,7 +166,11 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
     const fmt = due ? formatDue(due) : null;
     const remote = remoteChecks.get(item.id);
     return (
-      <li key={`${item.id}:${person ?? ''}`} data-item-id={item.id} className={`task${item.checked ? ' task--done' : ''}${remote ? ' tile--remote' : ''}`}>
+      <li
+        key={`${item.id}:${person ?? ''}`}
+        data-item-id={item.id}
+        className={`task${picked.has(item.id) ? ' is-picked' : ''}${item.checked ? ' task--done' : ''}${remote ? ' tile--remote' : ''}`}
+      >
         <button
           type="button"
           className="task__check"
@@ -214,14 +221,7 @@ export const TodoView = forwardRef<HTMLInputElement, Props>(function TodoView({ 
 
   return (
     <section className="listview" {...linkDrop}>
-      <AddBar
-        ref={addRef}
-        listId={list.id}
-        listType={list.listType}
-        index={index}
-        boost={noBoost}
-        placeholder="Neue Aufgabe, z. B. Reifen wechseln !Fr @Ben #Auto"
-      />
+      <AddBar ref={addRef} listId={list.id} listType={list.listType} index={index} boost={noBoost} placeholder={taskExample(list)} />
 
       {description && <p className="list-description">{description}</p>}
 

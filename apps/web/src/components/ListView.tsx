@@ -44,9 +44,9 @@ export const ListView = forwardRef<HTMLInputElement, Props>(function ListView(pr
   // Packing lists work differently: packed items stay visible (templates are shown like any template).
   if (props.list.listType === 'packing' && !props.list.isTemplate) return <PackingView ref={addRef} {...props} />;
   if (props.list.listType === 'memo') return <MemoView ref={addRef} {...props} />;
-  // ToDo lists on the desktop: table + details (every ToDo list, work or not).
-  if (props.list.listType === 'todo' && props.desktop && !props.list.isTemplate)
-    return <TaskBoard list={props.list} items={props.items} index={props.index} users={props.users} />;
+  // ToDo lists: the table – on phones compact, with the details as a page of their own.
+  if (props.list.listType === 'todo' && !props.list.isTemplate)
+    return <TaskBoard list={props.list} items={props.items} index={props.index} users={props.users} compact={!props.desktop} />;
   if (props.list.listType === 'todo') return <TodoView ref={addRef} {...props} />;
   return <ShoppingView ref={addRef} {...props} />;
 });

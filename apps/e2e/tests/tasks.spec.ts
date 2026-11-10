@@ -139,3 +139,47 @@ test('Kanban by keyboard: Alt + arrows move a card', async ({ page }, info) => {
   await page.keyboard.press('Alt+ArrowLeft');
   await expect(col('In Arbeit')).toContainText('Zwei');
 });
+
+test('several entries move into another list: dragged onto the sidebar or with V', async ({ page }, info) => {
+  test.skip(phone(page), 'mouse and keyboard on the desktop');
+  await login(page, `Nora ${info.project.name}`);
+  const from = await (await page.request.post('/api/v1/lists', { data: { name: 'Quelle', type: 'todo' } })).json();
+  const to = await (await page.request.post('/api/v1/lists', { data: { name: 'Ziel', type: 'todo' } })).json();
+  await page.request.post(`/api/v1/lists/${from.id}/items`, { data: { items: ['Eins', 'Zwei', 'Drei'] } });
+  await page.goto(`/#/list/${from.id}`);
+  // Columns nobody uses are not shown.
+  await expect(page.locator('.work-table th')).toHaveText(['', 'Aufgabe']);
+  await page.locator('.work-row', { hasText: 'Eins' }).click();
+  await page.keyboard.press('Shift+ArrowDown');
+  await expect(page.locator('.work-row.is-picked')).toHaveCount(2);
+  await page.locator('.work-row', { hasText: 'Zwei' }).dragTo(page.locator('.sidebar a', { hasText: 'Ziel' }));
+  await expect(page.locator('.work-row')).toHaveText([/Drei/]);
+  await expect(page.locator('.snackbar--toast')).toContainText('2 Einträge nach „Ziel“ verschoben');
+  // V: "Verschieben nach …", then undo.
+  await page.locator('.work-row', { hasText: 'Drei' }).click();
+  await page.keyboard.press('v');
+  await page.getByRole('textbox', { name: 'Liste suchen' }).fill('Ziel');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.work-row')).toHaveCount(0);
+  await page.locator('.snackbar--toast').getByRole('button', { name: 'Rückgängig' }).click();
+  await expect(page.locator('.work-row')).toHaveText([/Drei/]);
+  const names = (await (await page.request.get(`/api/v1/lists/${to.id}`)).json()).items.map((i: { name: string }) => i.name);
+  expect(names.sort()).toEqual(['Eins', 'Zwei']);
+});
+
+test('phones: ToDo lists as a compact table, a tap opens the task', async ({ page }, info) => {
+  test.skip(!phone(page), 'the phone layout');
+  await login(page, `Ole ${info.project.name}`);
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Handy', type: 'todo' } })).json();
+  await page.request.post(`/api/v1/lists/${list.id}/items`, { data: { text: 'Vertrag senden !morgen #Kunde' } });
+  await page.goto(`/#/list/${list.id}`);
+  const row = page.locator('.work-row', { hasText: 'Vertrag senden' });
+  await expect(row).toContainText('Morgen');
+  await row.click();
+  await expect(page.getByRole('textbox', { name: 'Titel' })).toHaveValue('Vertrag senden');
+  await page.getByRole('button', { name: 'Details schließen' }).click();
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+  // Typing a task shows no suggestion tiles.
+  await page.getByRole('textbox', { name: 'Neue Aufgabe' }).fill('Report');
+  await expect(page.locator('.addbar__results .tile')).toHaveCount(0);
+});

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { iconUrl, useIconIndex } from '../icons';
 import { Avatar } from './Avatar';
 import { entryKeys } from '../keyboard';
+import { useSelection } from '../selection';
 
 interface ItemIconProps {
   name: string;
@@ -71,6 +72,7 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
   const spec = itemSpecification(offer ? { ...item, properties: item.properties.filter((p) => !isOffer(p)) } : item);
   const cat = getCategory(item.categoryId, useCustomCategories());
   const icons = useIconIndex();
+  const picked = useSelection();
   // New icon drafts wait for review (shared free-text pictures count by their own entry only).
   const unreviewed = (item.catalogItemId && icons.pending.has(item.catalogItemId)) || (!!item.id && icons.pending.has(item.id));
 
@@ -92,7 +94,7 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
   return (
     <button
       type="button"
-      className={`tile tile--${variant}${fading ? ' tile--remote' : ''}`}
+      className={`tile tile--${variant}${fading ? ' tile--remote' : ''}${item.id && picked.has(item.id) ? ' is-picked' : ''}`}
       data-item-id={item.id}
       {...entryKeys(onToggle, onLongPress)}
       style={{ '--cat': cat.color } as React.CSSProperties}

@@ -256,19 +256,22 @@ export const AddBar = forwardRef<HTMLInputElement, Props>(function AddBar({ list
               {parsed.length} Artikel hinzufügen: {parsed.map((p) => p.name).join(', ')}
             </button>
           )}
-          <div className="tiles tiles--compact">
-            {hasAmount && single && <Tile item={single} variant="suggestion" onTap={() => void submit()} />}
-            {suggestions.map((c) => (
-              <Tile
-                key={c.id}
-                item={{ name: c.name, categoryId: c.categoryId, catalogItemId: c.id, amounts: [], properties: [], note: null }}
-                variant="suggestion"
-                onTap={() => void pick(c)}
-              />
-            ))}
-            {freeText && !hasAmount && <Tile item={single} variant="suggestion" badge="neu" onTap={() => void submit()} />}
-            {asTyped && <Tile item={asTyped} variant="suggestion" onTap={() => void addAsTyped()} />}
-          </div>
+          {/* ToDo lists: no tiles while typing – Enter adds the task (there is no catalog to pick from). */}
+          {listType !== 'todo' && (
+            <div className="tiles tiles--compact">
+              {hasAmount && single && <Tile item={single} variant="suggestion" onTap={() => void submit()} />}
+              {suggestions.map((c) => (
+                <Tile
+                  key={c.id}
+                  item={{ name: c.name, categoryId: c.categoryId, catalogItemId: c.id, amounts: [], properties: [], note: null }}
+                  variant="suggestion"
+                  onTap={() => void pick(c)}
+                />
+              ))}
+              {freeText && !hasAmount && <Tile item={single} variant="suggestion" badge="neu" onTap={() => void submit()} />}
+              {asTyped && <Tile item={asTyped} variant="suggestion" onTap={() => void addAsTyped()} />}
+            </div>
+          )}
           {single && hasAmount && <p className="addbar__hint">Enter fügt „{[single.name, itemSpecification(single)].filter(Boolean).join(' · ')}“ hinzu</p>}
         </div>
       )}

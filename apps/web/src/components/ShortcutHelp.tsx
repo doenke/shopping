@@ -6,6 +6,8 @@ const KEYS: [string, string][] = [
   ['Leertaste', 'Abhaken (bzw. wieder öffnen)'],
   ['Enter', 'Eintrag öffnen / bearbeiten'],
   ['Entf', 'Eintrag löschen (mit Rückgängig)'],
+  ['Shift + ↑ ↓ ← →', 'Mehrere Einträge markieren (auch Shift-/Strg-Klick)'],
+  ['V', 'Markierte in eine andere Liste verschieben (oder auf eine Liste in der Seitenleiste ziehen)'],
   ['Alt + ← →', 'Kanban: Karte in die Nachbarspalte'],
   ['Alt + ↑ ↓', 'Kanban: Karte einen Platz hoch/runter'],
   ['Strg + K', 'Liste oder Eintrag suchen'],

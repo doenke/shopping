@@ -27,9 +27,11 @@ import { sync } from './sync/engine';
 
 import { ListMenu } from './components/ListMenu';
 import { CommandPalette } from './components/CommandPalette';
+import { MoveDialog } from './components/MoveDialog';
 import { ShortcutHelp } from './components/ShortcutHelp';
 import { Toast } from './components/Toast';
 import { useShortcuts } from './keyboard';
+import { useItemDrag } from './itemDrag';
 import { applyModeFromUrl, isWorkList, isWorkMode, setWorkMode, setWorkScope, useWorkModeSetting, useWorkScope } from './workMode';
 import { ListBadges, OpenCount } from './components/ListBadges';
 
@@ -119,7 +121,13 @@ function Shell({ me }: { me: Me }) {
     <ul>
       {ls.map((l) => (
         <li key={l.id}>
-          <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
+          <a
+            href={`#/list/${l.id}`}
+            className={l.id === list?.id && route.page === 'list' ? 'active' : ''}
+            onClick={() => setDrawer(false)}
+            // Entries can be dragged onto a list (not onto templates).
+            {...(l.isTemplate ? {} : { 'data-list-id': l.id, 'data-list-name': l.name })}
+          >
             <span>
               {l.id === me.defaultListId && <span title="Hauptliste">⭐ </span>}
               {l.isTemplate && '◇ '}
@@ -180,11 +188,15 @@ function Shell({ me }: { me: Me }) {
   // The keyboard, in every mode.
   const [palette, setPalette] = useState(false);
   const [shortcutHelp, setShortcutHelp] = useState(false);
+  /** Entries to move into another list (V, "Verschieben nach …"). */
+  const [moving, setMoving] = useState<string[] | null>(null);
   useShortcuts({
     onSearch: () => setPalette(true),
     onHelp: () => setShortcutHelp(true),
     onToggleWork: () => setWorkMode(!isWorkMode()),
+    onMove: (ids) => setMoving(ids),
   });
+  useItemDrag(list?.id);
 
   const newList = () => {
     setNewDialog(true);
@@ -258,9 +270,13 @@ function Shell({ me }: { me: Me }) {
             </button>
           </div>
         ) : (
-          <button type="button" className="sidebar__work" onClick={() => setWorkMode(true)} title="Nur die Arbeitslisten zeigen – Strg+Shift+A">
-            💼 Arbeitsmodus
-          </button>
+          // Offered where it makes sense: while a ToDo list is open.
+          route.page === 'list' &&
+          list?.listType === 'todo' && (
+            <button type="button" className="sidebar__work" onClick={() => setWorkMode(true)} title="Nur die Arbeitslisten zeigen – Strg+Shift+A">
+              💼 Arbeitsmodus
+            </button>
+          )
         ))}
       <a href="#/help" className={route.page === 'help' ? 'active' : ''} onClick={() => setDrawer(false)}>
         ❓ Hilfe
@@ -275,6 +291,7 @@ function Shell({ me }: { me: Me }) {
     <>
       {palette && <CommandPalette lists={workMode ? workLists : ordered} onClose={() => setPalette(false)} />}
       {shortcutHelp && <ShortcutHelp onClose={() => setShortcutHelp(false)} />}
+      {moving && <MoveDialog ids={moving} fromListId={list?.id} onClose={() => setMoving(null)} />}
       {wide && (
         <button type="button" className="kbd-hint" onClick={() => setShortcutHelp(true)} title="Tastenkürzel anzeigen">
           <kbd>H</kbd> Tastenkürzel

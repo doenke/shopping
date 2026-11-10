@@ -211,3 +211,40 @@
 .kbd-hint kbd {
   font-size: 0.7rem;
 }
+
+/* Several entries selected (Shift + arrows, Ctrl-/Shift-click) */
+.tile.is-picked,
+.task.is-picked,
+.kanban-card.is-picked {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 70%, transparent);
+}
+.work-row.is-picked,
+.work-row.is-picked:hover {
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface));
+}
+
+/* Dragging entries onto another list in the sidebar */
+.drag-ghost {
+  position: fixed;
+  z-index: 60;
+  max-width: 260px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.18);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.9rem;
+}
+body.dragging-items {
+  user-select: none;
+  cursor: grabbing;
+}
+.sidebar a.drop-list {
+  outline: 2px dashed var(--primary);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}

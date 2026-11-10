@@ -19,6 +19,9 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { setChecked, updateItem } from '../../actions';
 import { entryKeys, focusItem } from '../../keyboard';
+import { selectedOr, useSelection } from '../../selection';
+import { listAt, markList } from '../../listDrop';
+import { moveAndTell } from '../MoveDialog';
 import { PeopleDots, PersonCheckDialog } from '../People';
 import { TaskAdd, TaskHeader } from './TaskTable';
 
@@ -43,6 +46,7 @@ const DONE_SHOWN = 30;
  */
 export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, viewSwitch }: Props) {
   const statuses = listStatuses(list);
+  const picked = useSelection();
   const showDone = kanbanShowsDone(list);
   const defaultStatus = listDefaultStatus(list, statuses);
   /** Where a dragged card would land: the column and the place in it. */
@@ -121,15 +125,30 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
       if (!dragged.current && Math.hypot(e.clientX - p.x, e.clientY - p.y) < 6) return;
       dragged.current = true;
       setDrag({ ...p, x: e.clientX, y: e.clientY });
-      setOver(dropAt(e.clientX, e.clientY, p.id));
+      // Over a list in the sidebar: into that list; else a column of the board.
+      const toList = listAt(e.clientX, e.clientY, list.id);
+      markList(toList?.el ?? null);
+      setOver(toList ? null : dropAt(e.clientX, e.clientY, p.id));
     };
     const onUp = (e: PointerEvent) => {
       const p = pending.current;
       pending.current = null;
       if (p && dragged.current) {
-        const target = dropAt(e.clientX, e.clientY, p.id);
-        const item = items.find((i) => i.id === p.id);
-        if (item && target) moveTo(item, target.column, target.column === DONE ? undefined : target.index);
+        const toList = listAt(e.clientX, e.clientY, list.id);
+        markList(null);
+        if (toList) void moveAndTell(selectedOr(p.id), toList);
+        else {
+          const target = dropAt(e.clientX, e.clientY, p.id);
+          const item = items.find((i) => i.id === p.id);
+          if (item && target) {
+            moveTo(item, target.column, target.column === DONE ? undefined : target.index);
+            // The other selected cards come along (at the end of that column).
+            for (const id of selectedOr(p.id)) {
+              const other = id !== p.id ? items.find((i) => i.id === id) : undefined;
+              if (other) moveTo(other, target.column);
+            }
+          }
+        }
       }
       setDrag(null);
       setOver(null);
@@ -151,9 +170,14 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
     const ids = [...statuses.map((s) => s.id), ...(showDone ? [DONE] : [])];
     const here = item.checked ? DONE : itemStatus(item, statuses, defaultStatus)!.id;
     if (key === 'ArrowLeft' || key === 'ArrowRight') {
-      const target = ids[ids.indexOf(here) + (key === 'ArrowRight' ? 1 : -1)];
-      if (target === undefined) return;
-      moveTo(item, target);
+      // Several selected: each one a column further.
+      for (const id of selectedOr(item.id)) {
+        const it = items.find((i) => i.id === id);
+        if (!it) continue;
+        const from = it.checked ? DONE : itemStatus(it, statuses, defaultStatus)!.id;
+        const target = ids[ids.indexOf(from) + (key === 'ArrowRight' ? 1 : -1)];
+        if (target !== undefined) moveTo(it, target);
+      }
     } else if (here !== DONE) {
       const cards = columns.open.find((c) => c.status.id === here)?.items ?? [];
       const at = cards.indexOf(item) + (key === 'ArrowDown' ? 1 : -1);
@@ -178,7 +202,7 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
         key={item.id}
         data-item-id={item.id}
         tabIndex={0}
-        className={`kanban-card${item.id === selected ? ' kanban-card--selected' : ''}${item.checked ? ' kanban-card--done' : ''}${drag?.id === item.id ? ' kanban-card--dragging' : ''}`}
+        className={`kanban-card${item.id === selected ? ' kanban-card--selected' : ''}${picked.has(item.id) ? ' is-picked' : ''}${item.checked ? ' kanban-card--done' : ''}${drag?.id === item.id ? ' kanban-card--dragging' : ''}`}
         aria-selected={item.id === selected}
         onPointerDown={(e) => {
           if (e.pointerType === 'touch' || e.button !== 0 || (e.target as HTMLElement).closest('a')) return;

@@ -90,11 +90,13 @@
   Status untereinander zur Auswahl. Umbenennen verliert nichts (gespeichert wird pro Eintrag; REST/MCP:
   `status`; in Aufgaben-Apps „in Bearbeitung“, siehe [api-und-ki.md](api-und-ki.md)).
 
-### Am Rechner: Tabelle und Kanban
+### Tabelle und Kanban
 
-Im breiten Fenster erscheint jede ToDo-Liste als **Tabelle** (Status, Fällig, Wer, Bereich, Link) mit der
-gewählten Aufgabe rechts zum direkten Bearbeiten, in einem sachlichen Design (Grau mit gedecktem Blau,
-Segoe UI, hell/dunkel nach System). Andere Listen behalten ihr Aussehen.
+Jede ToDo-Liste erscheint als **Tabelle** (Status, Fällig, Wer, Bereich, Link – nur die Spalten, die eine
+Aufgabe nutzt). Am Rechner steht die gewählte Aufgabe rechts zum direkten Bearbeiten, auf dem Handy sind die
+Zeilen kompakt (Angaben in einer zweiten Zeile) und ein Tipp öffnet die Aufgabe als eigene Seite. Am Rechner
+im sachlichen Design (Grau mit gedecktem Blau, Segoe UI, hell/dunkel nach System); andere Listen behalten ihr
+Aussehen.
 
 Listen mit Status bekommen oben rechts den Umschalter *Tabelle | Kanban* (pro Liste gemerkt; ohne Status
 gibt es nur die Tabelle). Im **Kanban** ist jeder Status eine Spalte:
@@ -110,7 +112,8 @@ gibt es nur die Tabelle). Im **Kanban** ist jeder Status eine Spalte:
 
 ### Arbeitsmodus
 
-💼 unten in der Seitenleiste oder `Strg+Shift+A` (pro Gerät gemerkt) blendet Listen aus: Seitenleiste, Suche
+💼 unten in der Seitenleiste (angeboten, solange eine ToDo-Liste offen ist) oder `Strg+Shift+A` (pro Gerät
+gemerkt) blendet Listen aus: Seitenleiste, Suche
 und Start zeigen nur noch die ToDo-Listen der Kategorie „Arbeit“ (umstellbar auf alle ToDo-Listen). Neue
 Listen sind dann ToDo-Listen in „Arbeit“, oben links steht „To-Do“. Die installierte App bietet per
 Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ als Sprungziele.
@@ -131,6 +134,11 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
   ein Tipp darauf öffnet die Seite, ohne abzuhaken. Nur ein Link eingetippt: Der Eintrag heißt wie die Seite.
   Am Laptop lassen sich Links und Browser-Tabs **auf die Liste ziehen** – auf einen Eintrag (bekommt den Link)
   oder auf freie Fläche (neuer Eintrag).
+- **Mehrere markieren und verschieben** (am Rechner): `Shift` + Pfeiltasten oder Shift-/Strg-Klick markiert
+  mehrere Einträge. Markierte (oder ein einzelner) lassen sich **auf eine Liste in der Seitenleiste ziehen**
+  oder mit `V` („Verschieben nach …“) in eine andere Liste verschieben, im Kanban mit `Alt` + Pfeiltasten in
+  die Nachbarspalte; `Entf` löscht alle, `Esc` hebt die Markierung auf. Verschieben und Löschen lassen sich
+  rückgängig machen. Der Status bleibt dabei in der alten Liste (in der neuen gilt deren Standard).
 - **⋮ → Bearbeiten …**: Name, Beschreibung, Kategorie, Status, Kanban-Einstellung, Icon.
 - **⋮ → Berechtigungen …**: für den Haushalt oder nur für dich, **mit anderen Haushalten oder Personen
   teilen**, Link teilen und erneuern. In der Seitenleiste: 🔒 privat, 🔗 per Link, 👥 mit anderen geteilt.
@@ -150,6 +158,8 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
   | Leertaste | abhaken bzw. wieder öffnen |
   | Enter | öffnen / bearbeiten |
   | Entf | löschen, mit „Rückgängig“ |
+  | `Shift` + Pfeiltasten | mehrere markieren (auch Shift-/Strg-Klick) |
+  | `V` | Markierte in eine andere Liste verschieben |
   | `Alt` + Pfeiltasten | Kanban: Karte verschieben |
   | `Strg+K` | Listen und Einträge suchen |
   | `Strg+Shift+A` | Arbeitsmodus an/aus |

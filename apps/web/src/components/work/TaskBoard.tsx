@@ -1,5 +1,5 @@
 import { listStatuses, type CatalogIndex, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TaskDetail } from './TaskDetail';
 import { TaskTable } from './TaskTable';
 import { KanbanBoard } from './KanbanBoard';
@@ -9,6 +9,8 @@ interface Props {
   items: ItemRow[];
   index: CatalogIndex;
   users: Map<string, UserInfo>;
+  /** Phones: compact rows, the details as a full-screen page (tap a task). */
+  compact?: boolean;
 }
 
 type View = 'table' | 'kanban';
@@ -25,9 +27,9 @@ function loadView(listId: string): View {
  * ToDo lists on the desktop: the tasks as a table, the selected task edited in place on the right.
  * Shown for every ToDo list (work or not) – the Arbeitsmodus only decides which lists are in the sidebar.
  */
-export function TaskBoard({ list, items, index, users }: Props) {
+export function TaskBoard({ list, items, index, users, compact = false }: Props) {
   // Kanban needs columns: without statuses of its own a list is just the table (no switch).
-  const hasStatuses = listStatuses(list).length > 0;
+  const hasStatuses = listStatuses(list).length > 0 && !compact;
   const [stored, setView] = useState<View>(() => loadView(list.id));
   const view: View = hasStatuses ? stored : 'table';
   useEffect(() => setView(loadView(list.id)), [list.id]);
@@ -81,6 +83,16 @@ export function TaskBoard({ list, items, index, users }: Props) {
     setOpened((o) => ({ id, n: (o?.n ?? 0) + 1 }));
   };
 
+  if (compact) {
+    // Phones: a tap opens the task as a page of its own (back with ✕ or the back gesture).
+    return (
+      <>
+        <TaskTable list={list} items={items} index={index} selected={null} onSelect={() => undefined} onOpen={open} compact />
+        {detailsOpen && item && <TaskPage key={item.id} item={item} list={list} items={items} users={users} onClose={() => setDetailsOpen(false)} />}
+      </>
+    );
+  }
+
   return (
     // Kanban needs the width: the details only show once opened (double click / Enter).
     <div className={`task-board${!showDetails ? ' task-board--full' : ''}`}>
@@ -109,5 +121,28 @@ export function TaskBoard({ list, items, index, users }: Props) {
         </div>
       )}
     </div>
+  );
+}
+
+/** The details of a task as a full-screen page (phones). */
+function TaskPage({
+  item,
+  list,
+  items,
+  users,
+  onClose,
+}: {
+  item: ItemRow;
+  list: ListRow;
+  items: ItemRow[];
+  users: Map<string, UserInfo>;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => ref.current?.showModal(), []);
+  return (
+    <dialog ref={ref} className="task-page" onClose={onClose} aria-label={item.name}>
+      <TaskDetail item={item} list={list} items={items} users={users} focusTitle={0} onClose={() => ref.current?.close()} />
+    </dialog>
   );
 }

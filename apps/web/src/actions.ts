@@ -1,4 +1,6 @@
 import {
+  comparePositions,
+  generateKeyBetween,
   categoriesFor,
   defaultVisibility,
   listTemplateIds,
@@ -91,6 +93,52 @@ export async function updateItem(id: string, patch: ItemPatch): Promise<void> {
 
 export async function deleteItem(id: string): Promise<void> {
   await sync.mutateItem(id, { deleted: true });
+}
+
+/**
+ * Entries into another list (dragged onto the sidebar, "Verschieben nach …"): created there with all
+ * their fields, at the end, and removed here – the sync has no "change list". The status belongs to the
+ * old list and stays behind. Returns what is needed for "Rückgängig".
+ */
+export async function moveItems(ids: string[], targetId: string): Promise<{ originals: ItemRow[]; created: string[] }> {
+  const items = (await db.items.bulkGet(ids)).filter((i): i is ItemRow => !!i && !i.deleted && i.listId !== targetId);
+  if (!items.length) return { originals: [], created: [] };
+  let last = (await db.items.where('listId').equals(targetId).toArray())
+    .filter((i) => !i.deleted)
+    .reduce<string | null>((max, i) => (max === null || i.position > max ? i.position : max), null);
+  const created: string[] = [];
+  const changes: { id: string; patch: ItemPatch }[] = [];
+  for (const item of [...items].sort((a, b) => comparePositions(a.position, b.position))) {
+    const id = crypto.randomUUID();
+    last = generateKeyBetween(last, null);
+    const { status: _s, davName: _d, icalUid: _u, ...attributes } = item.attributes;
+    changes.push({
+      id,
+      patch: {
+        listId: targetId,
+        name: item.name,
+        catalogItemId: item.catalogItemId,
+        categoryId: item.categoryId,
+        amounts: item.amounts,
+        properties: item.properties,
+        note: item.note,
+        position: last,
+        optional: item.optional,
+        attributes,
+        ...(item.checked ? { checked: true } : {}),
+      },
+    });
+    changes.push({ id: item.id, patch: { deleted: true } });
+    created.push(id);
+  }
+  await sync.mutateItems(changes);
+  return { originals: items, created };
+}
+
+/** "Rückgängig" after moving: the originals come back, the copies go. */
+export async function undoMove(moved: { originals: ItemRow[]; created: string[] }): Promise<void> {
+  await Promise.all(moved.originals.map(restoreItem));
+  await sync.mutateItems(moved.created.map((id) => ({ id, patch: { deleted: true } })));
 }
 
 /** "Rückgängig" after deleting: the item comes back with all its fields (the local copy may be gone already). */
