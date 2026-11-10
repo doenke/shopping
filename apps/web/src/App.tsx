@@ -312,7 +312,7 @@ function Shell({ me }: { me: Me }) {
       {moving && <MoveDialog ids={moving} fromListId={list?.id} onClose={() => setMoving(null)} />}
       {wide && (
         <button type="button" className="kbd-hint" onClick={() => setShortcutHelp(true)} title="Tastenkürzel anzeigen">
-          <kbd>H</kbd> Tastenkürzel
+          <kbd>H</kbd> Tastenkürzel <span className="kbd-hint-version">· {__APP_VERSION__}</span>
         </button>
       )}
       <Toast />
