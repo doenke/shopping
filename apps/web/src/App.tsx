@@ -33,6 +33,7 @@ import { Toast } from './components/Toast';
 import { useShortcuts } from './keyboard';
 import { useItemDrag } from './itemDrag';
 import { useSidebarCollapse } from './sidebarCollapse';
+import { moveInOrder, useListDrag } from './listDrag';
 import { applyModeFromUrl, isWorkList, isWorkMode, setWorkMode, useWorkModeSetting } from './workMode';
 import { ListBadges, OpenCount } from './components/ListBadges';
 
@@ -121,7 +122,7 @@ function Shell({ me }: { me: Me }) {
   const listLinks = (ls: ListRow[], prefix: (l: ListRow) => string) => (
     <ul>
       {ls.map((l) => (
-        <li key={l.id}>
+        <li key={l.id} data-sort-id={guest ? undefined : l.id}>
           <a
             href={`#/list/${l.id}`}
             className={l.id === list?.id && route.page === 'list' ? 'active' : ''}
@@ -199,6 +200,18 @@ function Shell({ me }: { me: Me }) {
     onMove: (ids) => setMoving(ids),
   });
   useItemDrag(list?.id);
+  // Sorting the lists right in the sidebar: drag a list within its group.
+  useListDrag(
+    (id, beforeId, afterId) =>
+      void setListOrder(
+        moveInOrder(
+          ordered.map((l) => l.id),
+          id,
+          beforeId,
+          afterId,
+        ),
+      ),
+  );
 
   const newList = () => {
     setNewDialog(true);
