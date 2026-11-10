@@ -32,6 +32,7 @@ import { ShortcutHelp } from './components/ShortcutHelp';
 import { Toast } from './components/Toast';
 import { useShortcuts } from './keyboard';
 import { useItemDrag } from './itemDrag';
+import { designPreview } from './designPreview';
 import { applyModeFromUrl, isWorkList, isWorkMode, setWorkMode, setWorkScope, useWorkModeSetting, useWorkScope } from './workMode';
 import { ListBadges, OpenCount } from './components/ListBadges';
 
@@ -183,8 +184,15 @@ function Shell({ me }: { me: Me }) {
   // A ToDo list on the desktop: tasks as a table with details, in the calm business look.
   const board = wide && route.page === 'list' && list?.listType === 'todo' && !list.isTemplate;
   useEffect(() => {
-    document.documentElement.classList.toggle('business', board);
+    // Draft of one design for everything (?design=neu): the same frame, the accent of the list type.
+    const preview = designPreview();
+    document.documentElement.classList.toggle('design-preview', preview);
+    document.documentElement.classList.toggle('business', board && !preview);
   }, [board]);
+  useEffect(() => {
+    if (route.page === 'list' && list) document.documentElement.dataset.accent = list.listType;
+    else delete document.documentElement.dataset.accent;
+  }, [route.page, list?.listType]);
   // The keyboard, in every mode.
   const [palette, setPalette] = useState(false);
   const [shortcutHelp, setShortcutHelp] = useState(false);

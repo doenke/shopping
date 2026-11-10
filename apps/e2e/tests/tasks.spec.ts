@@ -163,8 +163,10 @@ test('several entries move into another list: dragged onto the sidebar or with V
   await expect(page.locator('.work-row')).toHaveCount(0);
   await page.locator('.snackbar--toast').getByRole('button', { name: 'Rückgängig' }).click();
   await expect(page.locator('.work-row')).toHaveText([/Drei/]);
-  const names = (await (await page.request.get(`/api/v1/lists/${to.id}`)).json()).items.map((i: { name: string }) => i.name);
-  expect(names.sort()).toEqual(['Eins', 'Zwei']);
+  // The undo reaches the server through sync – wait for it.
+  await expect
+    .poll(async () => (await (await page.request.get(`/api/v1/lists/${to.id}`)).json()).items.map((i: { name: string }) => i.name).sort())
+    .toEqual(['Eins', 'Zwei']);
 });
 
 test('phones: ToDo lists as a compact table, a tap opens the task', async ({ page }, info) => {

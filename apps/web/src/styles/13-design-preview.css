@@ -1,0 +1,146 @@
+/*
+ * Draft of one design for everything (preview: ?design=neu, back with ?design=alt).
+ * A calm neutral frame for all lists, one accent colour per list type, the same type everywhere;
+ * tiles stay but are flatter. Only applies with html.design-preview – the current look is untouched.
+ */
+
+html.design-preview {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #eceef1;
+  --text: #1b1f24;
+  --muted: #6a717c;
+  --border: #dfe2e7;
+  --primary-text: #ffffff;
+  --danger: #b4372f;
+  --radius: 10px;
+  --tile-alpha: 9%;
+  --shadow: 0 1px 2px rgb(16 24 40 / 0.06);
+  --work-hover: #f3f5f8;
+  --work-selected: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  font-family:
+    'Segoe UI Variable Text',
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    Roboto,
+    sans-serif;
+  font-size: 15px;
+}
+/* One accent per list type – the frame stays the same. */
+html.design-preview,
+html.design-preview[data-accent='shopping'] {
+  --primary: #2e7a4f;
+}
+html.design-preview[data-accent='packing'] {
+  --primary: #2c6aa8;
+}
+html.design-preview[data-accent='memo'] {
+  --primary: #a8691a;
+}
+html.design-preview[data-accent='todo'] {
+  --primary: #3f5f95;
+}
+@media (prefers-color-scheme: dark) {
+  html.design-preview {
+    --bg: #16181c;
+    --surface: #1e2126;
+    --surface-2: #262a30;
+    --text: #e5e7eb;
+    --muted: #9aa1ac;
+    --border: #31363e;
+    --tile-alpha: 14%;
+    --work-hover: #23272d;
+  }
+  html.design-preview,
+  html.design-preview[data-accent='shopping'] {
+    --primary: #5cb880;
+  }
+  html.design-preview[data-accent='packing'] {
+    --primary: #6aa3dc;
+  }
+  html.design-preview[data-accent='memo'] {
+    --primary: #d9a24e;
+  }
+  html.design-preview[data-accent='todo'] {
+    --primary: #8aaee0;
+  }
+  html.design-preview {
+    --primary-text: #12161c;
+  }
+}
+
+/* Frame: title bar and sidebar as quiet surfaces with a line, no colour washes. */
+html.design-preview .topbar {
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border-bottom: 1px solid var(--border);
+  min-height: 56px;
+}
+html.design-preview .topbar__title {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+html.design-preview .sidebar {
+  background: var(--surface-2);
+  gap: 4px;
+}
+html.design-preview .sidebar a {
+  padding: 7px 10px;
+  border-radius: 8px;
+}
+html.design-preview .sidebar a.active {
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface));
+  color: var(--text);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+html.design-preview .sidebar__section {
+  margin-top: 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+html.design-preview .btn,
+html.design-preview .chip {
+  border-radius: 8px;
+  min-height: 36px;
+}
+html.design-preview .btn--primary {
+  font-weight: 600;
+}
+html.design-preview .sheet {
+  border-radius: 12px;
+}
+html.design-preview .snackbar {
+  border-radius: 8px;
+  background: #1f2937;
+}
+
+/* Input: the same field everywhere. */
+html.design-preview .addbar input[type='search'],
+html.design-preview .work-add {
+  border-radius: 8px;
+  box-shadow: none;
+  border: 1px solid var(--border);
+}
+
+/* Tiles: flatter, a thin category line instead of a coloured block. */
+html.design-preview .tile {
+  min-height: 92px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--cat) 70%, transparent);
+}
+html.design-preview .tile .item-icon {
+  width: 40px;
+  height: 40px;
+}
+html.design-preview .tile__name {
+  font-weight: 500;
+}
+html.design-preview .group__title {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+html.design-preview .listview--rows .group .tile {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--cat) 70%, transparent);
+}
