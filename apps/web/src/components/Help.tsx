@@ -155,8 +155,8 @@ function UserHelp({ me }: { me: Me }) {
         Kürzel.
       </p>
       <p>
-        <strong>💼 Arbeitsmodus</strong> (unten in der Seitenleiste oder <kbd>Strg</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd>): blendet alles aus außer den ToDo-Listen
-        der Kategorie „Arbeit“. ToDo-Listen erscheinen am Rechner immer als Tabelle mit Details rechts – ganz sachlich, ohne Einkaufszettel-Look.
+        <strong>🏢 Arbeitsmodus</strong> (Büro-Symbol oben in der Seitenleiste oder <kbd>Strg</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd>): blendet alles aus außer den
+        ToDo-Listen der Kategorie „Arbeit“. ToDo-Listen erscheinen am Rechner immer als Tabelle mit Details rechts – ganz sachlich, ohne Einkaufszettel-Look.
       </p>
     </>
   );

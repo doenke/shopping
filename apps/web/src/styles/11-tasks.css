@@ -354,40 +354,38 @@ kbd {
 .shortcuts td:first-child {
   white-space: nowrap;
 }
+.sidebar__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.sidebar__top .sidebar__head {
+  flex: 1;
+  min-width: 0;
+}
+/* Arbeitsmodus: a small office symbol next to the title. */
 .sidebar__work {
-  margin: 0 0 4px;
-  padding: 8px 12px;
-  border: 1px dashed var(--border);
-  border-radius: 10px;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin-top: 2px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: none;
-  color: var(--muted);
-  text-align: left;
+  font-size: 1.05rem;
+  line-height: 1;
   cursor: pointer;
+  opacity: 0.45;
+  filter: grayscale(1);
 }
 .sidebar__work:hover {
-  color: var(--text);
-  border-style: solid;
+  opacity: 0.9;
 }
 .sidebar__work--on {
-  display: grid;
-  gap: 6px;
-  border-style: solid;
   border-color: var(--primary);
-  color: var(--text);
-  cursor: default;
-}
-.sidebar__work--on:hover {
-  border-style: solid;
-}
-.sidebar__work--on select {
-  padding: 4px 6px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-}
-.sidebar__work--on .link {
-  justify-self: start;
-  font-size: 0.9em;
+  opacity: 1;
+  filter: none;
 }
 .tile:focus-visible,
 .task__body:focus-visible {

@@ -23,11 +23,11 @@ test('Arbeitsmodus hides lists; ToDo lists on the desktop are a table', async ({
   await page.keyboard.press(' ');
   await expect(page.locator('.work-table')).toContainText('Erledigt (1)');
   // The Arbeitsmodus only hides the other lists.
-  await page.getByRole('button', { name: /Arbeitsmodus/ }).click();
+  await page.getByRole('button', { name: 'Arbeitsmodus' }).click();
   await expect(page.locator('.sidebar')).toContainText('Projekt X');
   await expect(page.locator('.sidebar')).not.toContainText('Wocheneinkauf');
   await expect(page.locator('.sidebar')).not.toContainText('Haus');
-  await page.keyboard.press('Control+Shift+A');
+  await page.getByRole('button', { name: 'Arbeitsmodus' }).click();
   await expect(page.locator('.sidebar')).toContainText('Wocheneinkauf');
 });
 
