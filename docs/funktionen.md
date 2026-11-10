@@ -161,6 +161,8 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
 - **⋮ → Als Text teilen …**: die offenen Einträge als Text, auf dem Handy in den Teilen-Dialog, am Laptop in
   die Zwischenablage; geht auch offline.
 - **Reihenfolge der Listen und Abschnitte** in der Seitenleiste: *Einstellungen → Reihenfolge*, je Benutzer.
+  Am Rechner lassen sich Listen auch direkt in der Seitenleiste ziehen (innerhalb ihres Abschnitts bzw. ihrer
+  Kategorie).
 - **Abschnitte und Kategorien zuklappen**: Klick auf eine Überschrift in der Seitenleiste (▾) klappt sie zu
   oder auf, pro Gerät gemerkt. Die gerade offene Liste bleibt auch in einer zugeklappten Gruppe sichtbar.
 

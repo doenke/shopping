@@ -246,3 +246,24 @@ test('sidebar groups fold away and stay folded', async ({ page }, info) => {
   await sidebar.getByRole('button', { name: 'Arbeit', exact: true }).click();
   await expect(sidebar).toContainText('Projekt Y');
 });
+
+test('lists are sorted by dragging them in the sidebar', async ({ page }, info) => {
+  test.skip(phone(page), 'dragging with the mouse on the desktop');
+  await login(page, `Mia ${info.project.name}`);
+  for (const name of ['Alpha', 'Beta', 'Gamma']) await page.request.post('/api/v1/lists', { data: { name, type: 'packing' } });
+  await page.goto('/');
+  const names = page.locator('.sidebar li[data-sort-id]', { hasText: /Alpha|Beta|Gamma/ });
+  await expect(names).toHaveText([/Alpha/, /Beta/, /Gamma/]);
+  // Gamma onto the top half of Alpha: first.
+  const from = (await names.nth(2).boundingBox())!;
+  const to = (await names.nth(0).boundingBox())!;
+  await page.mouse.move(from.x + 20, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 20, from.y - 10, { steps: 4 });
+  await page.mouse.move(to.x + 20, to.y + 4, { steps: 6 });
+  await page.mouse.up();
+  await expect(names).toHaveText([/Gamma/, /Alpha/, /Beta/]);
+  // It was a drag, not a click, and the order is kept.
+  await page.reload();
+  await expect(names).toHaveText([/Gamma/, /Alpha/, /Beta/]);
+});
