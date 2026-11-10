@@ -229,6 +229,31 @@
   font-weight: 600;
   color: var(--muted, #6b6f6c);
 }
+/* Section and group headings fold their lists away. */
+.sidebar .sidebar__toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sidebar .sidebar__toggle:hover {
+  color: var(--text);
+}
+.sidebar__chevron {
+  display: inline-block;
+  width: 0.9em;
+  font-size: 0.85em;
+  transition: transform 0.15s;
+}
+.sidebar__toggle[aria-expanded='false'] .sidebar__chevron {
+  transform: rotate(-90deg);
+}
 /* Checkbox rows inside forms ("Als Vorlage anlegen", "Privat"): box and text side by side. */
 .check.field {
   flex-direction: row;
