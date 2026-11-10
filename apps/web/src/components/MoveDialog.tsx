@@ -26,7 +26,6 @@ export function MoveDialog({ ids, fromListId, onClose }: Props) {
   const [active, setActive] = useState(0);
   useEffect(() => ref.current?.showModal(), []);
   const shown = lists.filter((l) => l.name.toLowerCase().includes(query.trim().toLowerCase()));
-  useEffect(() => setActive(0), [query]);
 
   const choose = async (target: ListRow | undefined) => {
     if (!target) return;
@@ -43,14 +42,18 @@ export function MoveDialog({ ids, fromListId, onClose }: Props) {
           value={query}
           aria-label="Liste suchen"
           placeholder={`${ids.length === 1 ? '1 Eintrag' : `${ids.length} Einträge`} verschieben nach …`}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setActive(0);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
               e.preventDefault();
               setActive((a) => Math.max(0, Math.min(shown.length - 1, a + (e.key === 'ArrowDown' ? 1 : -1))));
             } else if (e.key === 'Enter') {
               e.preventDefault();
-              void choose(shown[active]);
+              // A hover from before the filtering can point past the end – then the first hit.
+              void choose(shown[active] ?? shown[0]);
             }
           }}
         />

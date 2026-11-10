@@ -142,7 +142,7 @@ test('Kanban by keyboard: Alt + arrows move a card', async ({ page }, info) => {
 
 test('several entries move into another list: dragged onto the sidebar or with V', async ({ page }, info) => {
   test.skip(phone(page), 'mouse and keyboard on the desktop');
-  await login(page, `Nora ${info.project.name}`);
+  await login(page, `Nora ${info.project.name} ${info.repeatEachIndex}`);
   const from = await (await page.request.post('/api/v1/lists', { data: { name: 'Quelle', type: 'todo' } })).json();
   const to = await (await page.request.post('/api/v1/lists', { data: { name: 'Ziel', type: 'todo' } })).json();
   await page.request.post(`/api/v1/lists/${from.id}/items`, { data: { items: ['Eins', 'Zwei', 'Drei'] } });
@@ -159,6 +159,7 @@ test('several entries move into another list: dragged onto the sidebar or with V
   await page.locator('.work-row', { hasText: 'Drei' }).click();
   await page.keyboard.press('v');
   await page.getByRole('textbox', { name: 'Liste suchen' }).fill('Ziel');
+  await expect(page.getByRole('option')).toHaveText([/Ziel/]);
   await page.keyboard.press('Enter');
   await expect(page.locator('.work-row')).toHaveCount(0);
   await page.locator('.snackbar--toast').getByRole('button', { name: 'Rückgängig' }).click();

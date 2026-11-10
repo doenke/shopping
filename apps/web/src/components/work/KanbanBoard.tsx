@@ -60,11 +60,18 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
   const dragged = useRef(false);
   const [checking, setChecking] = useState<string | null>(null);
   /** A card moved by keyboard: give it the focus back after it was re-drawn. */
-  const refocus = useRef<string | null>(null);
+  // Several updates can follow one move (the local write, then the server's answer); the card may be
+  // re-drawn by any of them. So for a moment: whenever the focus got lost, put it back on the card.
+  const refocus = useRef<{ id: string; until: number } | null>(null);
   useEffect(() => {
-    if (!refocus.current) return;
-    focusItem(refocus.current);
-    refocus.current = null;
+    const r = refocus.current;
+    if (!r) return;
+    if (Date.now() > r.until) {
+      refocus.current = null;
+      return;
+    }
+    const active = document.activeElement;
+    if (!active || active === document.body || (active as HTMLElement).dataset?.itemId === r.id) focusItem(r.id);
   }, [items]);
 
   const columns = useMemo(() => {
@@ -185,7 +192,7 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
       moveTo(item, here, at);
     }
     // The card is re-drawn in its new place once the change is in: focus it there (see the effect below).
-    refocus.current = item.id;
+    refocus.current = { id: item.id, until: Date.now() + 1500 };
   };
 
   const card = (item: ItemRow) => {
