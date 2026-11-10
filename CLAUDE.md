@@ -27,3 +27,5 @@ einem Push die Versionen aus der CI-Zusammenfassung dem Nutzer nennen.
 - Keine persönlichen Domains in Repo-Dateien, keine Benachrichtigungen einbauen.
 - Tests: `pnpm test` (braucht PostgreSQL, `TEST_DATABASE_URL`), App im Browser: `pnpm build && pnpm e2e`
   (Playwright, `apps/e2e`), HA: `ha-tests/` mit pytest. Formatierung: `pnpm format` (CI prüft `format:check`).
+- Aufgaben aus der ToDo-Liste „Shopping App“ (MCP Shoppingliste): Umgesetztes nach dem Push abhaken,
+  bei angefangenen oder wartenden Aufgaben den Stand in die Notiz schreiben.
