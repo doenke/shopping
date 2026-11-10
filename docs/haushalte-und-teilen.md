@@ -39,7 +39,7 @@ Nur Pocket-ID-Benutzer gehören zu einem Haushalt, Gäste nie. Wer alles im eige
 
 Teilen darf jeder mit Konto, der die Liste hat – wie beim Link; entfernen darf nur der Besitzer. In der
 Seitenleiste zeigt 🔗, dass eine Liste per Link geteilt ist, 👥, dass sie mit anderen Haushalten oder Personen
-geteilt ist (🔒 = privat).
+geteilt ist. Ob eine Liste privat ist (🔒), steht in der Liste selbst.
 
 ## Teilen per Link
 

@@ -7,11 +7,10 @@ export function OpenCount({ listId }: { listId: string }) {
   return n ? <span className="count">{n}</span> : null;
 }
 
-/** 🔒 private, 🔗 shared via the link, 👥 shared with other households or people. */
+/** Sidebar badges: 🔗 shared via the link, 👥 shared with other households or people (private shows in the list itself). */
 export function ListBadges({ list }: { list: ListRow }) {
   return (
     <>
-      {list.visibility === 'private' && <span title="Privat"> 🔒</span>}
       {(list.sharing === 'link' || list.sharing === 'both') && <span title="Per Link geteilt"> 🔗</span>}
       {(list.sharing === 'people' || list.sharing === 'both') && <span title="Mit anderen Haushalten oder Personen geteilt"> 👥</span>}
     </>
