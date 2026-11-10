@@ -217,3 +217,32 @@ test('the task table groups by Fällig, Bereich and Wer (one row per person)', a
   await page.reload();
   await expect(group.getByRole('button', { name: 'Alle' })).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('sidebar groups fold away and stay folded', async ({ page }, info) => {
+  test.skip(phone(page), 'the sidebar is always there on the desktop');
+  await login(page, `Lea ${info.project.name}`);
+  await page.request.post('/api/v1/lists', { data: { name: 'Projekt Y', type: 'todo', group: 'Arbeit' } });
+  await page.request.post('/api/v1/lists', { data: { name: 'Rasen', type: 'todo', group: 'Haus' } });
+  await page.request.post('/api/v1/lists', { data: { name: 'Urlaub', type: 'packing' } });
+  const garden = await (await page.request.post('/api/v1/lists', { data: { name: 'Gartenarbeit', type: 'todo', group: 'Haus' } })).json();
+  await page.goto(`/#/list/${garden.id}`);
+  const sidebar = page.locator('.sidebar');
+  await expect(sidebar).toContainText('Projekt Y');
+  // A ToDo Kategorie folds on its own …
+  await sidebar.getByRole('button', { name: 'Arbeit', exact: true }).click();
+  await expect(sidebar).not.toContainText('Projekt Y');
+  await expect(sidebar).toContainText('Rasen');
+  // … a whole section too, and it stays so after a reload.
+  await sidebar.getByRole('button', { name: 'Packlisten', exact: true }).click();
+  await expect(sidebar).not.toContainText('Urlaub');
+  await page.reload();
+  await expect(sidebar).toContainText('Rasen');
+  await expect(sidebar).not.toContainText('Urlaub');
+  await expect(sidebar).not.toContainText('Projekt Y');
+  // The open list stays visible in a folded group.
+  await sidebar.getByRole('button', { name: 'Haus', exact: true }).click();
+  await expect(sidebar).toContainText('Gartenarbeit');
+  await expect(sidebar).not.toContainText('Rasen');
+  await sidebar.getByRole('button', { name: 'Arbeit', exact: true }).click();
+  await expect(sidebar).toContainText('Projekt Y');
+});

@@ -32,6 +32,7 @@ import { ShortcutHelp } from './components/ShortcutHelp';
 import { Toast } from './components/Toast';
 import { useShortcuts } from './keyboard';
 import { useItemDrag } from './itemDrag';
+import { useSidebarCollapse } from './sidebarCollapse';
 import { applyModeFromUrl, isWorkList, isWorkMode, setWorkMode, useWorkModeSetting } from './workMode';
 import { ListBadges, OpenCount } from './components/ListBadges';
 
@@ -116,6 +117,7 @@ function Shell({ me }: { me: Me }) {
     me.sectionOrder,
     (s) => s.key,
   );
+  const { isCollapsed, toggle: toggleGroup } = useSidebarCollapse();
   const listLinks = (ls: ListRow[], prefix: (l: ListRow) => string) => (
     <ul>
       {ls.map((l) => (
@@ -237,22 +239,31 @@ function Shell({ me }: { me: Me }) {
           + Neu
         </button>
       )}
-      {sections.map(
-        (sec) =>
-          sec.lists.length > 0 && (
-            <div key={sec.title}>
-              {sec.title && <h3 className="sidebar__section">{sec.title}</h3>}
-              {sec.grouped
-                ? groupLists(sec.lists).map((g, _i, all) => (
+      {sections.map((sec) => {
+        if (sec.lists.length === 0) return null;
+        // A collapsed group still shows the open list, so you always see where you are.
+        const shown = (key: string, ls: ListRow[]) => (isCollapsed(key) ? ls.filter((l) => l.id === list?.id && route.page === 'list') : ls);
+        const secKey = `sec:${sec.key}`;
+        const secLists = sec.title ? shown(secKey, sec.lists) : sec.lists;
+        return (
+          <div key={sec.key}>
+            {sec.title && <GroupToggle className="sidebar__section" label={sec.title} open={!isCollapsed(secKey)} onToggle={() => toggleGroup(secKey)} />}
+            {sec.grouped && !(sec.title && isCollapsed(secKey))
+              ? groupLists(sec.lists).map((g, _i, all) => {
+                  const grpKey = `grp:${sec.key}:${g.group}`;
+                  return (
                     <div key={g.group}>
-                      {all.length > 1 && <h4 className="sidebar__subsection">{g.group}</h4>}
-                      {listLinks(g.lists, sec.prefix)}
+                      {all.length > 1 && (
+                        <GroupToggle className="sidebar__subsection" label={g.group} open={!isCollapsed(grpKey)} onToggle={() => toggleGroup(grpKey)} />
+                      )}
+                      {listLinks(all.length > 1 ? shown(grpKey, g.lists) : g.lists, sec.prefix)}
                     </div>
-                  ))
-                : listLinks(sec.lists, sec.prefix)}
-            </div>
-          ),
-      )}
+                  );
+                })
+              : listLinks(secLists, sec.prefix)}
+          </div>
+        );
+      })}
       {!workMode && archived.length > 0 && (
         <details className="sidebar__archive">
           <summary className="sidebar__section">Archiv ({archived.length})</summary>
@@ -503,5 +514,17 @@ function Shell({ me }: { me: Me }) {
         </div>
       </CategoryContext.Provider>
     </IconContext.Provider>
+  );
+}
+
+/** Heading of a sidebar group that folds it away (click again to open). */
+function GroupToggle({ className, label, open, onToggle }: { className: string; label: string; open: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" className={`${className} sidebar__toggle`} aria-expanded={open} onClick={onToggle} title={open ? 'Zuklappen' : 'Aufklappen'}>
+      <span className="sidebar__chevron" aria-hidden="true">
+        ▾
+      </span>
+      {label}
+    </button>
   );
 }
