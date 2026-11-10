@@ -47,19 +47,19 @@ export async function attachPlace(itemId: string, place: PlaceData, id = newAtta
  * "*": the current location goes on the entry right away (only the position), the address follows as
  * soon as it is known – the same attachment, updated.
  */
-export async function attachHere(itemId: string): Promise<boolean> {
+export async function attachHere(itemId: string): Promise<PlaceData | null> {
   let pos: { lat: number; lon: number };
   try {
     pos = await currentPosition();
   } catch (err) {
     showToast(`${(err as Error).message} – kein Ort angehängt`);
-    return false;
+    return null;
   }
   const id = newAttachmentId();
   await attachPlace(itemId, { name: 'Standort', address: null, ...pos }, id);
   const named = await reversePlace(pos.lat, pos.lon);
   if (named.name !== 'Standort' || named.address) await attachPlace(itemId, named, id);
-  return true;
+  return named;
 }
 
 /** "*Hornbach Altona": the best hit, if there is one. */

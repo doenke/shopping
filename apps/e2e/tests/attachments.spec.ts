@@ -63,4 +63,9 @@ test('"*" attaches the current location, with the address', async ({ page, conte
   await expect
     .poll(async () => (await (await page.request.get(`/api/v1/lists/${list.id}`)).json()).items[0]?.attachments)
     .toEqual([expect.objectContaining({ type: 'place', name: 'Parkhaus Mitte', lat: 53.5511, lon: 9.9937 })]);
+  // Just "*": an entry of its own, named after the place.
+  await input.fill('*');
+  await input.press('Enter');
+  await expect(tile(page, 'Parkhaus Mitte')).toBeVisible();
+  await expect(tile(page, 'Parkhaus Mitte').locator('.tile__link--place')).toBeVisible();
 });

@@ -57,7 +57,12 @@ export async function addItems(listId: string, parsed: NewItem[]): Promise<void>
       existing.find((i) => !i.checked && !i.deleted && i.name.toLowerCase() === name)?.id;
     if (!id) continue;
     const { attachHere, attachSearched } = await import('./places');
-    void (p.place.query ? attachSearched(id, p.place.query) : attachHere(id));
+    if (p.place.query) void attachSearched(id, p.place.query);
+    else
+      void attachHere(id).then((place) => {
+        // Just "*": the entry is called after the place ("Bahnhofstraße 3") once that is known.
+        if (p.nameFromPlace && place && place.name !== 'Standort') void updateItem(id, { name: place.name });
+      });
   }
 }
 

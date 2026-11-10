@@ -716,6 +716,10 @@ describe('attachments', () => {
       person: 'Ben',
     });
     expect(parseItem('2*3 Schrauben')?.place).toBeUndefined();
+    // Just "*": an entry of its own, named after the place later.
+    expect(parseItem('*')).toMatchObject({ name: expect.stringMatching(/^Standort \d\d:\d\d$/), place: { query: null }, nameFromPlace: true });
+    expect(parseItem('*Hornbach Altona')).toMatchObject({ name: 'Hornbach Altona', place: { query: 'Hornbach Altona' } });
+    expect(parseItem('*Hornbach')?.nameFromPlace).toBeUndefined();
   });
 
   it('each attachment has its own clock; an attributes patch keeps them', () => {

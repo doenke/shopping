@@ -27,6 +27,8 @@ export interface ParsedItem {
   url?: string | null;
   /** "*": attach the current location; "*Hornbach Altona": search that place (resolved by the app or server). */
   place?: { query: string | null };
+  /** Only "*" was typed: named "Standort 14:32" for now, renamed after the place once it is known. */
+  nameFromPlace?: boolean;
 }
 
 const NUMBER_WORDS: Record<string, number> = {
@@ -83,6 +85,11 @@ export function splitInput(text: string): string[] {
     .filter(Boolean);
 }
 
+/** "14:32" – a lone "*" stays apart from the one before (no merging into an older "Standort"). */
+function hereTime(now = new Date()): string {
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -98,6 +105,9 @@ export function parseItem(text: string, catalog?: CatalogIndex, listType: ListTy
   const dated = extractDue(placed.text);
   const packing = extractPackingTokens(dated.text);
   let rest = packing.text;
+  // Just "*" (or "*Hornbach"): the place is the entry.
+  const placeOnly = !rest && !!placed.place;
+  if (placeOnly) rest = placed.place!.query ?? `Standort ${hereTime()}`;
   if (!rest) return null;
 
   const notes: string[] = [];
@@ -197,6 +207,7 @@ export function parseItem(text: string, catalog?: CatalogIndex, listType: ListTy
     ...(dated.due ? { due: dated.due } : {}),
     ...(linked.url ? { url: linked.url } : {}),
     ...(placed.place ? { place: placed.place } : {}),
+    ...(placeOnly && !placed.place!.query ? { nameFromPlace: true } : {}),
   };
 }
 

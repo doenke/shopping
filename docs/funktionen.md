@@ -25,6 +25,7 @@
   | `!Fr`, `!morgen`, `!12.11.` | – | – | fällig am |
   | `https://…` | Link am Eintrag | Link am Eintrag | Link am Eintrag |
   | `*` | aktueller Standort als Ort am Eintrag | wie links | wie links |
+  | nur `*` | eigener Eintrag „Standort 14:32“, danach benannt wie der Ort („Bahnhofstraße 3“) | wie links | wie links |
   | `*Hornbach Altona` | Ort suchen und anhängen | wie links | wie links |
 
 - **Liste einfügen**: eine kopierte Zutaten- oder Einkaufsliste (mehrere Zeilen) einfügen – jede Zeile wird

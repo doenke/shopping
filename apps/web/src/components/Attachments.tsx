@@ -169,7 +169,7 @@ function PlaceForm({ item, onDone }: { item: ItemRow; onDone: () => void }) {
     setLocating(true);
     const ok = await attachHere(item.id);
     setLocating(false);
-    if (ok) onDone();
+    if (ok !== null) onDone();
   };
 
   return (
