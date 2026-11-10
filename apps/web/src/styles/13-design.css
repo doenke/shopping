@@ -1,10 +1,10 @@
 /*
- * Draft of one design for everything (preview: ?design=neu, back with ?design=alt).
- * A calm neutral frame for all lists, one accent colour per list type, the same type everywhere;
- * tiles stay but are flatter. Only applies with html.design-preview – the current look is untouched.
+ * One design for all lists: a calm neutral frame, one accent colour per list type (data-accent on
+ * <html>, set while a list is open), the same type everywhere, tiles tinted in the category colour.
+ * html:root keeps the specificity above the area files before it.
  */
 
-html.design-preview {
+html:root {
   --bg: #f4f5f7;
   --surface: #ffffff;
   --surface-2: #eceef1;
@@ -28,21 +28,21 @@ html.design-preview {
   font-size: 15px;
 }
 /* One accent per list type – the frame stays the same. */
-html.design-preview,
-html.design-preview[data-accent='shopping'] {
+html:root,
+html:root[data-accent='shopping'] {
   --primary: #2e7a4f;
 }
-html.design-preview[data-accent='packing'] {
+html:root[data-accent='packing'] {
   --primary: #2c6aa8;
 }
-html.design-preview[data-accent='memo'] {
+html:root[data-accent='memo'] {
   --primary: #a8691a;
 }
-html.design-preview[data-accent='todo'] {
+html:root[data-accent='todo'] {
   --primary: #3f5f95;
 }
 @media (prefers-color-scheme: dark) {
-  html.design-preview {
+  html:root {
     --bg: #16181c;
     --surface: #1e2126;
     --surface-2: #262a30;
@@ -52,91 +52,91 @@ html.design-preview[data-accent='todo'] {
     --tile-alpha: 24%;
     --work-hover: #23272d;
   }
-  html.design-preview,
-  html.design-preview[data-accent='shopping'] {
+  html:root,
+  html:root[data-accent='shopping'] {
     --primary: #5cb880;
   }
-  html.design-preview[data-accent='packing'] {
+  html:root[data-accent='packing'] {
     --primary: #6aa3dc;
   }
-  html.design-preview[data-accent='memo'] {
+  html:root[data-accent='memo'] {
     --primary: #d9a24e;
   }
-  html.design-preview[data-accent='todo'] {
+  html:root[data-accent='todo'] {
     --primary: #8aaee0;
   }
-  html.design-preview {
+  html:root {
     --primary-text: #12161c;
   }
 }
 
 /* Frame: title bar and sidebar as quiet surfaces with a line, no colour washes. */
-html.design-preview .topbar {
+html:root .topbar {
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   border-bottom: 1px solid var(--border);
   min-height: 56px;
 }
-html.design-preview .topbar__title {
+html:root .topbar__title {
   font-size: 1.15rem;
   font-weight: 600;
 }
-html.design-preview .sidebar {
+html:root .sidebar {
   background: var(--surface-2);
   gap: 4px;
 }
-html.design-preview .sidebar a {
+html:root .sidebar a {
   padding: 7px 10px;
   border-radius: 8px;
 }
-html.design-preview .sidebar a.active {
+html:root .sidebar a.active {
   background: color-mix(in srgb, var(--primary) 14%, var(--surface));
   color: var(--text);
   box-shadow: inset 3px 0 0 var(--primary);
 }
-html.design-preview .sidebar__section {
+html:root .sidebar__section {
   margin-top: 10px;
   font-size: 0.72rem;
   letter-spacing: 0.06em;
 }
-html.design-preview .btn,
-html.design-preview .chip {
+html:root .btn,
+html:root .chip {
   border-radius: 8px;
   min-height: 36px;
 }
-html.design-preview .btn--primary {
+html:root .btn--primary {
   font-weight: 600;
 }
-html.design-preview .sheet {
+html:root .sheet {
   border-radius: 12px;
 }
-html.design-preview .snackbar {
+html:root .snackbar {
   border-radius: 8px;
   background: #1f2937;
 }
 
 /* Input: the same field everywhere. */
-html.design-preview .addbar input[type='search'],
-html.design-preview .work-add {
+html:root .addbar input[type='search'],
+html:root .work-add {
   border-radius: 8px;
   box-shadow: none;
   border: 1px solid var(--border);
 }
 
 /* Tiles: flatter, fully tinted in the category colour with a matching thin edge. */
-html.design-preview .tile {
+html:root .tile {
   min-height: 92px;
   border: 1px solid color-mix(in srgb, var(--cat) 28%, var(--border));
   background: color-mix(in srgb, var(--cat) var(--tile-alpha), var(--surface));
   box-shadow: none;
 }
-html.design-preview .tile .item-icon {
+html:root .tile .item-icon {
   width: 40px;
   height: 40px;
 }
-html.design-preview .tile__name {
+html:root .tile__name {
   font-weight: 500;
 }
-html.design-preview .group__title {
+html:root .group__title {
   font-size: 0.75rem;
   letter-spacing: 0.06em;
   color: var(--muted);

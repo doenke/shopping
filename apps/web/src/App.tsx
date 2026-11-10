@@ -32,7 +32,6 @@ import { ShortcutHelp } from './components/ShortcutHelp';
 import { Toast } from './components/Toast';
 import { useShortcuts } from './keyboard';
 import { useItemDrag } from './itemDrag';
-import { designPreview } from './designPreview';
 import { applyModeFromUrl, isWorkList, isWorkMode, setWorkMode, setWorkScope, useWorkModeSetting, useWorkScope } from './workMode';
 import { ListBadges, OpenCount } from './components/ListBadges';
 
@@ -181,14 +180,9 @@ function Shell({ me }: { me: Me }) {
       navigate(workLists[0] ? { page: 'list', listId: workLists[0].id } : { page: 'list' });
   }, [workMode, scope, list?.id]);
 
-  // A ToDo list on the desktop: tasks as a table with details, in the calm business look.
+  // A ToDo list on the desktop: tasks as a table with details.
   const board = wide && route.page === 'list' && list?.listType === 'todo' && !list.isTemplate;
-  useEffect(() => {
-    // Draft of one design for everything (?design=neu): the same frame, the accent of the list type.
-    const preview = designPreview();
-    document.documentElement.classList.toggle('design-preview', preview);
-    document.documentElement.classList.toggle('business', board && !preview);
-  }, [board]);
+  // One design for all lists; the open list's type sets the accent colour.
   useEffect(() => {
     if (route.page === 'list' && list) document.documentElement.dataset.accent = list.listType;
     else delete document.documentElement.dataset.accent;

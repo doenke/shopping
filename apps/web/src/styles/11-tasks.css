@@ -1,49 +1,4 @@
-/* ToDo lists on the desktop: business look, table, details, search, shortcuts, statuses. */
-
-/* ======================================================================
-   Arbeitsmodus: calm business look (desktop) – neutral greys, a muted blue,
-   Segoe UI, compact rows. Everything below only applies with html.business.
-   ====================================================================== */
-
-html.business {
-  --bg: #f3f4f6;
-  --surface: #ffffff;
-  --surface-2: #eef0f3;
-  --text: #1c2129;
-  --muted: #6b7380;
-  --border: #dde1e7;
-  --primary: #33598c;
-  --primary-text: #ffffff;
-  --danger: #b4372f;
-  --radius: 6px;
-  --shadow: 0 1px 2px rgb(16 24 40 / 0.06);
-  --work-hover: #f4f6f9;
-  --work-selected: #e6edf7;
-  font-family:
-    'Segoe UI Variable Text',
-    'Segoe UI',
-    system-ui,
-    -apple-system,
-    sans-serif;
-  font-size: 14px;
-}
-@media (prefers-color-scheme: dark) {
-  html.business {
-    --bg: #17191d;
-    --surface: #1f2228;
-    --surface-2: #272b32;
-    --text: #e6e8ec;
-    --muted: #9aa1ad;
-    --border: #333842;
-    --primary: #7aa2d6;
-    --primary-text: #10161f;
-    --work-hover: #252a31;
-    --work-selected: #263449;
-  }
-}
-html.business body {
-  background: var(--bg);
-}
+/* ToDo lists: table, details, search, shortcuts, statuses (colours come from 13-design.css). */
 
 /* The board: table in the middle, details on the right; fills the space below the title bar. */
 .shell--board .content {
@@ -300,16 +255,6 @@ html.business body {
 .work-field .chips {
   gap: 4px;
 }
-html.business .chip {
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 14px;
-  font-size: 0.9em;
-}
-html.business .chip--input {
-  width: 110px;
-  min-height: 28px;
-}
 .work-detail__meta {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -329,17 +274,6 @@ html.business .chip--input {
   color: var(--danger);
   background: none;
   border: 1px solid var(--border);
-}
-html.business .btn {
-  min-height: 32px;
-  border-radius: var(--radius);
-}
-html.business .sheet {
-  border-radius: 8px;
-}
-html.business .snackbar {
-  border-radius: 6px;
-  background: #1f2937;
 }
 
 /* Keyboard: search, shortcuts, the switch in the sidebar */

@@ -94,9 +94,11 @@
 
 Jede ToDo-Liste erscheint als **Tabelle** (Status, Fällig, Wer, Bereich, Link – nur die Spalten, die eine
 Aufgabe nutzt). Am Rechner steht die gewählte Aufgabe rechts zum direkten Bearbeiten, auf dem Handy sind die
-Zeilen kompakt (Angaben in einer zweiten Zeile) und ein Tipp öffnet die Aufgabe als eigene Seite. Am Rechner
-im sachlichen Design (Grau mit gedecktem Blau, Segoe UI, hell/dunkel nach System); andere Listen behalten ihr
-Aussehen.
+Zeilen kompakt (Angaben in einer zweiten Zeile) und ein Tipp öffnet die Aufgabe als eigene Seite.
+
+**Design:** Alle Listen teilen ein ruhiges, neutrales Grundgerüst (hell/dunkel nach System). Jeder Listentyp
+hat eine eigene Akzentfarbe – Einkauf grün, Packliste blau, Merkliste ocker, ToDo blaugrau –, die Kacheln
+sind in der Farbe ihrer Kategorie getönt.
 
 Listen mit Status bekommen oben rechts den Umschalter *Tabelle | Kanban* (pro Liste gemerkt; ohne Status
 gibt es nur die Tabelle). Im **Kanban** ist jeder Status eine Spalte:
