@@ -26,6 +26,7 @@ import {
   findUnit,
   parseInput,
   planAdd,
+  changesToApply,
   type CatalogItem,
   type ItemPatch,
   type ListPatch,
@@ -459,7 +460,7 @@ export class ShoppingApi {
     );
     if (items.length === 0) throw new ApiError(400, 'empty', 'Keine Artikel erkannt');
     const plan = planAdd(list.id, existing, items, randomUUID);
-    await this.mutate(userId, 'item', plan);
+    await this.mutate(userId, 'item', changesToApply(plan));
     const after = new Map((await this.itemsOf(list.id)).map((i) => [i.id, i]));
     const names = await this.userNames();
     return {

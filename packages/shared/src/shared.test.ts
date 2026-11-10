@@ -9,7 +9,7 @@ import { categoriesFor, categoryInList, getCategory, nextCategoryColor } from '.
 import { isOwnName } from './catalog-index.js';
 import { extractDue, formatDue, parseDue } from './due.js';
 import { defaultVisibility } from './packing.js';
-import { planAdd } from './plan-add.js';
+import { changesToApply, planAdd } from './plan-add.js';
 import { comparePositions } from './order.js';
 import { findStatus, itemStatus, listDefaultStatus, listStatuses, withStatus } from './status.js';
 import { itemToIcal, parseIcalTodo, taskPatch, taskTitle } from './ical.js';
@@ -161,9 +161,23 @@ describe('planAdd', () => {
       ['milk', 'merged'],
       ['bread', 'restored'],
       ['new-1', 'created'],
+      ['new-1', 'merged'],
     ]);
     expect(plan[0]!.patch.amounts).toEqual([{ q: 3, u: 'l' }]);
     expect(plan[2]!.patch.position! > 'a1').toBe(true);
+    // The second "Käse" changes nothing, so it is not sent.
+    expect(changesToApply(plan).map((c) => c.id)).toEqual(['milk', 'bread', 'new-1']);
+  });
+
+  it('tells which input each change is for, also a merge into an entry with another name', () => {
+    const existing = [{ ...base, id: 'milk', name: 'Milch vom Hof', catalogItemId: 'c-milk', checked: false }];
+    const milk = { name: 'Milch', catalogItemId: 'c-milk', categoryId: null, amounts: [], properties: [], note: null, place: { query: 'Hofladen' } };
+    const plan = planAdd('L', existing, [...parseInput('Brot'), milk], id);
+    expect(plan.map((c) => [c.kind, c.input])).toEqual([
+      ['created', 0],
+      ['merged', 1],
+    ]);
+    expect(plan[1]).toMatchObject({ id: 'milk', patch: {} });
   });
 });
 

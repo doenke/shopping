@@ -17,9 +17,15 @@ export type NewItem = ParsedItem & {
 
 export interface PlannedChange {
   id: string;
+  /** May be empty: the item was there already and nothing changes (it is still the target of the input). */
   patch: ItemPatch;
   kind: 'merged' | 'restored' | 'created';
+  /** Which of the parsed items this is for – e.g. where a place looked up later goes. */
+  input: number;
 }
+
+/** The changes that actually change something (to send to the sync). */
+export const changesToApply = (plan: PlannedChange[]): PlannedChange[] => plan.filter((c) => Object.keys(c.patch).length > 0);
 
 type ExistingItem = Pick<ItemRow, 'id' | 'catalogItemId' | 'name' | 'checked' | 'deleted' | 'amounts' | 'properties' | 'note' | 'attributes' | 'position'>;
 
@@ -73,7 +79,7 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
   let position = items.reduce<string | null>((max, i) => (max === null || i.position > max ? i.position : max), null);
   const changes: PlannedChange[] = [];
 
-  for (const p of parsed) {
+  for (const [input, p] of parsed.entries()) {
     const open = items.find((i) => !i.checked && sameItem(i, p));
     if (open) {
       const patch: ItemPatch = {};
@@ -93,7 +99,7 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
       const again = have.length >= 2 ? newPeople(p).filter((n) => lower(have).includes(n.toLowerCase())) : [];
       if (again.length) patch.personChecks = Object.fromEntries(again.map((n) => [n, false]));
       if (p.placeData) patch.attachments = addPlacePatch(p.placeData).attachments;
-      if (Object.keys(patch).length) changes.push({ id: open.id, patch, kind: 'merged' });
+      changes.push({ id: open.id, patch, kind: 'merged', input });
       continue;
     }
     const done = items.find((i) => i.checked && sameItem(i, p));
@@ -119,6 +125,7 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
           ...(p.placeData ? addPlacePatch(p.placeData) : {}),
         },
         kind: 'restored',
+        input,
       });
       continue;
     }
@@ -137,7 +144,7 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
       ...(p.optional ? { optional: true } : {}),
       ...(p.placeData ? addPlacePatch(p.placeData) : {}),
     };
-    changes.push({ id, patch, kind: 'created' });
+    changes.push({ id, patch, kind: 'created', input });
     // The same thing twice in one batch ("Milch, Milch") must merge as well.
     items.push({
       id,

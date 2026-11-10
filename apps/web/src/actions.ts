@@ -10,6 +10,7 @@ import {
   type CustomCategoryType,
   packingInfo,
   planAdd,
+  changesToApply,
   isForEach,
   linkLabel,
   itemPersons,
@@ -46,15 +47,12 @@ export async function addItems(listId: string, parsed: NewItem[]): Promise<void>
   const persons = list && listPersons(list).length ? listPersons(list) : peopleOnItems(existing);
   const resolved = parsed.map((p) => resolvePeople(p, { isTemplate: !!list?.isTemplate, persons }));
   const changes = planAdd(listId, existing, resolved, () => crypto.randomUUID());
-  await sync.mutateItems(changes.map(({ id, patch }) => ({ id, patch })));
-  // "*" / "*Hornbach": the place follows once it is known (position, search) – the entry is there already.
-  for (const p of resolved) {
+  await sync.mutateItems(changesToApply(changes).map(({ id, patch }) => ({ id, patch })));
+  // "*" / "*Hornbach": the place follows once it is known (position, search) – the entry is there already,
+  // possibly an existing one it was merged into (under another name, or without any other change).
+  for (const [input, p] of resolved.entries()) {
     if (!p.place || p.placeData) continue;
-    const name = p.name.toLowerCase();
-    const id =
-      changes.find((c) => c.patch.name?.toLowerCase() === name)?.id ??
-      changes.find((c) => existing.some((i) => i.id === c.id && i.name.toLowerCase() === name))?.id ??
-      existing.find((i) => !i.checked && !i.deleted && i.name.toLowerCase() === name)?.id;
+    const id = changes.find((c) => c.input === input)?.id;
     if (!id) continue;
     const { attachHere, attachSearched } = await import('./places');
     if (p.place.query) void attachSearched(id, p.place.query);
