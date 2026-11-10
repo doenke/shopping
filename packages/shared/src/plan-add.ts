@@ -1,4 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
+import { addPlacePatch, type PlaceData } from './attachments.js';
 import { mergeAmounts } from './amounts.js';
 import type { ItemPatch, ItemRow, ItemSource } from './model.js';
 import { packingInfo, withPacking } from './packing.js';
@@ -7,7 +8,12 @@ import { isForEach, peopleAttributes, peopleOf, withPeople } from './people.js';
 import type { ParsedItem } from './parser.js';
 
 /** A parsed item plus where it came from (recipe, template …). */
-export type NewItem = ParsedItem & { sources?: ItemSource[]; optional?: boolean };
+export type NewItem = ParsedItem & {
+  sources?: ItemSource[];
+  optional?: boolean;
+  /** The place for "*…", once looked up (the server does that before planning; the app afterwards). */
+  placeData?: PlaceData | null;
+};
 
 export interface PlannedChange {
   id: string;
@@ -86,6 +92,7 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
       // Someone already ticked off needs it again: open for them.
       const again = have.length >= 2 ? newPeople(p).filter((n) => lower(have).includes(n.toLowerCase())) : [];
       if (again.length) patch.personChecks = Object.fromEntries(again.map((n) => [n, false]));
+      if (p.placeData) patch.attachments = addPlacePatch(p.placeData).attachments;
       if (Object.keys(patch).length) changes.push({ id: open.id, patch, kind: 'merged' });
       continue;
     }
@@ -109,6 +116,7 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
             ),
             ...peopleAttributes(p),
           },
+          ...(p.placeData ? addPlacePatch(p.placeData) : {}),
         },
         kind: 'restored',
       });
@@ -127,6 +135,7 @@ export function planAdd(listId: string, existing: ExistingItem[], parsed: NewIte
       position,
       ...(Object.keys(attributesOf(p)).length ? { attributes: attributesOf(p) } : {}),
       ...(p.optional ? { optional: true } : {}),
+      ...(p.placeData ? addPlacePatch(p.placeData) : {}),
     };
     changes.push({ id, patch, kind: 'created' });
     // The same thing twice in one batch ("Milch, Milch") must merge as well.

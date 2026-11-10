@@ -24,6 +24,8 @@
   | `#Koffer` | Packstück | Wo („#Netflix“) | Bereich („#Garten“) |
   | `!Fr`, `!morgen`, `!12.11.` | – | – | fällig am |
   | `https://…` | Link am Eintrag | Link am Eintrag | Link am Eintrag |
+  | `*` | aktueller Standort als Ort am Eintrag | wie links | wie links |
+  | `*Hornbach Altona` | Ort suchen und anhängen | wie links | wie links |
 
 - **Liste einfügen**: eine kopierte Zutaten- oder Einkaufsliste (mehrere Zeilen) einfügen – jede Zeile wird
   ein Eintrag mit Menge, Einheit und Notiz; vorher lässt sie sich noch bearbeiten.
@@ -135,8 +137,17 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
   steht er bei jeder Person einzeln. Kommt jemand dazu, wird der Eintrag erweitert. In Vorlagen heißt es
   „für jeden“ („@alle“): Beim Anlegen aus der Vorlage fragt „+ Neu“, für wen die Liste ist (vorausgewählt:
   der eigene Haushalt). Gleichzeitiges Abhaken von zwei Handys überschreibt sich nicht.
-- **Links** 🔗: im Text („Dune https://…“) oder im Editor (*Link*, mit „Öffnen“). Die Kachel zeigt ein 🔗,
-  ein Tipp darauf öffnet die Seite, ohne abzuhaken. Nur ein Link eingetippt: Der Eintrag heißt wie die Seite.
+- **Anhänge** 📎: In den Details steht ohne Anhang nur der Knopf *📎 Anhang*, sonst genau die Anhänge, die
+  es gibt, und ein dezentes *+ Anhang*. Ein Tipp öffnet sie, × entfernt sie. Gleichzeitiges Anhängen auf
+  zwei Geräten überschreibt sich nicht.
+  - **Link** 🔗: wie bisher im Text oder per Ziehen; weitere Links kommen als zusätzliche Anhänge dazu.
+  - **Ort** 📍: suchen (Vorschläge beim Tippen) oder *Aktueller Standort*; getippt mit `*` (hier) bzw.
+    `*Ortsname`. Der Eintrag erscheint sofort, Position und Adresse kommen Sekunden später dazu. Auf dem Handy
+    öffnet ein Tipp die Karten-App, am Rechner OpenStreetMap. Ohne `*` wird der Standort nie abgefragt.
+    Die Ortssuche läuft über den eigenen Photon-Server (`PHOTON_URL`); ohne ihn gibt es nur „hier“, ohne
+    Adresse. In CalDAV-Apps erscheint der erste Ort als Ort der Aufgabe.
+- **Links** 🔗: im Text („Dune https://…“) oder in den Details als Anhang. Die Kachel zeigt ein 🔗 (und 📍
+  bei einem Ort), ein Tipp darauf öffnet die Seite bzw. die Karte, ohne abzuhaken. Nur ein Link eingetippt: Der Eintrag heißt wie die Seite.
   Am Laptop lassen sich Links und Browser-Tabs **auf die Liste ziehen** – auf einen Eintrag (bekommt den Link)
   oder auf freie Fläche (neuer Eintrag).
 - **Mehrere markieren und verschieben** (am Rechner): `Shift` + Pfeiltasten oder Shift-/Strg-Klick markiert

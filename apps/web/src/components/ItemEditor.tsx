@@ -17,8 +17,6 @@ import {
   listStatuses,
   listDefaultStatus,
   withStatus,
-  itemUrl,
-  withUrl,
   type Amount,
   type ItemRow,
   type ItemSource,
@@ -26,6 +24,7 @@ import {
   type ListType,
   type UserInfo,
 } from '@shopping/shared';
+import { Attachments } from './Attachments';
 import { useEffect, useRef, useState } from 'react';
 import { addItems, createCategory, deleteItem, itemToNew, updateItem } from '../actions';
 import { useCustomCategories } from '../categories';
@@ -60,13 +59,6 @@ const NOTE_EXAMPLE: Record<ListType, string> = {
   packing: 'z. B. liegt im Keller',
   memo: 'z. B. ab Staffel 2',
   todo: 'z. B. Schrauben liegen in der Garage',
-};
-
-const LINK_EXAMPLE: Record<ListType, string> = {
-  shopping: 'z. B. zum Produkt oder Rezept',
-  packing: 'z. B. zur Bestätigung oder zum Shop',
-  memo: 'z. B. zum Film, Buch oder Restaurant',
-  todo: 'z. B. zur Anleitung',
 };
 
 function parseQuantity(s: string): number | null {
@@ -105,11 +97,9 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const suggestions = usePeopleSuggestions(list, items);
   const [container, setContainer] = useState(packingInfo(item).container ?? '');
   const [due, setDue] = useState(dueOf(item) ?? '');
-  const [link, setLink] = useState(typeof item.attributes.url === 'string' ? item.attributes.url : '');
   const statuses = todo && !isTemplate ? listStatuses(list) : [];
   const defaultStatus = listDefaultStatus(list, statuses);
   const [status, setStatus] = useState(itemStatus(item, statuses, defaultStatus)?.id ?? '');
-  const linkValid = itemUrl({ attributes: withUrl({}, link) });
   // The date field only shows once a task has (or gets) a due date.
   const [showDue, setShowDue] = useState(!!dueOf(item));
   const [forAll, setForAll] = useState(false);
@@ -228,17 +218,14 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
       categoryId,
       ...(isTemplate ? { optional } : {}),
       attributes: (statuses.length ? (a: Record<string, unknown>) => withStatus(a, status, statuses, defaultStatus) : (a: Record<string, unknown>) => a)(
-        withUrl(
-          labels
-            ? withDue(
-                multi
-                  ? withPeople(withPacking(item.attributes, labels.container ? { container } : {}), people, isTemplate && forEach)
-                  : withPacking(item.attributes, { person, container }),
-                todo ? due : undefined,
-              )
-            : item.attributes,
-          link,
-        ),
+        labels
+          ? withDue(
+              multi
+                ? withPeople(withPacking(item.attributes, labels.container ? { container } : {}), people, isTemplate && forEach)
+                : withPacking(item.attributes, { person, container }),
+              todo ? due : undefined,
+            )
+          : item.attributes,
       ),
     });
     if (forAll && item.catalogItemId && categoryId !== item.categoryId) {
@@ -334,22 +321,8 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
         </label>
 
         <div className="field">
-          <span>Link</span>
-          <div className="field__link">
-            <input
-              aria-label="Link"
-              type="url"
-              inputMode="url"
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              placeholder={LINK_EXAMPLE[list.listType]}
-            />
-            {linkValid && (
-              <a className="btn" href={linkValid} target="_blank" rel="noopener noreferrer" aria-label="Link öffnen">
-                🔗 Öffnen
-              </a>
-            )}
-          </div>
+          <span>Anhänge</span>
+          <Attachments item={item} />
         </div>
 
         {todo && !showDue && (

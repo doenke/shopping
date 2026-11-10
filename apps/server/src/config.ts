@@ -41,6 +41,13 @@ const EnvSchema = z.object({
   /** Local development only: allows logging in with just a name, without OIDC. */
   DEV_LOGIN: bool,
   WEB_DIST: z.string().optional(),
+  /** The household's Photon server (place search for attachments, e.g. http://photon:2322); optional. */
+  PHOTON_URL: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => v || undefined)
+    .pipe(z.string().url().optional()),
   LOG_LEVEL: z.string().default('info'),
 });
 

@@ -3,6 +3,7 @@ import type { Amount, ListType } from './model.js';
 import { extractDue } from './due.js';
 import { extractPackingTokens } from './packing.js';
 import { extractUrl, linkLabel } from './links.js';
+import { extractPlace } from './attachments.js';
 import { findProperty } from './properties.js';
 import { findUnit } from './units.js';
 
@@ -24,6 +25,8 @@ export interface ParsedItem {
   due?: string | null;
   /** A web link in the text ("Dune https://…"). */
   url?: string | null;
+  /** "*": attach the current location; "*Hornbach Altona": search that place (resolved by the app or server). */
+  place?: { query: string | null };
 }
 
 const NUMBER_WORDS: Record<string, number> = {
@@ -91,7 +94,8 @@ export function parseItem(text: string, catalog?: CatalogIndex, listType: ListTy
     // Only a link: named after the site until there is something better (the page title).
     return { name: linkLabel(linked.url), catalogItemId: null, categoryId: null, amounts: [], properties: [], note: null, url: linked.url };
   }
-  const dated = extractDue(linked.text);
+  const placed = extractPlace(linked.text);
+  const dated = extractDue(placed.text);
   const packing = extractPackingTokens(dated.text);
   let rest = packing.text;
   if (!rest) return null;
@@ -192,6 +196,7 @@ export function parseItem(text: string, catalog?: CatalogIndex, listType: ListTy
     ...(packing.container ? { container: packing.container } : {}),
     ...(dated.due ? { due: dated.due } : {}),
     ...(linked.url ? { url: linked.url } : {}),
+    ...(placed.place ? { place: placed.place } : {}),
   };
 }
 

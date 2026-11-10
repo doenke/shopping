@@ -1,4 +1,5 @@
 import { comparePositions } from '@shopping/shared';
+import { mobile } from '../../places';
 import {
   dueOf,
   generateKeyBetween,
@@ -6,6 +7,9 @@ import {
   itemPersons,
   itemStatus,
   itemUrl,
+  itemPlaces,
+  placeLabel,
+  placeUrl,
   listDefaultStatus,
   listStatuses,
   kanbanShowsDone,
@@ -200,6 +204,7 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
     const fmt = due ? formatDue(due) : null;
     const area = packingInfo(item).container;
     const url = itemUrl(item);
+    const place = itemPlaces(item)[0];
     const keys = entryKeys(
       () => toggle(item),
       () => onOpen(item.id),
@@ -231,7 +236,7 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
       >
         <div className="kanban-card__title">{item.name}</div>
         {item.note && <div className="kanban-card__note">{item.note}</div>}
-        {(fmt || area || url || itemPersons(item).length || peopleLabel(item)) && (
+        {(fmt || area || url || place || itemPersons(item).length || peopleLabel(item)) && (
           <div className="kanban-card__meta">
             {fmt && (
               <span className={`kanban-card__due${fmt.overdue && !item.checked ? ' work-row__due--overdue' : fmt.today ? ' work-row__due--today' : ''}`}>
@@ -243,6 +248,19 @@ export function KanbanBoard({ list, items, index, selected, onSelect, onOpen, vi
             {url && (
               <a href={url} target="_blank" rel="noopener noreferrer" tabIndex={-1} title={url} onClick={(e) => e.stopPropagation()} aria-label="Link öffnen">
                 ↗
+              </a>
+            )}
+            {place && (
+              <a
+                href={placeUrl(place, mobile)}
+                target="_blank"
+                rel="noopener noreferrer"
+                tabIndex={-1}
+                title={placeLabel(place)}
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Ort öffnen"
+              >
+                📍
               </a>
             )}
           </div>

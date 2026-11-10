@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { PlaceService, PlacesUnavailable } from './places.js';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import cookie from '@fastify/cookie';
@@ -63,6 +64,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   const sync = new SyncService(db, !!config.OIDC_OWNER_GROUP);
   const hub = new SyncHub(sync, app.log);
   app.addHook('onClose', async () => hub.close());
+  const places = new PlaceService(config.PHOTON_URL, fetchImpl);
   const icons = new IconService(db, secrets, sync, hub, app.log, fetchImpl);
   app.addHook('onClose', async () => icons.stop());
 
@@ -208,6 +210,27 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
       }
     });
 
+    // Places for attachments (Photon): search by text, or what is at a position ("*" = here).
+    api.get('/api/v1/places/search', { preHandler: requireUser }, async (request, reply) => {
+      const q = z
+        .object({
+          q: z.string().trim().min(1).max(200),
+          lat: z.coerce.number().min(-90).max(90).optional(),
+          lon: z.coerce.number().min(-180).max(180).optional(),
+        })
+        .parse(request.query);
+      try {
+        return { places: await places.search(q.q, q.lat !== undefined && q.lon !== undefined ? { lat: q.lat, lon: q.lon } : undefined) };
+      } catch (err) {
+        if (err instanceof PlacesUnavailable) return reply.code(503).send({ error: 'places', detail: err.message });
+        throw err;
+      }
+    });
+    api.get('/api/v1/places/reverse', { preHandler: requireUser }, async (request) => {
+      const q = z.object({ lat: z.coerce.number().min(-90).max(90), lon: z.coerce.number().min(-180).max(180) }).parse(request.query);
+      return places.reverse(q.lat, q.lon);
+    });
+
     // Name for a link that came without one (shared or pasted): the page's title.
     api.get('/api/v1/links/title', { preHandler: requireAccount }, async (request, reply) => {
       const q = z.object({ url: z.string().url().max(2000) }).parse(request.query);
@@ -247,7 +270,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   });
 
   const mealie = new MealieService(db, secrets, sync, hub, app.log, fetchImpl);
-  const api = new ShoppingApi(db, sync, hub);
+  const api = new ShoppingApi(db, sync, hub, places);
   await app.register(apiRoutes, { config, db, api, sync, hub, requireUser });
   const webhooks = new WebhookService(db, secrets, hub, app.log, fetchImpl);
   await app.register(webhookRoutes, { webhooks, requireAccount });

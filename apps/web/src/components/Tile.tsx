@@ -1,4 +1,6 @@
 import { useCustomCategories } from '../categories';
+import { itemPlaces, placeLabel, placeUrl } from '@shopping/shared';
+import { mobile } from '../places';
 import { getCategory, itemSpecification, type ItemRow } from '@shopping/shared';
 import { useRef, useState } from 'react';
 import { iconUrl, useIconIndex } from '../icons';
@@ -65,6 +67,8 @@ const isOffer = (p: string) => p.trim().toLowerCase() === 'angebot';
 
 /** Tile: tap to check (or add), long press / right click for details. */
 export function Tile({ item, variant = 'open', badge, badgeUser, fading = false, extra, people, url, onTap, onLongPress, onToggle }: TileProps) {
+  // The first place (📍 next to the 🔗): a tap opens the map.
+  const place = 'attributes' in item && item.attributes ? itemPlaces({ attributes: item.attributes as Record<string, unknown> })[0] : undefined;
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const longPressed = useRef(false);
   // "Angebot" is not written out but shown as a % badge.
@@ -141,6 +145,7 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
         </span>
       )}
       {url && <LinkBadge url={url} />}
+      {place && <LinkBadge url={placeUrl(place, mobile)} symbol="📍" title={placeLabel(place)} />}
       {offer && (
         <span className="tile__offer" title="Angebot" aria-hidden>
           %
@@ -160,7 +165,7 @@ export function Tile({ item, variant = 'open', badge, badgeUser, fading = false,
  * The 🔗 on a tile. The tile itself is a button, so this is no nested link: it opens the page itself and
  * keeps the tap from reaching the tile (no check, no long press). Keyboard users open it in the editor.
  */
-export function LinkBadge({ url }: { url: string }) {
+export function LinkBadge({ url, symbol = '🔗', title }: { url: string; symbol?: string; title?: string }) {
   const open = (e: React.SyntheticEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -168,15 +173,15 @@ export function LinkBadge({ url }: { url: string }) {
   };
   return (
     <span
-      className="tile__link"
-      title={url}
+      className={`tile__link${symbol === '📍' ? ' tile__link--place' : ''}`}
+      title={title ?? url}
       aria-hidden
       onClick={open}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.stopPropagation()}
     >
-      🔗
+      {symbol}
     </span>
   );
 }

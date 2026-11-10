@@ -56,7 +56,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     { name: 'shopping', title: 'Shopping – Einkaufslisten', version: '1.0.0' },
     {
       instructions:
-        'Einkaufslisten und Packlisten des Haushalts. Ohne Angabe einer Liste ist immer die Hauptliste (Einkauf) gemeint. Artikel am besten als natürlichen Text übergeben („2 kg Kartoffeln festkochend“) – Menge, Einheit und Eigenschaften werden erkannt. Gleiche Artikel werden zusammengeführt statt doppelt angelegt. In Packlisten bedeutet abgehakt „eingepackt“; „@Anna“ im Text ordnet einer Person zu, „#Koffer“ einem Packstück. Neue Packlisten am besten aus einer Packvorlage anlegen. Merklisten (Typ memo) sammeln Filme, Bücher, Restaurants usw.: „@Anna“ heißt dort „Tipp von Anna“, „#Netflix“ heißt „gibt es bei Netflix“; abgehakt = erledigt (gesehen, gelesen, besucht). ToDo-Listen (Typ todo, standardmäßig privat) enthalten Aufgaben: „@Anna“ = wer, „#Garten“ = Bereich, „!morgen“, „!Fr“ oder „!12.11.“ = fällig am.',
+        'Einkaufslisten und Packlisten des Haushalts. Ohne Angabe einer Liste ist immer die Hauptliste (Einkauf) gemeint. Artikel am besten als natürlichen Text übergeben („2 kg Kartoffeln festkochend“) – Menge, Einheit und Eigenschaften werden erkannt. Gleiche Artikel werden zusammengeführt statt doppelt angelegt. In Packlisten bedeutet abgehakt „eingepackt“; „@Anna“ im Text ordnet einer Person zu, „#Koffer“ einem Packstück. Neue Packlisten am besten aus einer Packvorlage anlegen. Merklisten (Typ memo) sammeln Filme, Bücher, Restaurants usw.: „@Anna“ heißt dort „Tipp von Anna“, „#Netflix“ heißt „gibt es bei Netflix“; abgehakt = erledigt (gesehen, gelesen, besucht). ToDo-Listen (Typ todo, standardmäßig privat) enthalten Aufgaben: „@Anna“ = wer, „#Garten“ = Bereich, „!morgen“, „!Fr“ oder „!12.11.“ = fällig am. In jeder Liste hängt „*Ortsname“ einen Ort an (z. B. „Baumarkt *Hornbach Altona“).',
     },
   );
   const userId = principal.userId;
@@ -183,7 +183,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     'update_item',
     {
       title: 'Artikel ändern',
-      description: 'Ändert Menge, Einheit, Eigenschaften, Notiz oder Kategorie eines Artikels (per Name oder ID).',
+      description: 'Ändert Menge, Einheit, Eigenschaften, Notiz oder Kategorie eines Artikels (per Name oder ID); hängt mit place einen Ort an.',
       inputSchema: {
         item: z.string().describe('Artikelname oder ID'),
         list: listParam,
@@ -197,6 +197,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
         container: z.string().nullable().optional().describe('Packliste: Packstück, z. B. „Koffer“'),
         tipFrom: z.string().nullable().optional().describe('Merkliste: von wem der Tipp kommt'),
         url: z.string().url().nullable().optional().describe('Link, z. B. zum Film oder Rezept (null = entfernen)'),
+        place: z.string().optional().describe('Ort als Anhang hinzufügen, per Name gesucht, z. B. „Hornbach Altona“'),
         status: z.string().nullable().optional().describe('ToDo-Liste: Status, z. B. „In Arbeit“ (aus den Status der Liste)'),
         where: z.string().nullable().optional().describe('Merkliste: wo es das gibt, z. B. „Netflix“'),
         due: z

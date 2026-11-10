@@ -151,6 +151,8 @@ export interface ItemPatch {
   deleted?: boolean;
   /** Multi-person items: tick off (true) or untick single persons ("Sönke": true). */
   personChecks?: Record<string, boolean>;
+  /** Attachments: { id: attachment } adds or changes one, { id: null } removes it (own clock each). */
+  attachments?: Record<string, import('./attachments.js').Attachment | null>;
 }
 
 export interface CategoryPatch {

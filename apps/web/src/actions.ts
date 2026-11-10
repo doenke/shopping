@@ -47,6 +47,18 @@ export async function addItems(listId: string, parsed: NewItem[]): Promise<void>
   const resolved = parsed.map((p) => resolvePeople(p, { isTemplate: !!list?.isTemplate, persons }));
   const changes = planAdd(listId, existing, resolved, () => crypto.randomUUID());
   await sync.mutateItems(changes.map(({ id, patch }) => ({ id, patch })));
+  // "*" / "*Hornbach": the place follows once it is known (position, search) – the entry is there already.
+  for (const p of resolved) {
+    if (!p.place || p.placeData) continue;
+    const name = p.name.toLowerCase();
+    const id =
+      changes.find((c) => c.patch.name?.toLowerCase() === name)?.id ??
+      changes.find((c) => existing.some((i) => i.id === c.id && i.name.toLowerCase() === name))?.id ??
+      existing.find((i) => !i.checked && !i.deleted && i.name.toLowerCase() === name)?.id;
+    if (!id) continue;
+    const { attachHere, attachSearched } = await import('./places');
+    void (p.place.query ? attachSearched(id, p.place.query) : attachHere(id));
+  }
 }
 
 /** The page title for a link (best effort: offline or without a title the site's name stays). */

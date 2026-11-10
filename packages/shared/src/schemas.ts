@@ -11,6 +11,27 @@ export const AmountSchema = z.object({
 const id = z.string().uuid();
 const hlc = z.string().min(20).max(80);
 
+const AttachmentSchema = z.discriminatedUnion('type', [
+  z.object({
+    id: z.string().min(1).max(40),
+    at: z.string().max(40),
+    by: z.string().max(64).nullish(),
+    type: z.literal('link'),
+    url: z.string().url().max(2000),
+    title: z.string().max(300).nullish(),
+  }),
+  z.object({
+    id: z.string().min(1).max(40),
+    at: z.string().max(40),
+    by: z.string().max(64).nullish(),
+    type: z.literal('place'),
+    name: z.string().max(200),
+    address: z.string().max(300).nullable(),
+    lat: z.number().min(-90).max(90),
+    lon: z.number().min(-180).max(180),
+  }),
+]);
+
 export const ListPatchSchema = z
   .object({
     name: z.string().trim().min(1).max(80),
@@ -41,6 +62,7 @@ export const ItemPatchSchema = z
     attributes: z.record(z.string(), z.unknown()),
     deleted: z.boolean(),
     personChecks: z.record(z.string().trim().min(1).max(60), z.boolean()),
+    attachments: z.record(z.string().min(1).max(40), AttachmentSchema.nullable()),
   })
   .partial()
   .strict();

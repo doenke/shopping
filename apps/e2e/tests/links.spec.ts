@@ -22,7 +22,8 @@ test('a link on an entry opens from the tile', async ({ page, context }, info) =
   await popup.close();
   await expect(tile(page, 'Dune')).not.toHaveClass(/tile--done/);
   await tile(page, 'Dune').click({ button: 'right' });
-  await expect(page.locator('dialog[open]').getByRole('textbox', { name: 'Link' })).toHaveValue('https://example.org/dune');
+  // In the details the link is an attachment.
+  await expect(page.locator('dialog[open] .attachment--link')).toContainText('example.org/dune');
 });
 
 test('links dropped onto an entry or onto free space', async ({ page }, info) => {

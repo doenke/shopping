@@ -1,4 +1,5 @@
-import { comparePositions } from '@shopping/shared';
+import { addPlacePatch, comparePositions } from '@shopping/shared';
+import type { PlaceService } from '../places.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import {
@@ -62,6 +63,8 @@ export type ItemInput =
       area?: string | null;
       /** A web link (film, recipe, product …); shown as 🔗 on the item. */
       url?: string | null;
+      /** A place to attach, looked up by name ("Hornbach Altona"). */
+      place?: string | null;
       /** ToDo lists: status by name or id ("In Arbeit"). */
       status?: string | null;
     };
@@ -95,6 +98,7 @@ export class ShoppingApi {
     private readonly db: Db,
     private readonly sync: SyncService,
     private readonly hub: SyncHub,
+    private readonly places?: PlaceService,
   ) {
     hub.onCatalogChange(() => this.invalidateCatalog());
   }
@@ -258,7 +262,17 @@ export class ShoppingApi {
         container: (input.container ?? input.where ?? input.area)?.trim() || null,
         due: input.due ?? null,
         url: input.url?.trim() || null,
+        ...(input.place?.trim() ? { place: { query: input.place.trim() } } : {}),
       });
+    }
+    // "*Hornbach Altona": the best hit becomes the attachment ("*" alone means "here" – unknown to the server).
+    for (const item of out) {
+      if (!item.place?.query || !this.places?.available) continue;
+      try {
+        item.placeData = (await this.places.search(item.place.query, undefined, 1))[0] ?? null;
+      } catch {
+        // No place then; the entry itself is what counts.
+      }
     }
     return out;
   }
@@ -479,6 +493,12 @@ export class ShoppingApi {
       }
     }
     if (input.url !== undefined) patch.attributes = withUrl(patch.attributes ?? item.attributes, input.url);
+    if (input.place?.trim()) {
+      if (!this.places?.available) throw new ApiError(503, 'places', 'Ortssuche ist nicht eingerichtet');
+      const [hit] = await this.places.search(input.place.trim(), undefined, 1);
+      if (!hit) throw notFound(`Ort „${input.place.trim()}“`);
+      patch.attachments = addPlacePatch(hit, userId).attachments;
+    }
     if (input.status !== undefined) {
       const list = (await this.accessibleLists(userId)).find((l) => l.id === item.listId);
       const statuses = list ? listStatuses(list) : [];

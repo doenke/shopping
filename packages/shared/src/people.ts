@@ -1,3 +1,4 @@
+import { applyAttachmentChanges, keepAttachments, mergeAttachments, type AttachmentChanges } from './attachments.js';
 import { applyPatch, mergeRow } from './lww.js';
 import type { ItemPatch, ItemRow } from './model.js';
 
@@ -145,7 +146,7 @@ export function peopleOnItems(items: Pick<ItemRow, 'attributes' | 'deleted'>[]):
 }
 
 /** A patch as it is applied: the synced fields plus ticks for single persons. */
-export type ItemChange = Partial<ItemRow> & { personChecks?: Record<string, boolean> };
+export type ItemChange = Partial<ItemRow> & { personChecks?: Record<string, boolean>; attachments?: AttachmentChanges };
 
 function millisOf(ts: string): number {
   const m = Number(ts.slice(0, 13));
@@ -162,10 +163,10 @@ function millisOf(ts: string): number {
  * Used by the server and by the app's local copy alike.
  */
 export function applyItemPatch(row: ItemRow, patch: ItemChange, ts: string): string[] {
-  const { personChecks, ...rest } = patch;
+  const { personChecks, attachments, ...rest } = patch;
   if (rest.attributes) {
     const keep = row.attributes;
-    const attrs: Record<string, unknown> = { ...rest.attributes };
+    const attrs: Record<string, unknown> = keepAttachments(rest.attributes, keep);
     delete attrs.done;
     delete attrs.doneAt;
     if (keep.done !== undefined) attrs.done = keep.done;
@@ -174,6 +175,7 @@ export function applyItemPatch(row: ItemRow, patch: ItemChange, ts: string): str
   }
   const wasChecked = row.checked;
   const applied: string[] = applyPatch(row, rest as Partial<Record<keyof ItemRow, unknown>>, ts);
+  if (attachments && applyAttachmentChanges(row, attachments, ts) && !applied.includes('attributes')) applied.push('attributes');
 
   const persons = itemPersons(row);
   if (!persons.length) {
@@ -229,6 +231,7 @@ export function applyItemPatch(row: ItemRow, patch: ItemChange, ts: string): str
  */
 export function mergeItem(local: ItemRow, incoming: ItemRow, fields: readonly string[]): ItemRow {
   const merged = mergeRow(local, incoming, fields);
+  mergeAttachments(local, merged);
   const persons = itemPersons(merged);
   if (!persons.length) return merged;
   let done = itemDone(merged);

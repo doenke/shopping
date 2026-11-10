@@ -6,16 +6,15 @@ import {
   withStatus,
   isForEach,
   itemPersons,
-  itemUrl,
   packingInfo,
   peopleOf,
   withPacking,
   withPeople,
-  withUrl,
   type ItemRow,
   type ListRow,
   type UserInfo,
 } from '@shopping/shared';
+import { Attachments } from '../Attachments';
 import { useEffect, useRef, useState } from 'react';
 import { deleteItem, restoreItem, setChecked, updateItem } from '../../actions';
 import { showToast } from '../../toast';
@@ -40,7 +39,6 @@ export function TaskDetail({ item, list, items, users, focusTitle, onClose }: Pr
   const [name, setName] = useState(item.name);
   const [note, setNote] = useState(item.note ?? '');
   const [area, setArea] = useState(packingInfo(item).container ?? '');
-  const [link, setLink] = useState(typeof item.attributes.url === 'string' ? item.attributes.url : '');
   const [checking, setChecking] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const suggestions = usePeopleSuggestions(list, items);
@@ -87,7 +85,6 @@ export function TaskDetail({ item, list, items, users, focusTitle, onClose }: Pr
 
   const createdBy = item.createdBy ? users.get(item.createdBy) : undefined;
   const checkedBy = item.checkedBy ? users.get(item.checkedBy) : undefined;
-  const url = itemUrl(item);
   const due = dueOf(item);
 
   return (
@@ -177,23 +174,8 @@ export function TaskDetail({ item, list, items, users, focusTitle, onClose }: Pr
       </label>
 
       <div className="work-field">
-        <span>Link</span>
-        <div className="field__link">
-          <input
-            type="url"
-            value={link}
-            aria-label="Link"
-            placeholder="https://…"
-            onChange={(e) => setLink(e.target.value)}
-            onBlur={() => saveAttributes(withUrl(item.attributes, link))}
-            onKeyDown={enterSaves(() => saveAttributes(withUrl(item.attributes, link)))}
-          />
-          {url && (
-            <a className="btn" href={url} target="_blank" rel="noopener noreferrer">
-              Öffnen
-            </a>
-          )}
-        </div>
+        <span>Anhänge</span>
+        <Attachments item={item} />
       </div>
 
       <dl className="work-detail__meta">

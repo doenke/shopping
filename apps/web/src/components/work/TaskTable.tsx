@@ -1,10 +1,14 @@
 import { comparePositions } from '@shopping/shared';
+import { mobile } from '../../places';
 import {
   dueOf,
   formatDue,
   itemDone,
   itemPersons,
   itemUrl,
+  itemPlaces,
+  placeLabel,
+  placeUrl,
   listDescription,
   listGroup,
   listStatuses,
@@ -54,7 +58,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
     due: items.some((i) => dueOf(i)),
     who: items.some((i) => peopleLabel(i)),
     area: items.some((i) => packingInfo(i).container),
-    link: items.some((i) => itemUrl(i)),
+    link: items.some((i) => itemUrl(i) || itemPlaces(i).length),
   };
   const defaultStatus = listDefaultStatus(list, statuses);
   // Groups like the phone list used to have: Fällig, Status, Bereich, Wer – or all in one.
@@ -85,6 +89,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
     const fmt = due ? formatDue(due) : null;
     const area = packingInfo(item).container;
     const url = itemUrl(item);
+    const place = itemPlaces(item)[0];
     return (
       <tr
         key={`${item.id}:${person ?? ''}`}
@@ -133,6 +138,19 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
             {url && (
               <a href={url} target="_blank" rel="noopener noreferrer" tabIndex={-1} title={url} onClick={(e) => e.stopPropagation()} aria-label="Link öffnen">
                 ↗
+              </a>
+            )}
+            {place && (
+              <a
+                href={placeUrl(place, mobile)}
+                target="_blank"
+                rel="noopener noreferrer"
+                tabIndex={-1}
+                title={placeLabel(place)}
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Ort öffnen"
+              >
+                📍
               </a>
             )}
           </td>

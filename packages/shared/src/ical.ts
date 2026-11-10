@@ -1,4 +1,5 @@
 import { formatAmounts } from './amounts.js';
+import { itemPlaces } from './attachments.js';
 import { dueOf } from './due.js';
 import { itemUrl, withUrl } from './links.js';
 import type { ItemPatch, ItemRow, ListRow, ListType } from './model.js';
@@ -87,6 +88,7 @@ export function itemToIcal(item: ItemRow, list: Pick<ListRow, 'name' | 'listType
   const p = packingInfo(item);
   const due = dueOf(item);
   const url = itemUrl(item);
+  const place = itemPlaces(item)[0];
   const categories = [p.container].filter((c): c is string => !!c);
   const lines = [
     'BEGIN:VCALENDAR',
@@ -102,6 +104,8 @@ export function itemToIcal(item: ItemRow, list: Pick<ListRow, 'name' | 'listType
     ...(item.note ? [`DESCRIPTION:${escapeText(item.note)}`] : []),
     ...(due ? [`DUE;VALUE=DATE:${due.replace(/-/g, '')}`] : []),
     ...(url ? [`URL:${url}`] : []),
+    // The first place: as text for every app, with the position for maps.
+    ...(place ? [`LOCATION:${escapeText([place.name, place.address].filter(Boolean).join(', '))}`, `GEO:${place.lat.toFixed(6)};${place.lon.toFixed(6)}`] : []),
     ...(categories.length ? [`CATEGORIES:${categories.map(escapeText).join(',')}`] : []),
     `STATUS:${item.checked ? 'COMPLETED' : inProcess ? 'IN-PROCESS' : 'NEEDS-ACTION'}`,
     ...(inProcess ? [`X-SHOPPING-STATUS:${escapeText(inProcess.name)}`] : []),

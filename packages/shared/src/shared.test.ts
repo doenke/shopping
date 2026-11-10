@@ -16,6 +16,16 @@ import { itemToIcal, parseIcalTodo, taskPatch, taskTitle } from './ical.js';
 import { findUrl, itemUrl, linkLabel, withUrl } from './links.js';
 import { applyItemPatch, itemDone, mergeItem, peopleLabel, resolvePeople, withPeople } from './people.js';
 import { suggestedProperties } from './properties.js';
+import {
+  addLinkPatch,
+  addPlacePatch,
+  attachmentBadges,
+  itemAttachments,
+  itemPlaces,
+  placeUrl,
+  removeAttachmentPatch,
+  URL_ATTACHMENT_ID,
+} from './attachments.js';
 import { listAsText } from './list-text.js';
 import type { ItemRow } from './model.js';
 import { seedCatalog } from './seed-catalog.js';
@@ -670,5 +680,80 @@ describe('statuses in task apps', () => {
     // An app that rewrote everything (no X-SHOPPING-STATUS) does not reset the status.
     const rewritten = parseIcalTodo('BEGIN:VTODO\r\nSUMMARY:Angebot\r\nSTATUS:NEEDS-ACTION\r\nEND:VTODO')!;
     expect(taskPatch(base, 'todo', rewritten, parse, info)).toEqual({});
+  });
+});
+
+describe('attachments', () => {
+  const base = (): ItemRow => ({
+    id: 'i1',
+    listId: 'l1',
+    catalogItemId: null,
+    name: 'Auto',
+    amounts: [],
+    properties: [],
+    note: null,
+    categoryId: null,
+    checked: false,
+    checkedAt: null,
+    checkedBy: null,
+    position: 'a0',
+    optional: false,
+    attributes: {},
+    createdBy: null,
+    createdAt: '2026-11-10T10:00:00.000Z',
+    deleted: false,
+    mergedInto: null,
+    hlc: {},
+    seq: 0,
+  });
+  const place = { name: 'Parkhaus', address: 'Bahnhofstr. 3', lat: 53.55, lon: 9.99 };
+
+  it('"*" means the current location, "*Name" a place to look up', () => {
+    expect(parseItem('Auto geparkt *')).toMatchObject({ name: 'Auto geparkt', place: { query: null } });
+    expect(parseItem('Baumarkt *Hornbach Altona !Fr @Ben', undefined, 'todo')).toMatchObject({
+      name: 'Baumarkt',
+      place: { query: 'Hornbach Altona' },
+      person: 'Ben',
+    });
+    expect(parseItem('2*3 Schrauben')?.place).toBeUndefined();
+  });
+
+  it('each attachment has its own clock; an attributes patch keeps them', () => {
+    const row = base();
+    applyItemPatch(row, { attachments: { p1: { id: 'p1', type: 'place', at: 'x', ...place } } }, '0000000000001-0000-a');
+    applyItemPatch(row, { attachments: { p2: { id: 'p2', type: 'link', url: 'https://example.org/a', at: 'x' } } }, '0000000000002-0000-b');
+    // A stale attributes object (status, due …) without them does not drop them.
+    applyItemPatch(row, { attributes: { due: '2026-11-12' } }, '0000000000003-0000-a');
+    expect(itemAttachments(row).map((a) => a.id)).toEqual(['p1', 'p2']);
+    // Removing is a change with its own clock; an older re-add loses.
+    applyItemPatch(row, { attachments: { p1: null } }, '0000000000004-0000-a');
+    applyItemPatch(row, { attachments: { p1: { id: 'p1', type: 'place', at: 'x', ...place } } }, '0000000000003-0000-b');
+    expect(itemAttachments(row).map((a) => a.id)).toEqual(['p2']);
+  });
+
+  it('the first link is attributes.url and shows as attachment "url"', () => {
+    const row = base();
+    const first = addLinkPatch(row, 'example.org/x');
+    expect(first.attributes?.url).toBe('https://example.org/x');
+    applyItemPatch(row, first, '0000000000001-0000-a');
+    const second = addLinkPatch(row, 'https://example.org/y');
+    applyItemPatch(row, second, '0000000000002-0000-a');
+    expect(itemAttachments(row).map((a) => (a.type === 'link' ? a.url : ''))).toEqual(['https://example.org/x', 'https://example.org/y']);
+    expect(attachmentBadges(row)).toEqual(['🔗']);
+    applyItemPatch(row, removeAttachmentPatch(row, URL_ATTACHMENT_ID), '0000000000003-0000-a');
+    expect(itemUrl(row)).toBeNull();
+    expect(itemAttachments(row)).toHaveLength(1);
+  });
+
+  it('merging keeps attachments added locally but not sent yet', () => {
+    const local = base();
+    applyItemPatch(local, addPlacePatch(place), '0000000000005-0000-a');
+    const incoming = base();
+    applyItemPatch(incoming, { name: 'Auto weg' }, '0000000000004-0000-b');
+    const merged = mergeItem(local, incoming, ITEM_FIELDS);
+    expect(merged.name).toBe('Auto weg');
+    expect(itemPlaces(merged)).toHaveLength(1);
+    expect(placeUrl(place, false)).toContain('openstreetmap.org');
+    expect(placeUrl(place, true)).toMatch(/^geo:53\.55/);
   });
 });

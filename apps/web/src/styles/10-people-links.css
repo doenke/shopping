@@ -141,3 +141,129 @@ section.listview {
 .task.drop-target {
   box-shadow: 0 0 0 3px var(--primary);
 }
+/* 📍 next to the 🔗 (or in its place when there is no link). */
+.tile:has(.tile__link:not(.tile__link--place)) .tile__link--place {
+  left: 34px;
+}
+.listview--rows .group .tile:has(.tile__link:not(.tile__link--place)) .tile__link--place {
+  left: auto;
+  right: 44px;
+}
+
+/* Attachments in the details: a button when there are none, else exactly the ones there are. */
+.attachments {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.attachments__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.attachment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.attachment__main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  color: inherit;
+  text-decoration: none;
+}
+.attachment__text,
+.attachments__hit {
+  display: grid;
+  min-width: 0;
+}
+.attachment__title {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment__sub {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.85em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment__remove {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin-right: 4px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.attachment__remove:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.attachments__add {
+  justify-self: start;
+}
+.attachments__more {
+  justify-self: start;
+  font-size: 0.9em;
+}
+.attachments__menu,
+.attachments__form,
+.attachments__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.attachments__form--place {
+  display: grid;
+}
+.attachments__form input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.attachments__hits {
+  display: grid;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.attachments__hit {
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.attachments__hit:hover,
+.attachments__hit[aria-selected='true'] {
+  background: var(--surface-2);
+}
+.attachments__note {
+  margin: 0;
+  font-size: 0.85em;
+}

@@ -10,6 +10,8 @@ import {
   packingInfo,
   itemDone,
   itemUrl,
+  itemAttachments,
+  type Attachment,
   itemStatus,
   type ListStatus,
   itemPersons,
@@ -23,6 +25,8 @@ import {
 /** The public shape of an item in the REST API, SSE and MCP. */
 export interface ApiItem {
   id: string;
+  /** Links and places attached to the entry (the first link is also in `url`). */
+  attachments: Attachment[];
   listId: string;
   name: string;
   /** Human-readable, e.g. "500 g · gemischt · bio". */
@@ -109,6 +113,7 @@ export function toApiItem(
     persons: itemPersons(i),
     donePersons: itemDone(i),
     url: itemUrl(i),
+    attachments: itemAttachments(i),
     status: statuses.length && !i.checked ? (itemStatus(i, statuses, defaultStatus)?.name ?? null) : null,
     tipFrom: packing.person,
     where: packing.container,

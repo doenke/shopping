@@ -8,6 +8,7 @@ export * from './due.js';
 export * from './packing.js';
 export * from './people.js';
 export * from './links.js';
+export * from './attachments.js';
 export * from './ical.js';
 export * from './status.js';
 export * from './order.js';

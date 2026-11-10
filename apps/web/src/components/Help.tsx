@@ -112,6 +112,8 @@ function UserHelp({ me }: { me: Me }) {
         <Example then="Merkliste: Tipp von Ben, gibt's bei Netflix">Dune @Ben #Netflix</Example>
         <Example then="mit 🔗 auf der Kachel – antippen öffnet die Seite">Dune https://www.imdb.com/…</Example>
         <Example then="ToDo: Freitag fällig, Ben macht's">Reifen wechseln !Fr @Ben #Auto</Example>
+        <Example then="mit 📍 – dein aktueller Standort hängt am Eintrag">Auto geparkt *</Example>
+        <Example then="Ort gesucht und angehängt">Fliesen holen *Hornbach Altona</Example>
       </ul>
       <p className="muted">
         Steht „Milch“ schon drauf, wird zusammengelegt statt verdoppelt. Ganze Zutatenlisten oder Rezept-Links kannst du einfach einfügen – und aus anderen Apps
