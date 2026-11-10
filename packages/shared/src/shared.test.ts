@@ -74,9 +74,10 @@ describe('parser', () => {
     });
   }
 
-  it('splits lists but keeps decimal commas', () => {
-    expect(splitInput('Kaffee, Butter, 6 Eier; 1,5 kg Mehl')).toEqual(['Kaffee', 'Butter', '6 Eier', '1,5 kg Mehl']);
-    expect(parseInput('Kaffee, Butter, 6 Eier', index).map((p) => p.name)).toEqual(['Kaffee', 'Butter', 'Eier']);
+  it('splits lists at semicolons, a comma stays in the entry', () => {
+    expect(splitInput('Kaffee; Butter; 6 Eier; 1,5 kg Mehl')).toEqual(['Kaffee', 'Butter', '6 Eier', '1,5 kg Mehl']);
+    expect(splitInput('Steuererklärung, Belege sortieren')).toEqual(['Steuererklärung, Belege sortieren']);
+    expect(parseInput('Kaffee; Butter; 6 Eier', index).map((p) => p.name)).toEqual(['Kaffee', 'Butter', 'Eier']);
   });
 
   it('works without catalog', () => {
@@ -155,7 +156,7 @@ describe('planAdd', () => {
       { ...base, id: 'milk', name: 'Milch', checked: false, amounts: [{ q: 1, u: 'l' }] },
       { ...base, id: 'bread', name: 'Brot', checked: true, position: 'a1' },
     ];
-    const plan = planAdd('L', existing, parseInput('2 l Milch, Brot, Käse, Käse'), id);
+    const plan = planAdd('L', existing, parseInput('2 l Milch; Brot; Käse; Käse'), id);
     expect(plan.map((c) => [c.id, c.kind])).toEqual([
       ['milk', 'merged'],
       ['bread', 'restored'],
@@ -180,7 +181,7 @@ describe('packing lists', () => {
   const index = new CatalogIndex(packing);
 
   it('reads person and Packstück from the input', () => {
-    const [shirts, brush] = parseInput('3 T-Shirts @anna #Koffer, Zahnbürste @Ben #Blaue_Tasche', index);
+    const [shirts, brush] = parseInput('3 T-Shirts @anna #Koffer; Zahnbürste @Ben #Blaue_Tasche', index);
     expect(shirts).toMatchObject({ name: 'T-Shirts', amounts: [{ q: 3, u: null }], person: 'Anna', container: 'Koffer', categoryId: 'kleidung' });
     expect(brush).toMatchObject({ name: 'Zahnbürste', person: 'Ben', container: 'Blaue Tasche', categoryId: 'koerperpflege' });
     expect(parseItem('Socken', index)).not.toHaveProperty('person');
@@ -189,7 +190,7 @@ describe('packing lists', () => {
   it('keeps items of different people or Packstücke apart', () => {
     let n = 0;
     const newId = () => `id-${++n}`;
-    const first = planAdd('l', [], parseInput('2 T-Shirts @Anna, 2 T-Shirts @Ben', index), newId);
+    const first = planAdd('l', [], parseInput('2 T-Shirts @Anna; 2 T-Shirts @Ben', index), newId);
     expect(first.map((c) => c.kind)).toEqual(['created', 'created']);
     expect(first[0]!.patch.attributes).toEqual({ person: 'Anna' });
     const existing = first.map((c) => ({
@@ -204,7 +205,7 @@ describe('packing lists', () => {
       attributes: c.patch.attributes ?? {},
       position: c.patch.position!,
     }));
-    const more = planAdd('l', existing, parseInput('1 T-Shirts @anna, T-Shirts #Koffer', index), newId);
+    const more = planAdd('l', existing, parseInput('1 T-Shirts @anna; T-Shirts #Koffer', index), newId);
     expect(more[0]).toMatchObject({ id: 'id-1', kind: 'merged', patch: { amounts: [{ q: 3, u: null }] } });
     expect(more[1]).toMatchObject({ kind: 'created', patch: { attributes: { container: 'Koffer' } } });
   });
@@ -275,8 +276,9 @@ describe('a pasted ingredient list', () => {
     expect(items[6]!.amounts).toEqual([{ q: 2, u: 'el' }]);
   });
 
-  it('still splits a single line at commas', () => {
-    expect(parseInput('Milch, Butter, 6 Eier', index).map((i) => i.name)).toEqual(['Milch', 'Butter', 'Eier']);
+  it('splits a single line at semicolons, not at commas', () => {
+    expect(parseInput('Milch; Butter; 6 Eier', index).map((i) => i.name)).toEqual(['Milch', 'Butter', 'Eier']);
+    expect(parseInput('Fenster zu, Herd aus', index)).toHaveLength(1);
   });
 });
 
@@ -482,7 +484,7 @@ describe('things for several people', () => {
 
   it('merges more people into one entry instead of a second one', () => {
     const existing = [{ ...item({ persons: ['Sönke', 'Ulli'], done: ['Ulli'] }), amounts: [{ q: 1, u: null }] }];
-    const plan = planAdd('l', existing, parseInput('Sonnenbrille @Anna, 2 Sonnenbrille @Ulli'), () => 'new');
+    const plan = planAdd('l', existing, parseInput('Sonnenbrille @Anna; 2 Sonnenbrille @Ulli'), () => 'new');
     expect(plan).toHaveLength(2);
     expect(plan[0]).toMatchObject({ id: 'i', kind: 'merged', patch: { attributes: { persons: ['Sönke', 'Ulli', 'Anna'], done: ['Ulli'] } } });
     expect(plan[1]).toMatchObject({ id: 'i', patch: { personChecks: { Ulli: false } } });

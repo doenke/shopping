@@ -47,7 +47,7 @@ describe('outgoing webhooks', () => {
     expect(secret).toMatch(/^whsec_/);
     expect((await req('GET', '/api/v1/webhooks')).body).not.toContain(secret);
 
-    await req('POST', '/api/v1/lists/default/items', { text: 'Milch, Brot' }, { authorization: `Bearer ${token}` });
+    await req('POST', '/api/v1/lists/default/items', { text: 'Milch; Brot' }, { authorization: `Bearer ${token}` });
     await waitFor(() => deliveries.length === 1);
     const d = deliveries[0]!;
     const payload = JSON.parse(d.body);

@@ -20,7 +20,7 @@ describe('own order per user', () => {
   it('keeps the order of lists and categories, synced and used by the API', async () => {
     const a = (await req('POST', '/api/v1/lists', { name: 'Einkauf' })).json().id;
     const b = (await req('POST', '/api/v1/lists', { name: 'Drogerie' })).json().id;
-    await req('POST', `/api/v1/lists/${a}/items`, { text: 'Milch, Äpfel, Brot' });
+    await req('POST', `/api/v1/lists/${a}/items`, { text: 'Milch; Äpfel; Brot' });
 
     const push = await req('POST', '/api/v1/sync/push', {
       mutations: [me({ listOrder: [b, a], categoryOrder: ['brot-gebaeck', 'milch-kaese', 'obst-gemuese'], sectionOrder: ['todo', 'shopping', 'memo'] })],

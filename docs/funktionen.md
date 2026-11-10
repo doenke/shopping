@@ -11,8 +11,8 @@
 
 ## Eingeben
 
-- **Eine Eingabezeile für alles**: „2 kg Kartoffeln“, „500g Hack gemischt bio“, „Milch, Butter, 6 Eier“.
-  Menge, Einheit und Eigenschaften werden erkannt, mehrere Einträge trennt ein Komma. Wird etwas nur über
+- **Eine Eingabezeile für alles**: „2 kg Kartoffeln“, „500g Hack gemischt bio“, „Milch; Butter; 6 Eier“.
+  Menge, Einheit und Eigenschaften werden erkannt, mehrere Einträge trennt ein Semikolon (ein Komma nicht). Wird etwas nur über
   ein Synonym gefunden („Stirnlampe“ → Taschenlampe), gibt es zusätzlich eine Kachel mit genau dem Getippten.
 - **Zeichen mit Bedeutung**:
 

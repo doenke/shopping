@@ -57,7 +57,7 @@ describe('one entry for several people', () => {
 
   it('templates: "für jeden" becomes the people of the list', async () => {
     const tpl = (await as(anna, 'POST', '/api/v1/lists', { name: 'Strand', type: 'packing', isTemplate: true })).json();
-    await as(anna, 'POST', `/api/v1/lists/${tpl.id}/items`, { text: 'Sonnenbrille @alle, Sonnenschirm' });
+    await as(anna, 'POST', `/api/v1/lists/${tpl.id}/items`, { text: 'Sonnenbrille @alle; Sonnenschirm' });
     const inTemplate = (await as(anna, 'GET', `/api/v1/lists/${tpl.id}`)).json().items as { name: string; person: string | null }[];
     expect(inTemplate.find((i) => i.name === 'Sonnenbrille')!.person).toBeNull();
 

@@ -46,7 +46,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         return result if call.return_response else None
 
     async def add_items(call: ServiceCall) -> ServiceResponse:
-        return await run(call, lambda c, d: c.add(d[ATTR_LIST], text=", ".join(d[ATTR_ITEMS])))
+        return await run(call, lambda c, d: c.add(d[ATTR_LIST], text="; ".join(d[ATTR_ITEMS])))
 
     async def apply_template(call: ServiceCall) -> ServiceResponse:
         return await run(call, lambda c, d: c.apply_template(d[ATTR_LIST], d[ATTR_TEMPLATE], d[ATTR_INCLUDE_OPTIONAL]))

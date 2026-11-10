@@ -65,7 +65,7 @@ function GuestHelp({ admins, isGuest }: { admins: string[]; isGuest: boolean }) 
       <h3>Was geht</h3>
       <ul className="help__examples">
         <Example then="landet direkt auf der Liste">2 kg Kartoffeln</Example>
-        <Example then="drei Einträge auf einmal">Milch, Brot, 6 Eier</Example>
+        <Example then="drei Einträge auf einmal">Milch; Brot; 6 Eier</Example>
       </ul>
       <p>
         Antippen öffnet einen Eintrag zum Ändern. Im Laden auf <strong>🛒</strong> tippen – dann hakt Antippen ab, und alle anderen sehen live, was schon im
@@ -105,7 +105,7 @@ function UserHelp({ me }: { me: Me }) {
       <h3>Tippen wie du redest</h3>
       <ul className="help__examples">
         <Example then="Menge, Einheit und Eigenschaft erkannt">2 kg Kartoffeln festkochend</Example>
-        <Example then="mehrere auf einmal">Milch, Butter, 6 Eier</Example>
+        <Example then="mehrere auf einmal">Milch; Butter; 6 Eier</Example>
         <Example then="Packliste: für Anna, in den Koffer">3 T-Shirts @Anna #Koffer</Example>
         <Example then="einmal auf der Liste, abgehakt wird pro Person">Sonnenbrille @Sönke @Ulli</Example>
         <Example then="in einer Vorlage: für jeden, der mitfährt">Badehose @alle</Example>

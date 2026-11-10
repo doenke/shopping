@@ -43,7 +43,11 @@ const ItemRef = z.object({ id: z.string().min(1).max(120).describe('Artikel-ID')
 
 const AddItemsBody = z
   .object({
-    text: z.string().max(2000).optional().describe('Ein oder mehrere Artikel als Text, z. B. „Milch, 6 Eier, 500g Hack bio“'),
+    text: z
+      .string()
+      .max(2000)
+      .optional()
+      .describe('Ein oder mehrere Artikel als Text, mehrere mit Semikolon getrennt, z. B. „Milch; 6 Eier; 500g Hack bio“ (ein Komma trennt nicht)'),
     items: z.array(ItemInput).max(200).optional(),
   })
   .refine((b) => b.text || b.items?.length, 'text oder items angeben');

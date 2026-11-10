@@ -8,7 +8,7 @@ test('add items, edit one, buy them', async ({ page }, info) => {
   await newList(page, 'Wocheneinkauf');
 
   const input = page.getByRole('searchbox', { name: 'Artikel hinzufügen' });
-  await input.fill('2 kg Kartoffeln, Milch, 6 Eier');
+  await input.fill('2 kg Kartoffeln; Milch; 6 Eier');
   await input.press('Enter');
   for (const name of ['Kartoffeln', 'Milch', 'Eier']) await expect(tile(page, name)).toBeVisible();
   await expect(tile(page, 'Kartoffeln')).toContainText('2 kg');

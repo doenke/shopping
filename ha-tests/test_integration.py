@@ -122,7 +122,7 @@ async def test_new_lists_and_actions(hass: HomeAssistant, shopping: ShoppingServ
 
     # A new list created elsewhere does not show up by itself – it is added by hand.
     template = shopping.request("POST", "/api/v1/lists", {"name": "Grillabend", "isTemplate": True}, token)
-    shopping.request("POST", f"/api/v1/lists/{template['id']}/items", {"text": "Würstchen, Grillkohle"}, token)  # type: ignore[index]
+    shopping.request("POST", f"/api/v1/lists/{template['id']}/items", {"text": "Würstchen; Grillkohle"}, token)  # type: ignore[index]
     shopping.request("POST", "/api/v1/lists", {"name": "Drogerie"}, token)
     await entry.runtime_data.async_refresh()
     await hass.async_block_till_done()
