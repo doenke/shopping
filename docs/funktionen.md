@@ -179,7 +179,8 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
   Am Rechner lassen sich Listen auch direkt in der Seitenleiste ziehen (innerhalb ihres Abschnitts bzw. ihrer
   Kategorie).
 - **Abschnitte und Kategorien zuklappen**: Klick auf eine Überschrift in der Seitenleiste (▾) klappt sie zu
-  oder auf, pro Gerät gemerkt. Die gerade offene Liste bleibt auch in einer zugeklappten Gruppe sichtbar.
+  oder auf, pro Gerät gemerkt (auch am Handy, ohne dass sich die Seitenleiste schließt). „Vorlagen“ ist anfangs
+  zugeklappt. Die gerade offene Liste bleibt auch in einer zugeklappten Gruppe sichtbar.
 
 ## Am Rechner bedienen
 

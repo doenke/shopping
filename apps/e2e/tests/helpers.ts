@@ -13,7 +13,7 @@ export const phone = (page: Page) => (page.viewportSize()?.width ?? 1000) < 900;
 
 /** The "+ Neu" button lives in the sidebar (the drawer on phones). */
 export async function newList(page: Page, name: string) {
-  if (phone(page)) await page.getByRole('button', { name: 'Listen' }).click();
+  if (phone(page)) await page.getByRole('button', { name: 'Listen', exact: true }).click();
   await page.locator('.sidebar__new').click();
   const dialog = page.locator('dialog[open]');
   await dialog.getByRole('textbox', { name: 'Name' }).fill(name);

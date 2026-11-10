@@ -331,9 +331,9 @@ function Shell({ me }: { me: Me }) {
                 <div
                   className="drawer"
                   onClick={(e) => {
-                    // Closes on the backdrop or a link/button – not when a section like "Archiv" is unfolded.
+                    // Closes on the backdrop or a link/button – not when a group is folded or a section like "Archiv" is unfolded.
                     const t = e.target as HTMLElement;
-                    if (t === e.currentTarget || (t.closest('a, button') && !t.closest('summary'))) setDrawer(false);
+                    if (t === e.currentTarget || (t.closest('a, button') && !t.closest('summary, .sidebar__toggle'))) setDrawer(false);
                   }}
                 >
                   {sidebar}

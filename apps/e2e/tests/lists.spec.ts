@@ -56,6 +56,30 @@ test('a packing list groups by person', async ({ page }, info) => {
   await expect(page.getByText('0 von 1 eingepackt')).toBeVisible();
 });
 
+test('sidebar groups fold without closing the drawer; Vorlagen start folded', async ({ page }, info) => {
+  await login(page, `Dora ${info.project.name}`);
+  await page.goto('/');
+  await newList(page, 'Einkauf');
+  if (phone(page)) await page.getByRole('button', { name: 'Listen', exact: true }).click();
+  await page.locator('.sidebar__new').click();
+  const dialog = page.locator('dialog[open]');
+  await dialog.getByRole('textbox', { name: 'Name' }).fill('Basis');
+  await dialog.getByText('Als Vorlage anlegen').click();
+  await dialog.locator('button[type=submit]').click();
+  await expect(page.locator('.topbar__title')).toContainText('Basis');
+
+  await newList(page, 'Wochenmarkt');
+  if (phone(page)) await page.getByRole('button', { name: 'Listen', exact: true }).click();
+  const sidebar = page.locator('.sidebar');
+  const vorlagen = sidebar.getByRole('button', { name: 'Vorlagen' });
+  await expect(vorlagen).toHaveAttribute('aria-expanded', 'false');
+  await expect(sidebar.getByRole('link', { name: /Basis/ })).toBeHidden();
+  await vorlagen.click();
+  await expect(sidebar).toBeVisible();
+  await expect(vorlagen).toHaveAttribute('aria-expanded', 'true');
+  await expect(sidebar.getByRole('link', { name: /Basis/ })).toBeVisible();
+});
+
 test('one item for two people is ticked off per person', async ({ page }, info) => {
   await login(page, `Dora ${info.project.name}`);
   await page.goto('/');
