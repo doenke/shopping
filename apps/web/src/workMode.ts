@@ -7,10 +7,7 @@ import { useEffect, useState } from 'react';
  */
 
 const MODE_KEY = 'work-mode';
-const SCOPE_KEY = 'work-scope';
 const EVENT = 'work-mode-change';
-
-export type WorkScope = 'arbeit' | 'all';
 
 function read(key: string): string | null {
   try {
@@ -56,22 +53,10 @@ export function useWorkModeSetting(): boolean {
   return useStored(isWorkMode);
 }
 
-export function workScope(): WorkScope {
-  return read(SCOPE_KEY) === 'all' ? 'all' : 'arbeit';
-}
-
-export function setWorkScope(scope: WorkScope): void {
-  write(SCOPE_KEY, scope === 'all' ? 'all' : null);
-}
-
-export function useWorkScope(): WorkScope {
-  return useStored(workScope);
-}
-
-/** The lists of the Arbeitsmodus: ToDo lists, by default only those in the Kategorie "Arbeit". */
-export function isWorkList(list: ListRow, scope: WorkScope): boolean {
+/** The lists of the Arbeitsmodus: ToDo lists in the Kategorie "Arbeit". */
+export function isWorkList(list: ListRow): boolean {
   if (list.listType !== 'todo' || list.isTemplate || list.archivedAt) return false;
-  return scope === 'all' || (listGroup(list) ?? '').trim().toLowerCase() === 'arbeit';
+  return (listGroup(list) ?? '').trim().toLowerCase() === 'arbeit';
 }
 
 /** Start shortcuts of the installed app ("/?mode=work", "/?mode=home") switch the mode. */

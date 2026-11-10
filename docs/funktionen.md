@@ -120,9 +120,8 @@ gibt es nur die Tabelle). Im **Kanban** ist jeder Status eine Spalte:
 
 ### Arbeitsmodus
 
-💼 unten in der Seitenleiste (angeboten, solange eine ToDo-Liste offen ist) oder `Strg+Shift+A` (pro Gerät
-gemerkt) blendet Listen aus: Seitenleiste, Suche
-und Start zeigen nur noch die ToDo-Listen der Kategorie „Arbeit“ (umstellbar auf alle ToDo-Listen). Neue
+🏢 (Büro-Symbol oben in der Seitenleiste neben dem Titel) oder `Strg+Shift+A` (pro Gerät gemerkt) blendet
+Listen aus: Seitenleiste, Suche und Start zeigen nur noch die ToDo-Listen der Kategorie „Arbeit“. Neue
 Listen sind dann ToDo-Listen in „Arbeit“, oben links steht „To-Do“. Die installierte App bietet per
 Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ als Sprungziele.
 

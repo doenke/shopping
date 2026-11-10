@@ -32,7 +32,7 @@ import { ShortcutHelp } from './components/ShortcutHelp';
 import { Toast } from './components/Toast';
 import { useShortcuts } from './keyboard';
 import { useItemDrag } from './itemDrag';
-import { applyModeFromUrl, isWorkList, isWorkMode, setWorkMode, setWorkScope, useWorkModeSetting, useWorkScope } from './workMode';
+import { applyModeFromUrl, isWorkList, isWorkMode, setWorkMode, useWorkModeSetting } from './workMode';
 import { ListBadges, OpenCount } from './components/ListBadges';
 
 export function App() {
@@ -90,8 +90,7 @@ function Shell({ me }: { me: Me }) {
   const todoLists = ordered.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'todo');
   // Arbeitsmodus: only shows and hides lists – just the work lists in the sidebar, the search and as start.
   const workMode = useWorkModeSetting();
-  const scope = useWorkScope();
-  const workLists = todoLists.filter((l) => isWorkList(l, scope));
+  const workLists = todoLists.filter(isWorkList);
   const archived = ordered.filter((l) => !l.isTemplate && l.archivedAt);
   const templates = ordered.filter((l) => l.isTemplate);
   const [editing, setEditing] = useState(false);
@@ -176,9 +175,8 @@ function Shell({ me }: { me: Me }) {
   }, [workMode]);
   // Arbeitsmodus on while a hidden list is open: go to the first work list.
   useEffect(() => {
-    if (workMode && route.page === 'list' && list && !isWorkList(list, scope))
-      navigate(workLists[0] ? { page: 'list', listId: workLists[0].id } : { page: 'list' });
-  }, [workMode, scope, list?.id]);
+    if (workMode && route.page === 'list' && list && !isWorkList(list)) navigate(workLists[0] ? { page: 'list', listId: workLists[0].id } : { page: 'list' });
+  }, [workMode, list?.id]);
 
   // A ToDo list on the desktop: tasks as a table with details.
   const board = wide && route.page === 'list' && list?.listType === 'todo' && !list.isTemplate;
@@ -207,19 +205,33 @@ function Shell({ me }: { me: Me }) {
 
   const sidebar = (
     <nav className="sidebar" aria-label="Listen">
-      <a
-        href={mainList ? `#/list/${mainList.id}` : '#/'}
-        className="sidebar__head"
-        title="Zur Hauptliste"
-        onClick={(e) => {
-          e.preventDefault();
-          setDrawer(false);
-          navigate(mainList ? { page: 'list', listId: mainList.id } : { page: 'list' });
-        }}
-      >
-        <img src="/icon.svg" alt="" width={28} height={28} />
-        <strong>{workMode ? 'To-Do' : 'Shopping'}</strong>
-      </a>
+      <div className="sidebar__top">
+        <a
+          href={mainList ? `#/list/${mainList.id}` : '#/'}
+          className="sidebar__head"
+          title="Zur Hauptliste"
+          onClick={(e) => {
+            e.preventDefault();
+            setDrawer(false);
+            navigate(mainList ? { page: 'list', listId: mainList.id } : { page: 'list' });
+          }}
+        >
+          <img src="/icon.svg" alt="" width={28} height={28} />
+          <strong>{workMode ? 'To-Do' : 'Shopping'}</strong>
+        </a>
+        {!guest && (
+          <button
+            type="button"
+            className={`sidebar__work${workMode ? ' sidebar__work--on' : ''}`}
+            onClick={() => setWorkMode(!workMode)}
+            aria-pressed={workMode}
+            aria-label="Arbeitsmodus"
+            title={workMode ? 'Arbeitsmodus aus: alle Listen zeigen – Strg+Shift+A' : 'Arbeitsmodus: nur die Arbeitslisten zeigen – Strg+Shift+A'}
+          >
+            🏢
+          </button>
+        )}
+      </div>
       {!guest && (
         <button type="button" className="btn btn--primary sidebar__new" onClick={() => newList()}>
           + Neu
@@ -259,27 +271,6 @@ function Shell({ me }: { me: Me }) {
         </details>
       )}
       <span className="spacer" />
-      {!guest &&
-        (workMode ? (
-          <div className="sidebar__work sidebar__work--on">
-            <strong>💼 Arbeitsmodus</strong>
-            <select value={scope} onChange={(e) => setWorkScope(e.target.value === 'all' ? 'all' : 'arbeit')} aria-label="Welche Listen">
-              <option value="arbeit">ToDo-Listen „Arbeit“</option>
-              <option value="all">Alle ToDo-Listen</option>
-            </select>
-            <button type="button" className="link" onClick={() => setWorkMode(false)} title="Strg+Shift+A">
-              Alle Listen zeigen
-            </button>
-          </div>
-        ) : (
-          // Offered where it makes sense: while a ToDo list is open.
-          route.page === 'list' &&
-          list?.listType === 'todo' && (
-            <button type="button" className="sidebar__work" onClick={() => setWorkMode(true)} title="Nur die Arbeitslisten zeigen – Strg+Shift+A">
-              💼 Arbeitsmodus
-            </button>
-          )
-        ))}
       <a href="#/help" className={route.page === 'help' ? 'active' : ''} onClick={() => setDrawer(false)}>
         ❓ Hilfe
       </a>
@@ -434,7 +425,7 @@ function Shell({ me }: { me: Me }) {
           {newDialog && (
             <NewListDialog
               templates={templates}
-              {...(workMode ? { initialType: 'todo' as const, initialGroup: scope === 'arbeit' ? 'Arbeit' : '' } : {})}
+              {...(workMode ? { initialType: 'todo' as const, initialGroup: 'Arbeit' } : {})}
               groups={[...new Set(todoLists.map(listGroup).filter((g): g is string => !!g))]}
               onClose={() => setNewDialog(false)}
             />
