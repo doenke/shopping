@@ -78,7 +78,8 @@
 ## Merklisten
 
 - Für Filme, Bücher, Restaurants: **Tipp von** und **Wo** („Dune @Ben #Netflix“), gruppierbar nach Ort oder
-  Tippgeber; Erledigtes bleibt unter „Erledigt“. Die Beschreibung der Liste („Filme und Serien, die wir sehen
+  Tippgeber; Erledigtes bleibt unter „Erledigt“. Ein Tipp auf einen Eintrag öffnet wie bei Vorlagen nur die
+  Details; abgehakt wird dort mit *☑ Erledigt* (zurück mit *↺ Wieder offen*), am Rechner auch mit Leertaste. Die Beschreibung der Liste („Filme und Serien, die wir sehen
   wollen“) hilft beim Icon jedes Eintrags.
 
 ## ToDo-Listen

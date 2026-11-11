@@ -27,7 +27,7 @@ import {
 import { Attachments } from './Attachments';
 import { useFileDropOn } from '../files';
 import { useEffect, useRef, useState } from 'react';
-import { addItems, createCategory, deleteItem, itemToNew, updateItem } from '../actions';
+import { addItems, createCategory, deleteItem, itemToNew, setChecked, updateItem } from '../actions';
 import { useCustomCategories } from '../categories';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -245,6 +245,19 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
   const allProps = [...new Set([...suggestedProperties(list.listType), ...items.flatMap((i) => i.properties), ...item.properties, ...properties])];
   const sources = Array.isArray(item.attributes.sources) ? (item.attributes.sources as ItemSource[]) : [];
   const checkedBy = item.checkedBy ? users.get(item.checkedBy) : undefined;
+  // Merklisten: a tap on the tile only opens this – done (seen, read, visited) is said here.
+  const doneButton = list.listType === 'memo' && !isTemplate && (
+    <button
+      type="button"
+      className="btn"
+      onClick={() => {
+        void setChecked(item, !item.checked);
+        void save();
+      }}
+    >
+      {item.checked ? '↺ Wieder offen' : '☑ Erledigt'}
+    </button>
+  );
   const createdBy = item.createdBy ? users.get(item.createdBy) : undefined;
 
   return (
@@ -264,6 +277,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
               🗑
             </button>
             <span className="spacer" />
+            {doneButton}
             <button type="button" className="icon-btn" aria-label="Abbrechen" title="Abbrechen" onClick={onClose}>
               ✕
             </button>
@@ -582,6 +596,7 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
             Entfernen
           </button>
           <span className="spacer" />
+          {doneButton}
           <button type="button" className="btn" onClick={onClose}>
             Abbrechen
           </button>

@@ -126,3 +126,16 @@ test('Berechtigungen: the invitation link is shown, created on demand, copied an
   await expect(field).not.toHaveValue(first);
   await page.screenshot({ path: test.info().outputPath('link.png') });
 });
+
+test('Merkliste: a tap opens the details, done is said there (phone: at the top)', async ({ page }, info) => {
+  await login(page, `Mia ${info.project.name}`);
+  const memo = await (await page.request.post('/api/v1/lists', { data: { name: 'Bücher', type: 'memo' } })).json();
+  await page.request.post(`/api/v1/lists/${memo.id}/items`, { data: { text: 'Dune' } });
+  await page.goto(`/#/list/${memo.id}`);
+  await tile(page, 'Dune').click();
+  const dialog = page.locator('dialog[open]');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: '☑ Erledigt' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('button', { name: /Erledigt \(1\)/ })).toBeVisible();
+});

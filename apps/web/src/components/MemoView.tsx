@@ -136,11 +136,8 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
                   fading={!!remote}
                   badge={remote ? `✓ ${users.get(remote.by)?.displayName ?? ''}`.trim() : undefined}
                   badgeUser={remote ? users.get(remote.by) : undefined}
-                  onTap={() => {
-                    if (remote) return;
-                    void setChecked(item, true);
-                    setUndo(item);
-                  }}
+                  // Like a template: a tap opens the details, "✓ Erledigt" is there (Space still ticks off).
+                  onTap={() => setEditing(item.id)}
                   onLongPress={() => setEditing(item.id)}
                   onToggle={() => {
                     if (remote) return;
@@ -170,7 +167,7 @@ export const MemoView = forwardRef<HTMLInputElement, Props>(function MemoView({ 
                   url={itemUrl(item)}
                   variant="done"
                   extra={extraOf(item)}
-                  onTap={() => void setChecked(item, false)}
+                  onTap={() => setEditing(item.id)}
                   onLongPress={() => setEditing(item.id)}
                   onToggle={() => void setChecked(item, false)}
                 />
