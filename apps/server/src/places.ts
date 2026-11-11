@@ -51,7 +51,18 @@ export class PlaceService {
       const why = (err as Error).name === 'TimeoutError' ? `nicht innerhalb von ${Math.round(this.timeoutMs / 1000)} s` : cause ? `nicht (${cause})` : 'nicht';
       throw new PlacesUnavailable(`Die Ortssuche antwortet ${why}`);
     }
-    if (!res.ok) throw new PlacesUnavailable(`Die Ortssuche antwortet mit ${res.status}`);
+    if (!res.ok) {
+      // Photon says what it did not like ("language … is not supported"): pass it on, short.
+      const text = await res.text().catch(() => '');
+      let msg = text;
+      try {
+        msg = String((JSON.parse(text) as { message?: unknown }).message ?? text);
+      } catch {
+        // Not JSON: the text as it is.
+      }
+      msg = msg.replace(/\s+/g, ' ').trim().slice(0, 160);
+      throw new PlacesUnavailable(`Die Ortssuche antwortet mit ${res.status}${msg && !msg.startsWith('<') ? `: ${msg}` : ''}`);
+    }
     const body = (await res.json()) as { features?: PhotonFeature[] };
     return Array.isArray(body.features) ? body.features : [];
   }

@@ -80,5 +80,9 @@ describe('a slow or unreachable Photon', () => {
     await expect(new PlaceService('http://photon.test', hang, 50).search('x')).rejects.toThrow('Die Ortssuche antwortet nicht innerhalb von 0 s');
     const refused = (() => Promise.reject(Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } }))) as typeof fetch;
     await expect(new PlaceService('http://photon.test', refused).search('x')).rejects.toThrow('Die Ortssuche antwortet nicht (ECONNREFUSED)');
+    const bad = (async () => new Response(JSON.stringify({ message: 'Language is not supported. Supported are: en' }), { status: 400 })) as typeof fetch;
+    await expect(new PlaceService('http://photon.test', bad).search('x')).rejects.toThrow(
+      'Die Ortssuche antwortet mit 400: Language is not supported. Supported are: en',
+    );
   });
 });
