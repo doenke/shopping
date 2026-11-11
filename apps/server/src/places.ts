@@ -31,6 +31,7 @@ export class PlaceService {
   constructor(
     private readonly baseUrl: string | undefined,
     private readonly fetchImpl: typeof fetch = fetch,
+    private readonly timeoutMs = 30_000,
   ) {}
 
   get available(): boolean {
@@ -43,9 +44,12 @@ export class PlaceService {
     for (const [k, v] of Object.entries(params)) if (v !== undefined) url.searchParams.set(k, String(v));
     let res: Response;
     try {
-      res = await this.fetchImpl(url, { signal: AbortSignal.timeout(6000), headers: { accept: 'application/json' } });
-    } catch {
-      throw new PlacesUnavailable('Die Ortssuche antwortet nicht');
+      res = await this.fetchImpl(url, { signal: AbortSignal.timeout(this.timeoutMs), headers: { accept: 'application/json' } });
+    } catch (err) {
+      // The reason goes into the message, so the log and the app say what went wrong (time, name, connection).
+      const cause = (err as { cause?: { code?: string } }).cause?.code;
+      const why = (err as Error).name === 'TimeoutError' ? `nicht innerhalb von ${Math.round(this.timeoutMs / 1000)} s` : cause ? `nicht (${cause})` : 'nicht';
+      throw new PlacesUnavailable(`Die Ortssuche antwortet ${why}`);
     }
     if (!res.ok) throw new PlacesUnavailable(`Die Ortssuche antwortet mit ${res.status}`);
     const body = (await res.json()) as { features?: PhotonFeature[] };

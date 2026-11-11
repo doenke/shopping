@@ -71,3 +71,14 @@ describe('places as attachments', () => {
     expect(again.attachments).toHaveLength(2);
   });
 });
+
+describe('a slow or unreachable Photon', () => {
+  it('waits as long as configured and says why it gave up', async () => {
+    const { PlaceService } = await import('../src/places.js');
+    const hang = ((_: unknown, init?: RequestInit) =>
+      new Promise((_r, reject) => init?.signal?.addEventListener('abort', () => reject(init.signal?.reason)))) as typeof fetch;
+    await expect(new PlaceService('http://photon.test', hang, 50).search('x')).rejects.toThrow('Die Ortssuche antwortet nicht innerhalb von 0 s');
+    const refused = (() => Promise.reject(Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } }))) as typeof fetch;
+    await expect(new PlaceService('http://photon.test', refused).search('x')).rejects.toThrow('Die Ortssuche antwortet nicht (ECONNREFUSED)');
+  });
+});

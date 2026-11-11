@@ -66,7 +66,7 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   const sync = new SyncService(db, !!config.OIDC_OWNER_GROUP);
   const hub = new SyncHub(sync, app.log);
   app.addHook('onClose', async () => hub.close());
-  const places = new PlaceService(config.PHOTON_URL, fetchImpl);
+  const places = new PlaceService(config.PHOTON_URL, fetchImpl, config.PHOTON_TIMEOUT * 1000);
   const icons = new IconService(db, secrets, sync, hub, app.log, fetchImpl);
   app.addHook('onClose', async () => icons.stop());
 

@@ -48,6 +48,8 @@ const EnvSchema = z.object({
     .optional()
     .transform((v) => v || undefined)
     .pipe(z.string().url().optional()),
+  /** How long to wait for Photon, in seconds – generous, a large database on a small NAS can take a while. */
+  PHOTON_TIMEOUT: z.coerce.number().positive().max(300).default(30),
   LOG_LEVEL: z.string().default('info'),
 });
 

@@ -34,6 +34,7 @@ Datenbank-Migrationen und der Grundkatalog laufen beim Start automatisch.
 | `OIDC_LOGIN_LABEL` | `Mit Pocket ID anmelden` | Beschriftung des Anmeldeknopfs. |
 | `OIDC_OWNER_GROUP` | leer | Mitglieder teilen sich den Haushalt des Betreibers, alle anderen bekommen einen eigenen. Leer: alle in einem Haushalt. Siehe [haushalte-und-teilen.md](haushalte-und-teilen.md). |
 | `PHOTON_URL` | leer | Eigener [Photon](https://github.com/komoot/photon)-Server für Orte als Anhang (Suche und Adresse zum Standort), z. B. `http://photon:2322`. Die App fragt ihn über den Server, nicht direkt. Leer: nur „aktueller Standort“ ohne Adresse. |
+| `PHOTON_TIMEOUT` | `30` | Wie lange (Sekunden) auf Photon gewartet wird. Großzügig, weil eine große Datenbank auf einem kleinen NAS dauern kann. Danach meldet die App „Die Ortssuche antwortet nicht innerhalb von … s“. |
 | `OIDC_HOUSEHOLD_CLAIM` | `household` | Claim mit einem ausdrücklichen Haushalt (geht vor die Gruppe). |
 | `DEFAULT_HOUSEHOLD_NAME` | leer | Name des gemeinsamen Haushalts beim ersten Anlegen; sonst der Nachname des ersten Mitglieds. |
 | `PORT` / `HOST` | `3000` / `0.0.0.0` | Wo die App im Container lauscht. |

@@ -268,7 +268,7 @@ function PlaceForm({ item, onDone }: { item: ItemRow; onDone: () => void }) {
   const [note, setNote] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
 
-  // Suggestions while typing (a short pause first, so not every letter asks the server).
+  // Suggestions while typing (a pause first, so not every letter asks the server – Photon may be slow).
   useEffect(() => {
     const query = q.trim();
     if (query.length < 3) {
@@ -278,11 +278,13 @@ function PlaceForm({ item, onDone }: { item: ItemRow; onDone: () => void }) {
     }
     let stale = false;
     const t = setTimeout(async () => {
+      // A slow place search (a big database on a small server) can take a while: say it is still looking.
+      setNote('Suche …');
       const res = await searchPlaces(query);
       if (stale) return;
       setHits(res.places);
       setNote(res.unavailable ?? (res.places.length ? null : 'Nichts gefunden'));
-    }, 300);
+    }, 500);
     return () => {
       stale = true;
       clearTimeout(t);
