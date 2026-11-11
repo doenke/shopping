@@ -26,8 +26,18 @@ test('attachments: a button without any, a place found by name, a second link �
   await expect(dialog.locator('.attachment')).toHaveCount(0);
   await dialog.getByRole('button', { name: '📎 Anhang' }).click();
   await dialog.getByRole('button', { name: '📍 Ort' }).click();
-  await dialog.getByRole('searchbox', { name: 'Ort suchen' }).fill('Hornbach');
+  // Searched on Enter only – nothing goes to the server while typing.
+  let searches = 0;
+  page.on('request', (r) => {
+    if (r.url().includes('/api/v1/places/search')) searches++;
+  });
+  const placeInput = dialog.getByRole('searchbox', { name: 'Ort suchen' });
+  await placeInput.fill('Hornbach');
+  await page.waitForTimeout(700);
+  expect(searches).toBe(0);
+  await placeInput.press('Enter');
   await dialog.getByRole('option', { name: /Hornbach/ }).click();
+  expect(searches).toBe(1);
   await expect(dialog.locator('.attachment--place')).toContainText('Bahnhofstraße 3');
   // More: "+ Anhang".
   await dialog.getByRole('button', { name: '+ Anhang' }).click();

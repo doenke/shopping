@@ -86,3 +86,52 @@ describe('a slow or unreachable Photon', () => {
     );
   });
 });
+
+describe('one question to Photon at a time', () => {
+  it('queues questions, drops those nobody waits for and calls off a running one', async () => {
+    const { PlaceService, PlacesCancelled } = await import('../src/places.js');
+    const sent: string[] = [];
+    let running = 0;
+    let most = 0;
+    const answers = new Map<string, () => void>();
+    const slow = ((input: string | URL, init?: RequestInit) => {
+      const q = new URL(String(input)).searchParams.get('q')!;
+      sent.push(q);
+      most = Math.max(most, ++running);
+      return new Promise<Response>((resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          running--;
+          reject(init.signal?.reason);
+        });
+        answers.set(q, () => {
+          running--;
+          resolve(new Response(JSON.stringify({ features: [] })));
+        });
+      });
+    }) as typeof fetch;
+    const photon = new PlaceService('http://photon.test', slow);
+    const tick = () => new Promise((r) => setTimeout(r, 10));
+
+    const first = photon.search('Hor');
+    const skipped = new AbortController();
+    const second = photon.search('Horn', undefined, 6, skipped.signal);
+    const third = new AbortController();
+    const last = photon.search('Hornbach', undefined, 6, third.signal);
+    await tick();
+    expect(sent).toEqual(['Hor']);
+    skipped.abort(); // typed on while still waiting: never reaches Photon
+    answers.get('Hor')!();
+    await expect(first).resolves.toEqual([]);
+    await expect(second).rejects.toBeInstanceOf(PlacesCancelled);
+    await tick();
+    expect(sent).toEqual(['Hor', 'Hornbach']);
+    third.abort(); // form closed while Photon is still searching: called off
+    await expect(last).rejects.toBeInstanceOf(PlacesCancelled);
+    expect(most).toBe(1);
+    // The line goes on after a cancelled question.
+    const next = photon.search('Baumarkt');
+    await tick();
+    answers.get('Baumarkt')!();
+    await expect(next).resolves.toEqual([]);
+  });
+});

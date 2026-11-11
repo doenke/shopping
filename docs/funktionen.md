@@ -148,7 +148,7 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
   es gibt, und ein dezentes *+ Anhang*. Ein Tipp öffnet sie, × entfernt sie. Gleichzeitiges Anhängen auf
   zwei Geräten überschreibt sich nicht.
   - **Link** 🔗: wie bisher im Text oder per Ziehen; weitere Links kommen als zusätzliche Anhänge dazu.
-  - **Ort** 📍: suchen (Vorschläge beim Tippen) oder *Aktueller Standort*; getippt mit `*` (hier) bzw.
+  - **Ort** 📍: suchen (Enter oder *🔍 Suchen*, Enter noch einmal nimmt den ersten Treffer) oder *Aktueller Standort*; getippt mit `*` (hier) bzw.
     `*Ortsname`. Der Eintrag erscheint sofort, Position und Adresse kommen Sekunden später dazu. Auf dem Handy
     öffnet ein Tipp die Karten-App, am Rechner OpenStreetMap. Ohne `*` wird der Standort nie abgefragt.
     Die Ortssuche läuft über den eigenen Photon-Server (`PHOTON_URL`); ohne ihn gibt es nur „hier“, ohne

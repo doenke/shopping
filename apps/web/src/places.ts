@@ -18,13 +18,17 @@ export function currentPosition(): Promise<{ lat: number; lon: number }> {
 }
 
 /** Places matching a text (Photon via the server); empty when offline or not set up. */
-export async function searchPlaces(q: string, near?: { lat: number; lon: number }): Promise<{ places: PlaceData[]; unavailable?: string }> {
+export async function searchPlaces(
+  q: string,
+  near?: { lat: number; lon: number },
+  signal?: AbortSignal,
+): Promise<{ places: PlaceData[]; unavailable?: string }> {
   const params = new URLSearchParams({ q });
   if (near) {
     params.set('lat', String(near.lat));
     params.set('lon', String(near.lon));
   }
-  const res = await fetch(`/api/v1/places/search?${params}`).catch(() => null);
+  const res = await fetch(`/api/v1/places/search?${params}`, { signal }).catch(() => null);
   if (!res) return { places: [], unavailable: 'Keine Verbindung' };
   const body = (await res.json().catch(() => null)) as { places?: PlaceData[]; detail?: string } | null;
   if (!res.ok) return { places: [], unavailable: body?.detail ?? 'Ortssuche nicht erreichbar' };

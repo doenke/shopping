@@ -2,6 +2,8 @@ import type { PlaceData } from '@shopping/shared';
 
 /** Thrown when there is no place search (PHOTON_URL not set) or Photon does not answer. */
 export class PlacesUnavailable extends Error {}
+/** The one who asked is gone (typed on, closed the form): nobody waits for the answer any more. */
+export class PlacesCancelled extends PlacesUnavailable {}
 
 interface PhotonFeature {
   geometry?: { coordinates?: [number, number] };
@@ -26,6 +28,10 @@ export function placeFromPhoton(f: PhotonFeature): PlaceData | null {
 /**
  * Place search and "what is here" through the household's own Photon server (PHOTON_URL), so the app
  * needs no access to it and no third party learns where anybody is.
+ *
+ * Photon may run on a small, busy machine: only one question goes to it at a time, the others wait in
+ * line. A question whose asker is gone (signal aborted) leaves the line, or – already running – is
+ * called off, which also stops Photon's search.
  */
 export class PlaceService {
   constructor(
@@ -34,18 +40,41 @@ export class PlaceService {
     private readonly timeoutMs = 30_000,
   ) {}
 
+  /** The end of the line: resolves when the last question queued so far is done. */
+  private line: Promise<void> = Promise.resolve();
+
   get available(): boolean {
     return !!this.baseUrl;
   }
 
-  private async get(path: string, params: Record<string, string | number | undefined>): Promise<PhotonFeature[]> {
+  /** Runs `job` once every question before it is done – unless `signal` is aborted while it waits. */
+  private async inLine<T>(job: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+    const before = this.line;
+    let done!: () => void;
+    this.line = new Promise<void>((r) => (done = r));
+    try {
+      await before;
+      if (signal?.aborted) throw new PlacesCancelled('Die Suche wurde abgebrochen');
+      return await job();
+    } finally {
+      done();
+    }
+  }
+
+  private get(path: string, params: Record<string, string | number | undefined>, signal?: AbortSignal): Promise<PhotonFeature[]> {
+    return this.inLine(() => this.ask(path, params, signal), signal);
+  }
+
+  private async ask(path: string, params: Record<string, string | number | undefined>, signal?: AbortSignal): Promise<PhotonFeature[]> {
     if (!this.baseUrl) throw new PlacesUnavailable('Ortssuche ist nicht eingerichtet (PHOTON_URL)');
     const url = new URL(path, this.baseUrl.endsWith('/') ? this.baseUrl : `${this.baseUrl}/`);
     for (const [k, v] of Object.entries(params)) if (v !== undefined) url.searchParams.set(k, String(v));
     let res: Response;
+    const timeout = AbortSignal.timeout(this.timeoutMs);
     try {
-      res = await this.fetchImpl(url, { signal: AbortSignal.timeout(this.timeoutMs), headers: { accept: 'application/json' } });
+      res = await this.fetchImpl(url, { signal: signal ? AbortSignal.any([timeout, signal]) : timeout, headers: { accept: 'application/json' } });
     } catch (err) {
+      if (signal?.aborted) throw new PlacesCancelled('Die Suche wurde abgebrochen');
       // The reason goes into the message, so the log and the app say what went wrong (time, name, connection).
       const cause = (err as { cause?: { code?: string } }).cause?.code;
       const why = (err as Error).name === 'TimeoutError' ? `nicht innerhalb von ${Math.round(this.timeoutMs / 1000)} s` : cause ? `nicht (${cause})` : 'nicht';
@@ -68,17 +97,17 @@ export class PlaceService {
   }
 
   /** Places matching a text, the ones near the given position first. */
-  async search(q: string, near?: { lat: number; lon: number }, limit = 6): Promise<PlaceData[]> {
-    const features = await this.get('api', { q, limit, lang: 'de', lat: near?.lat, lon: near?.lon });
+  async search(q: string, near?: { lat: number; lon: number }, limit = 6, signal?: AbortSignal): Promise<PlaceData[]> {
+    const features = await this.get('api', { q, limit, lang: 'de', lat: near?.lat, lon: near?.lon }, signal);
     return features.map(placeFromPhoton).filter((p): p is PlaceData => p !== null);
   }
 
   /** What is at a position (the nearest address); without Photon just the position. */
-  async reverse(lat: number, lon: number): Promise<PlaceData> {
+  async reverse(lat: number, lon: number, signal?: AbortSignal): Promise<PlaceData> {
     const here: PlaceData = { name: 'Standort', address: null, lat, lon };
     if (!this.baseUrl) return here;
     try {
-      const [hit] = (await this.get('reverse', { lat, lon, lang: 'de', limit: 1 })).map(placeFromPhoton);
+      const [hit] = (await this.get('reverse', { lat, lon, lang: 'de', limit: 1 }, signal)).map(placeFromPhoton);
       // The address belongs to the spot, the position stays the one that was measured.
       return hit ? { name: hit.name || 'Standort', address: hit.address, lat, lon } : here;
     } catch {

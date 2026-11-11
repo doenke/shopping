@@ -222,15 +222,16 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
         })
         .parse(request.query);
       try {
-        return { places: await places.search(q.q, q.lat !== undefined && q.lon !== undefined ? { lat: q.lat, lon: q.lon } : undefined) };
+        const near = q.lat !== undefined && q.lon !== undefined ? { lat: q.lat, lon: q.lon } : undefined;
+        return { places: await places.search(q.q, near, 6, gone(reply)) };
       } catch (err) {
         if (err instanceof PlacesUnavailable) return reply.code(503).send({ error: 'places', detail: err.message });
         throw err;
       }
     });
-    api.get('/api/v1/places/reverse', { preHandler: requireUser }, async (request) => {
+    api.get('/api/v1/places/reverse', { preHandler: requireUser }, async (request, reply) => {
       const q = z.object({ lat: z.coerce.number().min(-90).max(90), lon: z.coerce.number().min(-180).max(180) }).parse(request.query);
-      return places.reverse(q.lat, q.lon);
+      return places.reverse(q.lat, q.lon, gone(reply));
     });
 
     // Name for a link that came without one (shared or pasted): the page's title.
@@ -322,4 +323,13 @@ export async function buildApp({ config, db, fetchImpl }: AppOptions) {
   }
 
   return { app, sync, hub, mealie, api, icons, avatars, webhooks, files };
+}
+
+/** Aborted when the client hangs up before its answer is sent (typed on, closed the form). */
+function gone(reply: import('fastify').FastifyReply): AbortSignal {
+  const ctrl = new AbortController();
+  reply.raw.once('close', () => {
+    if (!reply.raw.writableFinished) ctrl.abort();
+  });
+  return ctrl.signal;
 }

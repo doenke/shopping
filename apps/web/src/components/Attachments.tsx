@@ -268,28 +268,26 @@ function PlaceForm({ item, onDone }: { item: ItemRow; onDone: () => void }) {
   const [note, setNote] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
 
-  // Suggestions while typing (a pause first, so not every letter asks the server – Photon may be slow).
-  useEffect(() => {
+  /** The text the hits belong to; Enter on it again takes the first hit. */
+  const [searched, setSearched] = useState<string | null>(null);
+  const asking = useRef<AbortController | null>(null);
+  useEffect(() => () => asking.current?.abort(), []);
+
+  // Searched on Enter (or the button) only, not while typing: Photon may be slow, one question per search.
+  const search = async () => {
     const query = q.trim();
-    if (query.length < 3) {
-      setHits([]);
-      setNote(null);
-      return;
-    }
-    let stale = false;
-    const t = setTimeout(async () => {
-      // A slow place search (a big database on a small server) can take a while: say it is still looking.
-      setNote('Suche …');
-      const res = await searchPlaces(query);
-      if (stale) return;
-      setHits(res.places);
-      setNote(res.unavailable ?? (res.places.length ? null : 'Nichts gefunden'));
-    }, 500);
-    return () => {
-      stale = true;
-      clearTimeout(t);
-    };
-  }, [q]);
+    if (!query) return;
+    asking.current?.abort();
+    const ctrl = new AbortController();
+    asking.current = ctrl;
+    setSearched(query);
+    setHits([]);
+    setNote('Suche …');
+    const res = await searchPlaces(query, undefined, ctrl.signal);
+    if (ctrl.signal.aborted) return;
+    setHits(res.places);
+    setNote(res.unavailable ?? (res.places.length ? null : 'Nichts gefunden'));
+  };
 
   const pick = (p: PlaceData) => {
     void attachPlace(item.id, p);
@@ -310,19 +308,24 @@ function PlaceForm({ item, onDone }: { item: ItemRow; onDone: () => void }) {
           autoFocus
           aria-label="Ort suchen"
           placeholder="Ort suchen, z. B. Hornbach Altona"
+          enterKeyHint="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
               e.stopPropagation();
-              if (hits[0]) pick(hits[0]);
+              if (q.trim() === searched && hits[0]) pick(hits[0]);
+              else void search();
             } else if (e.key === 'Escape') {
               e.stopPropagation();
               onDone();
             }
           }}
         />
+        <button type="button" className="btn" onClick={() => void search()} disabled={!q.trim()}>
+          🔍 Suchen
+        </button>
         <button type="button" className="btn" onClick={() => void here()} disabled={locating}>
           {locating ? 'Suche Standort …' : '📍 Aktueller Standort'}
         </button>
