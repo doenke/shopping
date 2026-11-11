@@ -121,6 +121,15 @@ function Shell({ me }: { me: Me }) {
     (s) => s.key,
   );
   const { isCollapsed, toggle: toggleGroup } = useSidebarCollapse();
+  // On the phone everything is open – fewer small targets. Only Vorlagen and the Archiv still fold (they start folded).
+  const foldable = (key: string) => wide || key === 'sec:templates' || key === 'sec:archive';
+  const folded = (key: string) => foldable(key) && isCollapsed(key);
+  const groupHeading = (className: string, label: string, foldKey: string) =>
+    foldable(foldKey) ? (
+      <GroupToggle className={className} label={label} open={!isCollapsed(foldKey)} onToggle={() => toggleGroup(foldKey)} />
+    ) : (
+      <div className={className}>{label}</div>
+    );
   const listLinks = (ls: ListRow[], prefix: (l: ListRow) => string) => (
     <ul>
       {ls.map((l) => (
@@ -270,20 +279,19 @@ function Shell({ me }: { me: Me }) {
       {sections.map((sec) => {
         if (sec.lists.length === 0) return null;
         // A collapsed group still shows the open list, so you always see where you are.
-        const shown = (key: string, ls: ListRow[]) => (isCollapsed(key) ? ls.filter((l) => l.id === list?.id && route.page === 'list') : ls);
+        const shown = (key: string, ls: ListRow[]) => (folded(key) ? ls.filter((l) => l.id === list?.id && route.page === 'list') : ls);
         const secKey = `sec:${sec.key}`;
         const secLists = sec.title ? shown(secKey, sec.lists) : sec.lists;
+        const title = sec.key === 'templates' ? `${sec.title} (${sec.lists.length})` : sec.title;
         return (
           <div key={sec.key}>
-            {sec.title && <GroupToggle className="sidebar__section" label={sec.title} open={!isCollapsed(secKey)} onToggle={() => toggleGroup(secKey)} />}
-            {sec.grouped && !(sec.title && isCollapsed(secKey))
+            {title && groupHeading('sidebar__section', title, secKey)}
+            {sec.grouped && !(sec.title && folded(secKey))
               ? groupLists(sec.lists).map((g, _i, all) => {
                   const grpKey = `grp:${sec.key}:${g.group}`;
                   return (
                     <div key={g.group}>
-                      {all.length > 1 && (
-                        <GroupToggle className="sidebar__subsection" label={g.group} open={!isCollapsed(grpKey)} onToggle={() => toggleGroup(grpKey)} />
-                      )}
+                      {all.length > 1 && groupHeading('sidebar__subsection', g.group, grpKey)}
                       {listLinks(all.length > 1 ? shown(grpKey, g.lists) : g.lists, sec.prefix)}
                     </div>
                   );
@@ -293,10 +301,10 @@ function Shell({ me }: { me: Me }) {
         );
       })}
       {!workMode && archived.length > 0 && (
-        <details className="sidebar__archive">
-          <summary className="sidebar__section">Archiv ({archived.length})</summary>
+        <div className="sidebar__archive">
+          {groupHeading('sidebar__section', `Archiv (${archived.length})`, 'sec:archive')}
           <ul>
-            {archived.map((l) => (
+            {(folded('sec:archive') ? archived.filter((l) => l.id === list?.id && route.page === 'list') : archived).map((l) => (
               <li key={l.id}>
                 <a href={`#/list/${l.id}`} className={l.id === list?.id && route.page === 'list' ? 'active' : ''} onClick={() => setDrawer(false)}>
                   <span>
@@ -307,7 +315,7 @@ function Shell({ me }: { me: Me }) {
               </li>
             ))}
           </ul>
-        </details>
+        </div>
       )}
       <span className="spacer" />
       <a href="#/help" className={route.page === 'help' ? 'active' : ''} onClick={() => setDrawer(false)}>
@@ -345,9 +353,9 @@ function Shell({ me }: { me: Me }) {
                 <div
                   className="drawer"
                   onClick={(e) => {
-                    // Closes on the backdrop or a link/button – not when a group is folded or a section like "Archiv" is unfolded.
+                    // Closes on the backdrop or a link/button – not when a group like "Vorlagen" or "Archiv" is unfolded.
                     const t = e.target as HTMLElement;
-                    if (t === e.currentTarget || (t.closest('a, button') && !t.closest('summary, .sidebar__toggle'))) setDrawer(false);
+                    if (t === e.currentTarget || (t.closest('a, button') && !t.closest('.sidebar__toggle'))) setDrawer(false);
                   }}
                 >
                   {sidebar}

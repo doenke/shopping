@@ -5,7 +5,7 @@ import { useState } from 'react';
  * Keys: `sec:<section>`, `grp:<section>:<group>`. Groups in DEFAULT_COLLAPSED start folded away until opened.
  */
 const KEY = 'sidebar-collapsed';
-const DEFAULT_COLLAPSED = new Set(['sec:templates']);
+const DEFAULT_COLLAPSED = new Set(['sec:templates', 'sec:archive']);
 
 /** Stored as { key: collapsed } – only groups that differ from their default. Older versions stored an array of collapsed keys. */
 function load(): Record<string, boolean> {

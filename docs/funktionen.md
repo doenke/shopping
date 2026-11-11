@@ -182,9 +182,11 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
 - **Reihenfolge der Listen und Abschnitte** in der Seitenleiste: *Einstellungen → Reihenfolge*, je Benutzer.
   Am Rechner lassen sich Listen auch direkt in der Seitenleiste ziehen (innerhalb ihres Abschnitts bzw. ihrer
   Kategorie).
-- **Abschnitte und Kategorien zuklappen**: Klick auf eine Überschrift in der Seitenleiste (▾) klappt sie zu
-  oder auf, pro Gerät gemerkt (auch am Handy, ohne dass sich die Seitenleiste schließt). „Vorlagen“ ist anfangs
-  zugeklappt. Die gerade offene Liste bleibt auch in einer zugeklappten Gruppe sichtbar.
+- **Abschnitte und Kategorien zuklappen**: Am Rechner klappt ein Klick auf eine Überschrift in der Seitenleiste
+  (▾) sie zu oder auf, pro Gerät gemerkt. „Vorlagen“ und „Archiv“ sind anfangs zugeklappt. Die gerade offene
+  Liste bleibt auch in einer zugeklappten Gruppe sichtbar.
+- **Seitenleiste am Handy**: große Zeilen für den Daumen; alle Abschnitte sind einfach offen, nur „Vorlagen“ und
+  „Archiv“ sind breite Klapp-Zeilen (die Seitenleiste bleibt dabei offen).
 
 ## Am Rechner bedienen
 

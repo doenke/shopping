@@ -56,7 +56,7 @@ test('a packing list groups by person', async ({ page }, info) => {
   await expect(page.getByText('0 von 1 eingepackt')).toBeVisible();
 });
 
-test('sidebar groups fold without closing the drawer; Vorlagen start folded', async ({ page }, info) => {
+test('sidebar groups fold without closing the drawer; Vorlagen start folded; big rows on the phone', async ({ page }, info) => {
   await login(page, `Dora ${info.project.name}`);
   await page.goto('/');
   await newList(page, 'Einkauf');
@@ -78,6 +78,13 @@ test('sidebar groups fold without closing the drawer; Vorlagen start folded', as
   await expect(sidebar).toBeVisible();
   await expect(vorlagen).toHaveAttribute('aria-expanded', 'true');
   await expect(sidebar.getByRole('link', { name: /Basis/ })).toBeVisible();
+  // On the phone only Vorlagen (and the Archiv) fold – everything else is simply open, with rows big enough for thumbs.
+  if (phone(page)) {
+    await expect(sidebar.locator('.sidebar__toggle')).toHaveCount(1);
+    const box = await sidebar.getByRole('link', { name: /Wochenmarkt/ }).boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect((await vorlagen.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
 });
 
 test('one item for two people is ticked off per person', async ({ page }, info) => {

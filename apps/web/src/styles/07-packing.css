@@ -65,10 +65,6 @@
 .empty--inline {
   margin: 12px auto;
 }
-.sidebar__archive summary {
-  cursor: pointer;
-  list-style: none;
-}
 .list-description {
   margin: 0 0 8px;
   color: var(--muted);

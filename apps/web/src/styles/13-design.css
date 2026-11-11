@@ -141,3 +141,56 @@ html:root .group__title {
   letter-spacing: 0.06em;
   color: var(--muted);
 }
+
+/* Phone: the sidebar as a drawer, made for thumbs – tall rows, big type, whole-width headings to tap. */
+html:root .drawer .sidebar {
+  width: min(340px, 88vw);
+  padding: 12px 10px calc(12px + env(safe-area-inset-bottom));
+  gap: 2px;
+}
+html:root .drawer .sidebar a {
+  min-height: 48px;
+  padding: 10px 14px;
+  font-size: 1.05rem;
+}
+html:root .drawer .sidebar a.sidebar__head {
+  min-height: 0;
+  padding: 4px 8px 8px;
+}
+html:root .drawer .sidebar__work {
+  width: 44px;
+  height: 44px;
+  margin-top: 0;
+}
+html:root .drawer .sidebar__new {
+  min-height: 48px;
+  font-size: 1.05rem;
+}
+html:root .drawer .sidebar__section {
+  margin: 14px 14px 4px;
+  font-size: 0.8rem;
+}
+html:root .drawer .sidebar__subsection {
+  margin: 10px 14px 2px;
+  font-size: 0.85rem;
+}
+/* What still folds on the phone (Vorlagen, Archiv): a full row to tap, chevron on the right. */
+html:root .drawer .sidebar .sidebar__toggle {
+  width: 100%;
+  min-height: 48px;
+  margin: 10px 0 0;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  justify-content: space-between;
+  flex-direction: row-reverse;
+  font-size: 0.85rem;
+}
+html:root .drawer .sidebar .sidebar__toggle:active {
+  background: var(--surface-2);
+}
+html:root .drawer .sidebar__chevron {
+  font-size: 1.1rem;
+  width: auto;
+}
