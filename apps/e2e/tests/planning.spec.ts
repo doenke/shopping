@@ -121,3 +121,46 @@ test('Gantt: bars, arrows, moving and stretching a bar', async ({ page }, info) 
   await expect(page.locator('.work-detail')).toBeVisible();
   await expect(page.locator('.work-detail .pm summary')).toContainText('3 Tage');
 });
+
+test('Planning automation: resource levelling and writing the computed dates', async ({ page }, info) => {
+  test.skip(phone(page), 'the Gantt chart is for the desktop');
+  await login(page, `Ulla ${info.project.name}`);
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Renovierung', type: 'todo' } })).json();
+  await page.request.post(`/api/v1/lists/${list.id}/items`, { data: { items: ['Wände streichen @Ulla', 'Boden legen @Ulla', 'Lampen kaufen @Tom'] } });
+  await page.goto(`/#/list/${list.id}`);
+  await page.getByRole('button', { name: 'Listenmenü' }).click();
+  await page.getByRole('menuitem', { name: /Bearbeiten/ }).click();
+  const dialog = page.locator('dialog[open]');
+  await dialog.getByRole('checkbox', { name: /Projektplanung/ }).check();
+  await dialog.getByLabel('Projektbeginn (leer = heute)').fill('2030-01-07');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Gantt' }).click();
+  const gantt = page.locator('.gantt');
+  // Without levelling everything starts on the Monday.
+  await expect(gantt.getByRole('img', { name: /^Boden legen: Mo\., 7\.1\.2030/ })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Listenmenü' }).click();
+  await page.getByRole('menuitem', { name: /Bearbeiten/ }).click();
+  await dialog.getByRole('checkbox', { name: /Ressourcenabgleich/ }).check();
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+  // Ulla does one after the other, Tom is free.
+  await expect(gantt.getByRole('img', { name: /^Wände streichen: Mo\., 7\.1\.2030/ })).toBeVisible();
+  await expect(gantt.getByRole('img', { name: /^Boden legen: Di\., 8\.1\.2030 bis Di\., 8\.1\.2030$/ })).toHaveAttribute('title', /später, weil Ulla/);
+  await expect(gantt.getByRole('img', { name: /^Lampen kaufen: Mo\., 7\.1\.2030/ })).toBeVisible();
+
+  // Writing the dates: afterwards there is nothing left to write.
+  const fix = page.getByRole('button', { name: /Termine festschreiben/ });
+  await expect(fix).toHaveText(/\(3\)/);
+  await fix.click();
+  await expect(page.getByText('Termine für 3 Aufgaben festgeschrieben')).toBeVisible();
+  await expect(fix).toBeDisabled();
+  await gantt.getByRole('button', { name: 'Boden legen' }).dblclick();
+  const pm = page.locator('.work-detail .pm');
+  await pm.locator('summary').click();
+  // Still calculated (grey), not a given date.
+  await expect(pm.locator('input[type=date]').first()).toHaveValue('2030-01-08');
+  await expect(pm.locator('input[type=date]').first()).toHaveClass(/pm-calc/);
+});

@@ -150,6 +150,18 @@ der Fälligkeitstag rot gestrichelt. Rot = kritischer Pfad, grau = erledigt, rot
 ziehen setzt den Start (als Vorgabe), am rechten Rand ziehen die Dauer; Klick wählt, Doppelklick oder Enter
 öffnet die Details, ↑ ↓ wechselt die Zeile. Zeitachse in *Tagen* oder *Wochen* (pro Liste gemerkt).
 
+**Planungsautomatik**:
+
+- **Ressourcenabgleich** (⋮ → Bearbeiten … → Projektplanung): offene Aufgaben derselben Person (`@Anna`,
+  auch mehrere) laufen nacheinander statt gleichzeitig. Zuerst kommt, was weniger Puffer hat (z. B. früher
+  fällig), bei Gleichstand die Reihenfolge der Liste. Vorgaben bleiben, wo sie sind; überschneiden sich zwei
+  Vorgaben derselben Person, gibt es eine Warnung. Verschobene Balken haben links einen gestrichelten Rand,
+  der Tooltip und die Details sagen, warum („1 Tag später, weil Anna …“).
+- **📌 Termine festschreiben** (im Gantt, mit Anzahl): schreibt die berechneten Start- und Endtermine in die
+  offenen Aufgaben – weiter als „berechnet“ (grau), nicht als Vorgabe. Damit sehen sie auch Kalender-Apps
+  (CalDAV: Beginn der Aufgabe), API, MCP und andere Geräte. Ändert sich der Plan, zeigt der Knopf wieder an,
+  wie viele Aufgaben neue Termine bekommen würden.
+
 ### Arbeitsmodus
 
 🏢 (Büro-Symbol oben in der Seitenleiste neben dem Titel) oder `Strg+Shift+A` (pro Gerät gemerkt) blendet

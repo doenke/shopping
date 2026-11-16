@@ -7,6 +7,8 @@ import {
   isWorkDay,
   itemPm,
   listCalendar,
+  peopleLabel,
+  pmCalcChanges,
   workBetween,
   type CatalogIndex,
   type DepType,
@@ -15,8 +17,9 @@ import {
   type ScheduledItem,
 } from '@shopping/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { updateItem } from '../../actions';
-import { conflictTexts, DEP_LABEL, shortDate, useSchedule } from '../Planning';
+import { updateItem, writePlannedDates } from '../../actions';
+import { showToast } from '../../toast';
+import { conflictTexts, delayText, DEP_LABEL, shortDate, useSchedule } from '../Planning';
 import { TaskAdd, TaskHeader } from './TaskTable';
 
 interface Props {
@@ -95,6 +98,12 @@ export function GanttChart({ list, items, index, selected, onSelect, onOpen, vie
     [items, plan],
   );
   const done = rows.filter((r) => r.item.checked).length;
+  // Planning automation: how many open tasks would get new calculated dates.
+  const pending = useMemo(() => pmCalcChanges(items, plan).size, [items, plan]);
+  const fixDates = async () => {
+    const n = await writePlannedDates(items, plan);
+    showToast(n === 1 ? 'Termine für 1 Aufgabe festgeschrieben' : `Termine für ${n} Aufgaben festgeschrieben`);
+  };
 
   // The time range: all bars (and today, when it is near), with some room on both sides.
   const range = useMemo(() => {
@@ -205,6 +214,19 @@ export function GanttChart({ list, items, index, selected, onSelect, onOpen, vie
         done={done}
         viewSwitch={
           <div className="work-tasks__tools">
+            <button
+              type="button"
+              className="btn gantt__fix"
+              disabled={pending === 0}
+              title={
+                pending
+                  ? 'Berechnete Start- und Endtermine in die Aufgaben schreiben – dann sehen sie auch Kalender-Apps (CalDAV), die API und andere Geräte. Vorgaben bleiben.'
+                  : 'Alle berechneten Termine sind festgeschrieben.'
+              }
+              onClick={() => void fixDates()}
+            >
+              📌 Termine festschreiben{pending ? ` (${pending})` : ''}
+            </button>
             <div className="segmented" role="group" aria-label="Zeitachse">
               {(['day', 'week'] as const).map((z) => (
                 <button key={z} type="button" className={z === zoom ? 'active' : ''} aria-pressed={z === zoom} onClick={() => chooseZoom(z)}>
@@ -279,7 +301,15 @@ export function GanttChart({ list, items, index, selected, onSelect, onOpen, vie
                 })
                 .filter(Boolean);
               const label = s.milestone ? `${item.name}: Meilenstein ${shortDate(s.start)}` : `${item.name}: ${shortDate(s.start)} bis ${shortDate(s.end)}`;
-              const title = [label, s.critical && !item.checked ? 'kritischer Pfad' : null, preds.length ? `nach ${preds.join(', ')}` : null, ...conflicts]
+              const people = peopleLabel(item);
+              const title = [
+                label,
+                people,
+                s.critical && !item.checked ? 'kritischer Pfad' : null,
+                preds.length ? `nach ${preds.join(', ')}` : null,
+                delayText(s, people),
+                ...conflicts,
+              ]
                 .filter(Boolean)
                 .join('\n');
               const cls = [
@@ -288,6 +318,7 @@ export function GanttChart({ list, items, index, selected, onSelect, onOpen, vie
                 s.critical && !item.checked ? 'gantt__bar--critical' : '',
                 item.checked ? 'gantt__bar--done' : '',
                 conflicts.length ? 'gantt__bar--conflict' : '',
+                s.delay > 0 && !item.checked ? 'gantt__bar--delayed' : '',
                 drag?.id === item.id ? 'gantt__bar--dragging' : '',
               ]
                 .filter(Boolean)

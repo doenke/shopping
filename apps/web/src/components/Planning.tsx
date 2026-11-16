@@ -4,10 +4,9 @@ import {
   dueOf,
   isoDate,
   itemPm,
-  listCalendar,
-  listProjectStart,
   minutesToDays,
-  schedule,
+  peopleLabel,
+  scheduleList,
   successorsOf,
   wouldCreateCycle,
   type DepType,
@@ -49,7 +48,7 @@ const fmtHours = (min: number) => `${(Math.round((min / 60) * 10) / 10).toLocale
 
 /** The plan of a list (all its entries). */
 export function useSchedule(list: ListRow, items: ItemRow[]): Map<string, ScheduledItem> {
-  return useMemo(() => schedule(items, { calendar: listCalendar(list), projectStart: listProjectStart(list) ?? isoDate(new Date()) }), [items, list]);
+  return useMemo(() => scheduleList(list, items, isoDate(new Date())), [items, list]);
 }
 
 /** What is wrong with the plan of an entry, in words. */
@@ -61,8 +60,16 @@ export function conflictTexts(s: ScheduledItem, due: string | null): string[] {
         ? 'Der vorgegebene Start ist früher, als die Vorgänger es erlauben.'
         : c === 'end'
           ? 'Das vorgegebene Ende ist früher, als die Vorgänger es erlauben.'
-          : 'Die Vorgänger bilden einen Kreis – diese Verknüpfungen werden nicht berücksichtigt.',
+          : c === 'overload'
+            ? 'Überschneidet sich mit einer anderen festen Aufgabe derselben Person.'
+            : 'Die Vorgänger bilden einen Kreis – diese Verknüpfungen werden nicht berücksichtigt.',
   );
+}
+
+/** "Wegen Anna 2 Tage später" – resource levelling put the task off. */
+export function delayText(s: ScheduledItem, people: string | null): string | null {
+  if (s.delay <= 0) return null;
+  return `${fmtDays(s.delay)} später, weil ${people ?? 'die Person'} vorher mit anderem beschäftigt ist (Ressourcenabgleich).`;
 }
 
 /** A number field that saves when it loses focus (or on Enter); empty = remove. */
@@ -152,6 +159,7 @@ export function PlanningSection({ item, list, items }: Props) {
   const canSucc = others.filter((o) => !wouldCreateCycle(item.id, o.id, items));
 
   const conflicts = conflictTexts(s, due);
+  const delay = delayText(s, peopleLabel(item));
   const summary = s.milestone ? `◆ ${shortDate(s.start)}` : `${fmtDays(s.duration)} · ${shortDate(s.start)} – ${shortDate(s.end)}`;
 
   return (
@@ -170,6 +178,7 @@ export function PlanningSection({ item, list, items }: Props) {
           ⚠ {c}
         </p>
       ))}
+      {delay && <p className="muted pm__note">⏸ {delay}</p>}
 
       <label className="check pm__row">
         <input type="checkbox" checked={s.milestone} onChange={(e) => save({ milestone: e.target.checked || null })} /> Meilenstein

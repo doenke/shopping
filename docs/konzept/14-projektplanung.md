@@ -53,7 +53,18 @@ Projekts (sonst heute).
    Arbeitstage und Projektbeginn in den Listeneinstellungen – erledigt.
 3. Gantt-Ansicht (`components/work/GanttChart.tsx`, Stil `14-gantt.css`) – erledigt. Ziehen schreibt
    Vorgaben: verschieben = `start` (ein vorgegebenes `end` wandert mit), rechter Rand = `dur`.
-4. Planungsautomatik (Termine, später Ressourcenabgleich).
+4. Planungsautomatik – erledigt:
+   - **Ressourcenabgleich** (`settings.levelResources`, `schedule(…, { level: true })`, `scheduleList`):
+     serielle Einplanung nach spätestem Start (aus dem Plan ohne Abgleich), bei Gleichstand nach Position.
+     Personen aus `person`/`persons` (Groß/klein egal), erledigte Aufgaben belegen niemanden. Vorgaben
+     werden zuerst gebucht und nie verschoben; Überschneidungen zweier Vorgaben einer Person = Konflikt
+     `overload`. `delay` = um wie viel eine Aufgabe wegen ihrer Personen später beginnt. Späteste Termine
+     und Puffer werden danach vom abgeglichenen Plan zurückgerechnet (ohne Ressourcen).
+   - **Termine festschreiben** (Knopf im Gantt, `pmCalcChanges`): schreibt Start/Ende offener Aufgaben als
+     `src: calc` (Vorgaben bleiben, Meilensteine ohne Ende). Bewusst ein Knopf statt automatisch, damit nicht
+     jedes Gerät bei jeder Änderung Termine schreibt. `schedule()` ignoriert calc-Werte, der Plan ändert
+     sich dadurch nicht. CalDAV gibt den Start als `DTSTART;VALUE=DATE` aus (nicht, wenn er nach `DUE` liegt).
 
-Später möglich: Ist-Start/-Ende, Fortschritt/Restaufwand, Sammelaufgaben, Ressourcen-Kapazitäten,
+Später möglich: Ist-Start/-Ende, Fortschritt/Restaufwand, Sammelaufgaben, Ressourcen-Kapazitäten (Teilzeit,
+Urlaub je Person), Gantt auf dem Handy,
 Basisplan, Abhängigkeiten über `RELATED-TO` in CalDAV.

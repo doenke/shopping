@@ -1,5 +1,6 @@
 import type { ItemRow } from './model.js';
 import { dueOf } from './due.js';
+import { comparePositions } from './order.js';
 
 /**
  * Project planning for ToDo lists (second level: the normal ToDo view stays as it is).
@@ -364,7 +365,7 @@ export function daysToMinutes(days: number): number {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// Scheduling (critical path method)
+// Scheduling (critical path method, optional resource levelling)
 
 export type PmConflict =
   /** The given start lies before what the predecessors (or "not before") allow. */
@@ -374,7 +375,9 @@ export type PmConflict =
   /** The planned end lies after the due date. */
   | 'due'
   /** Part of a circle of dependencies (those links are ignored). */
-  | 'cycle';
+  | 'cycle'
+  /** Resource levelling: given dates of the same person overlap (given dates are not moved). */
+  | 'overload';
 
 export interface ScheduledItem {
   id: string;
@@ -395,6 +398,8 @@ export interface ScheduledItem {
   /** Total float in minutes of working time (negative: the plan does not work out). */
   float: number;
   critical: boolean;
+  /** Resource levelling: minutes of working time the start was put off because its people were busy. */
+  delay: number;
   conflicts: PmConflict[];
 }
 
@@ -402,10 +407,22 @@ export interface ScheduleOptions {
   calendar: WorkCalendar;
   /** Where the plan starts (list setting `projectStart`, else today). */
   projectStart: string;
+  /**
+   * Resource levelling (list setting `levelResources`): open tasks of the same person do not overlap. Tasks
+   * with less float go first; given dates stay where they are.
+   */
+  level?: boolean;
+}
+
+/** Resource levelling is switched on for the list (list setting `levelResources`). */
+export function listLevels(list: { settings: Record<string, unknown> }): boolean {
+  return list.settings.levelResources === true;
 }
 
 interface Node {
   id: string;
+  /** Rank in the list (by position, else the input order): ties in levelling keep the order of the list. */
+  index: number;
   dur: number;
   durSrc: PmSource;
   milestone: boolean;
@@ -413,28 +430,49 @@ interface Node {
   fixedEnd: number | null;
   notBefore: number | null;
   deadline: number | null;
+  /** The people the task needs (levelling); ticked-off tasks need nobody. */
+  people: string[];
   preds: { id: string; dep: PmDep }[];
   succs: { id: string; dep: PmDep }[];
   es: number;
   ef: number;
   ls: number;
   lf: number;
+  delay: number;
   /** The start was decided by a predecessor or a given date (a milestone then shows the day it ends). */
   bound: boolean;
   conflicts: Set<PmConflict>;
 }
+
+/** The people of an entry as names for levelling (case does not matter). */
+function peopleKeys(attributes: Record<string, unknown>): string[] {
+  const raw = Array.isArray(attributes.persons) && attributes.persons.length >= 2 ? attributes.persons : [attributes.person];
+  const out = new Set<string>();
+  for (const p of raw) if (typeof p === 'string' && p.trim()) out.add(p.trim().toLowerCase());
+  return [...out];
+}
+
+type ScheduleInput = Pick<ItemRow, 'id' | 'attributes' | 'deleted'> & { checked?: boolean; position?: string };
 
 /**
  * Computes early and late dates, float and the critical path of a list's entries (deleted ones are left
  * out; dependencies on entries that are not there are ignored). Given start/end/duration ("set") are
  * fixed; a given start and end together decide the duration. Without a duration an entry takes one day,
  * a milestone none.
+ *
+ * With `level`, open tasks of the same person (`person`/`persons`) are put one after the other: the tasks
+ * are placed in the order of their late start (least float first, then the order of the list), each at
+ * the earliest time its predecessors allow and its people are free. Given dates are not moved; when two of
+ * them overlap for one person, both get the conflict `overload`.
  */
-export function schedule(items: Pick<ItemRow, 'id' | 'attributes' | 'deleted'>[], opts: ScheduleOptions): Map<string, ScheduledItem> {
+export function schedule(items: ScheduleInput[], opts: ScheduleOptions): Map<string, ScheduledItem> {
   const axis = new Axis(opts.calendar);
   const live = items.filter((i) => !i.deleted);
+  const ranked = live.map((it, i) => ({ it, i })).sort((a, b) => comparePositions(a.it.position ?? '', b.it.position ?? '') || a.i - b.i);
+  const rank = new Map(ranked.map(({ it }, r) => [it.id, r]));
   const nodes = new Map<string, Node>();
   for (const it of live) {
+    const index = rank.get(it.id)!;
     const pm = itemPm(it);
     const milestone = pm.milestone === true;
     const fixedStart = pm.start?.src === 'set' ? axis.dayStart(dayNumber(pm.start.v)) : null;
@@ -448,6 +486,7 @@ export function schedule(items: Pick<ItemRow, 'id' | 'attributes' | 'deleted'>[]
     const due = dueOf(it);
     nodes.set(it.id, {
       id: it.id,
+      index,
       dur,
       durSrc,
       milestone,
@@ -455,12 +494,14 @@ export function schedule(items: Pick<ItemRow, 'id' | 'attributes' | 'deleted'>[]
       fixedEnd,
       notBefore: pm.notBefore ? axis.dayStart(dayNumber(pm.notBefore)) : null,
       deadline: due ? axis.dayEnd(dayNumber(due)) : null,
+      people: it.checked ? [] : peopleKeys(it.attributes),
       preds: [],
       succs: [],
       es: 0,
       ef: 0,
       ls: 0,
       lf: 0,
+      delay: 0,
       bound: false,
       conflicts: new Set(),
     });
@@ -500,17 +541,20 @@ export function schedule(items: Pick<ItemRow, 'id' | 'attributes' | 'deleted'>[]
     order.push(...rest);
   }
 
-  // Forward pass.
   const projectStart = axis.dayStart(dayNumber(opts.projectStart));
-  for (const n of order) {
+  const isFixed = (n: Node) => n.fixedStart !== null || n.fixedEnd !== null;
+
+  /** The earliest start the predecessors, "not before" and given dates allow (the predecessors are placed). */
+  const earliest = (n: Node): number => {
     let es = Math.max(projectStart, n.notBefore ?? -Infinity);
+    n.bound = false;
     for (const { id, dep } of n.preds) {
       const p = nodes.get(id)!;
       const t = dep.type === 'FS' ? p.ef + dep.lag : dep.type === 'SS' ? p.es + dep.lag : dep.type === 'FF' ? p.ef + dep.lag - n.dur : p.es + dep.lag - n.dur;
       if (t >= es) n.bound = true;
       es = Math.max(es, t);
     }
-    if (n.fixedStart !== null || n.fixedEnd !== null) n.bound = true;
+    if (isFixed(n)) n.bound = true;
     if (n.fixedStart !== null) {
       if (n.fixedStart < es) n.conflicts.add('start');
       es = n.fixedStart;
@@ -518,22 +562,98 @@ export function schedule(items: Pick<ItemRow, 'id' | 'attributes' | 'deleted'>[]
       if (n.fixedEnd - n.dur < es) n.conflicts.add('end');
       es = n.fixedEnd - n.dur;
     }
-    n.es = es;
-    n.ef = es + n.dur;
+    return es;
+  };
+
+  const backward = () => {
+    const projectEnd = Math.max(projectStart, ...order.map((n) => n.ef));
+    for (const n of [...order].reverse()) {
+      let lf = Math.min(projectEnd, n.deadline ?? Infinity);
+      for (const { id, dep } of n.succs) {
+        const s = nodes.get(id)!;
+        const t = dep.type === 'FS' ? s.ls - dep.lag : dep.type === 'SS' ? s.ls - dep.lag + n.dur : dep.type === 'FF' ? s.lf - dep.lag : s.lf - dep.lag + n.dur;
+        lf = Math.min(lf, t);
+      }
+      n.lf = lf;
+      n.ls = lf - n.dur;
+      n.conflicts.delete('due');
+      if (n.deadline !== null && n.ef > n.deadline) n.conflicts.add('due');
+    }
+  };
+
+  // Forward and backward pass.
+  for (const n of order) {
+    n.es = earliest(n);
+    n.ef = n.es + n.dur;
+  }
+  backward();
+
+  if (opts.level) {
+    level();
+    backward();
   }
 
-  // Backward pass.
-  const projectEnd = Math.max(projectStart, ...order.map((n) => n.ef));
-  for (const n of [...order].reverse()) {
-    let lf = Math.min(projectEnd, n.deadline ?? Infinity);
-    for (const { id, dep } of n.succs) {
-      const s = nodes.get(id)!;
-      const t = dep.type === 'FS' ? s.ls - dep.lag : dep.type === 'SS' ? s.ls - dep.lag + n.dur : dep.type === 'FF' ? s.lf - dep.lag : s.lf - dep.lag + n.dur;
-      lf = Math.min(lf, t);
+  function level() {
+    const takesPeople = (n: Node) => n.dur > 0 && n.people.length > 0;
+    const busy = new Map<string, { from: number; to: number; id: string }[]>();
+    const book = (n: Node, from: number) => {
+      for (const p of n.people) {
+        const list = busy.get(p) ?? [];
+        list.push({ from, to: from + n.dur, id: n.id });
+        busy.set(p, list);
+      }
+    };
+    // Given dates stay where they are and are booked first.
+    for (const n of order) {
+      if (!takesPeople(n) || !isFixed(n)) continue;
+      const from = n.fixedStart ?? n.fixedEnd! - n.dur;
+      for (const p of n.people) {
+        for (const b of busy.get(p) ?? []) {
+          if (b.from < from + n.dur && from < b.to) {
+            n.conflicts.add('overload');
+            nodes.get(b.id)!.conflicts.add('overload');
+          }
+        }
+      }
+      book(n, from);
     }
-    n.lf = lf;
-    n.ls = lf - n.dur;
-    if (n.deadline !== null && n.ef > n.deadline) n.conflicts.add('due');
+    for (const n of nodes.values()) {
+      n.conflicts.delete('start');
+      n.conflicts.delete('end');
+    }
+    // Serial placement: of the tasks whose predecessors are placed, the one with the earliest late start.
+    const placed = new Set<string>();
+    const remaining = [...order];
+    while (remaining.length) {
+      let best = -1;
+      for (const [i, n] of remaining.entries()) {
+        if (!n.preds.every((p) => placed.has(p.id))) continue;
+        const b = best >= 0 ? remaining[best]! : null;
+        if (!b || n.ls < b.ls || (n.ls === b.ls && n.index < b.index)) best = i;
+      }
+      const n = remaining.splice(Math.max(0, best), 1)[0]!;
+      const es = earliest(n);
+      let t = es;
+      if (takesPeople(n) && !isFixed(n)) {
+        // The first time all its people are free for the whole duration.
+        for (let moved = true; moved;) {
+          moved = false;
+          for (const p of n.people) {
+            for (const b of busy.get(p) ?? []) {
+              if (b.from < t + n.dur && t < b.to) {
+                t = b.to;
+                moved = true;
+              }
+            }
+          }
+        }
+        book(n, t);
+      }
+      n.delay = t - es;
+      n.es = t;
+      n.ef = t + n.dur;
+      placed.add(n.id);
+    }
   }
 
   const out = new Map<string, ScheduledItem>();
@@ -559,8 +679,44 @@ export function schedule(items: Pick<ItemRow, 'id' | 'attributes' | 'deleted'>[]
       lateEnd: endDate(n.lf),
       float,
       critical: float <= 0,
+      delay: n.delay,
       conflicts: [...n.conflicts],
     });
   }
   return out;
+}
+
+/** The plan of a list with its own settings (working days, project start, levelling). */
+export function scheduleList(list: { settings: Record<string, unknown> }, items: ScheduleInput[], today: string): Map<string, ScheduledItem> {
+  return schedule(items, { calendar: listCalendar(list), projectStart: listProjectStart(list) ?? today, level: listLevels(list) });
+}
+
+/**
+ * The planning automation ("Termine festschreiben"): the computed start and end of every open entry whose
+ * date is not given, as `calc` values – a hint for everyone reading the entry elsewhere (REST, MCP, the
+ * start date in CalDAV). Given values stay; calc values that are no longer right are replaced, ticked-off
+ * entries are left alone. Only entries where something changes are returned (id → changes).
+ */
+export function pmCalcChanges(items: ScheduleInput[], plan: Map<string, ScheduledItem>): Map<string, PmChanges> {
+  const out = new Map<string, PmChanges>();
+  for (const it of items) {
+    if (it.deleted || it.checked) continue;
+    const s = plan.get(it.id);
+    if (!s) continue;
+    const pm = itemPm(it);
+    const changes: PmChanges = {};
+    if (pm.start?.src !== 'set' && pm.start?.v !== s.start) changes.start = { v: s.start, src: 'calc' };
+    if (pm.end?.src !== 'set') {
+      if (s.milestone) {
+        if (pm.end) changes.end = null;
+      } else if (pm.end?.v !== s.end) changes.end = { v: s.end, src: 'calc' };
+    }
+    if (Object.keys(changes).length) out.set(it.id, changes);
+  }
+  return out;
+}
+
+/** The planned start of an entry as stored (given or written by the planning automation), if any. */
+export function plannedStart(item: Pick<ItemRow, 'attributes'>): string | null {
+  return itemPm(item).start?.v ?? null;
 }

@@ -17,6 +17,7 @@ import {
   SUGGESTED_STATUSES,
   type ListStatus,
   listPlans,
+  listLevels,
   listProjectStart,
   listWorkDays,
 } from '@shopping/shared';
@@ -54,6 +55,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
   const [planning, setPlanning] = useState(listPlans(list));
   const [workDays, setWorkDays] = useState<number[]>(listWorkDays(list));
   const [projectStart, setProjectStart] = useState(listProjectStart(list) ?? '');
+  const [level, setLevel] = useState(listLevels(list));
   const todo = list.listType === 'todo';
 
   useEffect(() => ref.current?.showModal(), []);
@@ -68,7 +70,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
           await editList(list, {
             name,
             description,
-            ...(todo ? { group, statuses, defaultStatus, kanbanDone, planning: { on: planning, workDays, projectStart: projectStart || null } } : {}),
+            ...(todo ? { group, statuses, defaultStatus, kanbanDone, planning: { on: planning, workDays, projectStart: projectStart || null, level } } : {}),
             ...(canAutoReset(list) ? { reset } : {}),
             ...(templates.length ? { askTemplates } : {}),
           });
@@ -124,6 +126,8 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
             onWorkDays={setWorkDays}
             projectStart={projectStart}
             onProjectStart={setProjectStart}
+            level={level}
+            onLevel={setLevel}
           />
         )}
 
@@ -311,6 +315,8 @@ function PlanningSettings(p: {
   onWorkDays: (days: number[]) => void;
   projectStart: string;
   onProjectStart: (v: string) => void;
+  level: boolean;
+  onLevel: (on: boolean) => void;
 }) {
   return (
     <>
@@ -338,6 +344,10 @@ function PlanningSettings(p: {
           <label className="field">
             <span>Projektbeginn (leer = heute)</span>
             <input type="date" value={p.projectStart} onChange={(e) => p.onProjectStart(e.target.value)} />
+          </label>
+          <label className="check field">
+            <input type="checkbox" checked={p.level} onChange={(e) => p.onLevel(e.target.checked)} /> Ressourcenabgleich: Aufgaben derselben Person nacheinander
+            planen
           </label>
         </div>
       )}

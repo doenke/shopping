@@ -38,6 +38,8 @@ import {
   listWorkDays,
   pmChangesForCopy,
   schedule,
+  pmCalcChanges,
+  listLevels,
   successorsOf,
   wouldCreateCycle,
 } from './pm.js';
@@ -593,6 +595,11 @@ describe('entries as tasks (CalDAV/JMAP)', () => {
     });
     // Unchanged: nothing to do.
     expect(taskPatch(row, 'todo', back, (t) => parseItem(t))).toEqual({});
+    // The planned start (project planning) goes along, unless it lies after the due date.
+    const planned = { ...row, attributes: { ...row.attributes, pm: { start: { v: '2026-11-10', src: 'calc' } } } };
+    expect(itemToIcal(planned, { name: 'Aufgaben', listType: 'todo' })).toContain('DTSTART;VALUE=DATE:20261110');
+    const late = { ...row, attributes: { ...row.attributes, pm: { start: { v: '2026-11-20', src: 'set' } } } };
+    expect(itemToIcal(late, { name: 'Aufgaben', listType: 'todo' })).not.toContain('DTSTART');
   });
 
   it('takes over what a task app changed', () => {
@@ -893,6 +900,69 @@ describe('project planning', () => {
     expect(s.get('a')).toMatchObject({ start: '2026-11-21', end: '2026-11-28' });
     expect(listWorkDays({ settings: { workDays: [] } })).toEqual([1, 2, 3, 4, 5]);
     expect(listCalendar({ settings: { workDays: [1], workHours: { '1': { from: '08:00', to: '12:30' } } } }).minutes[1]).toBe(270);
+  });
+
+  it('levels resources: tasks of one person one after the other, given dates stay', () => {
+    const lv = { ...opts, level: true };
+    const items = [
+      task('a', { dur: days(2) }, { person: 'Anna' }),
+      // Less float (due earlier): goes first.
+      task('b', { dur: days(1) }, { person: 'anna', due: '2026-11-16' }),
+      task('c', { dur: days(1) }, { person: 'Ben' }),
+      task('d', { dur: days(1), deps: { a: fs } }, { person: 'Ben' }),
+      task('f', { start: { v: '2026-11-19', src: 'set' }, dur: days(1) }, { persons: ['Anna', 'Ben'] }),
+    ];
+    const plain = schedule(items, opts);
+    expect(plain.get('a')).toMatchObject({ start: '2026-11-16', delay: 0 });
+    const s = schedule(items, lv);
+    expect(s.get('b')).toMatchObject({ start: '2026-11-16', end: '2026-11-16', delay: 0 });
+    // a waits a day for b (Anna) and fits in before f (given: Anna and Ben on Thursday).
+    expect(s.get('a')).toMatchObject({ start: '2026-11-17', end: '2026-11-18', delay: DAY_MINUTES });
+    expect(s.get('c')).toMatchObject({ start: '2026-11-16' });
+    // d after a (Wed), Thursday is f: Friday.
+    expect(s.get('d')).toMatchObject({ start: '2026-11-20', delay: DAY_MINUTES });
+    expect(s.get('f')).toMatchObject({ start: '2026-11-19', conflicts: [] });
+    // Ticked off tasks and tasks without people are not levelled.
+    const done = schedule([task('x', {}, { person: 'Anna' }), { ...task('y', {}, { person: 'Anna' }), checked: true }, task('z')], lv);
+    expect(done.get('x')!.start).toBe('2026-11-16');
+    expect(done.get('y')!.start).toBe('2026-11-16');
+    // Given dates of one person that overlap: a conflict, nothing moves.
+    const clash = schedule(
+      [task('p', { start: { v: '2026-11-17', src: 'set' } }, { person: 'Anna' }), task('q', { start: { v: '2026-11-17', src: 'set' } }, { person: 'Anna' })],
+      lv,
+    );
+    expect(clash.get('p')!.conflicts).toEqual(['overload']);
+    expect(clash.get('q')).toMatchObject({ start: '2026-11-17', conflicts: ['overload'] });
+    // Same float: the order of the list decides (position, not the order the entries come in).
+    const tie = schedule(
+      [
+        { ...task('late', {}, { person: 'Anna' }), position: 'a2' },
+        { ...task('early', {}, { person: 'Anna' }), position: 'a1' },
+      ],
+      lv,
+    );
+    expect(tie.get('early')!.start).toBe('2026-11-16');
+    expect(tie.get('late')!.start).toBe('2026-11-17');
+    expect(listLevels({ settings: { levelResources: true } })).toBe(true);
+  });
+
+  it('writes the computed dates as calc values, given ones stay', () => {
+    const items = [
+      task('a', { dur: days(2) }),
+      task('b', { start: { v: '2026-11-18', src: 'set' }, end: { v: '2026-11-30', src: 'calc' } }),
+      task('m', { milestone: true, end: { v: '2026-11-01', src: 'calc' }, deps: { a: fs } }),
+      { ...task('x'), checked: true },
+    ];
+    const plan = schedule(items, opts);
+    const ch = pmCalcChanges(items, plan);
+    expect(ch.get('a')).toEqual({ start: { v: '2026-11-16', src: 'calc' }, end: { v: '2026-11-17', src: 'calc' } });
+    expect(ch.get('b')).toEqual({ end: { v: '2026-11-18', src: 'calc' } });
+    expect(ch.get('m')).toEqual({ start: { v: '2026-11-17', src: 'calc' }, end: null });
+    expect(ch.has('x')).toBe(false);
+    // Applied, nothing is left to write – and calc values do not change the plan.
+    for (const it of items) if (ch.has(it.id)) applyItemPatch(it, { pm: ch.get(it.id)! }, '0009');
+    expect(pmCalcChanges(items, schedule(items, opts)).size).toBe(0);
+    expect(schedule(items, opts).get('a')).toMatchObject(plan.get('a')!);
   });
 
   it('prevents and survives circles', () => {
