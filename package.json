@@ -18,6 +18,6 @@
     "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx,css}\" \"apps/*/test/**/*.ts\" \"apps/e2e/**/*.ts\" \"packages/*/src/**/*.ts\""
   },
   "devDependencies": {
-    "prettier": "^3.9.10"
+    "prettier": "^3.10.1"
   }
 }
