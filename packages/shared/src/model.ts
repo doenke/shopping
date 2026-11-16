@@ -153,8 +153,6 @@ export interface ItemPatch {
   personChecks?: Record<string, boolean>;
   /** Attachments: { id: attachment } adds or changes one, { id: null } removes it (own clock each). */
   attachments?: Record<string, import('./attachments.js').Attachment | null>;
-  /** Project planning: { field: value | null }, { "dep:<id>": dep | null } (own clock each, see pm.ts). */
-  pm?: Record<string, unknown>;
 }
 
 export interface CategoryPatch {

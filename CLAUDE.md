@@ -43,9 +43,7 @@ genutzt), `apps/server` (Fastify 5, Drizzle, PostgreSQL), `apps/web` (React-PWA,
   `applyItemPatch`/`mergeItem` (`people.ts`). Eigene Uhren unter einem Feld: `done:<name>` (Abhaken pro
   Person), `att:<id>` (Anhänge). Ein `attributes`-Patch ändert diese nie.
 - **Eintrags-Daten** stecken großteils in `attributes`: `due`, `person`/`persons`/`done`, `container`
-  (Packstück/Bereich/Wo), `status`, `url` (erster Link), `attachments` (weitere Links, Orte), `pm`
-  (Projektplanung: Dauer, Vorgänger, Aufwand; eigene Uhren `pm:<feld>`, Rechnung `schedule()` in `pm.ts`,
-  siehe `docs/konzept/14-projektplanung.md`). Helfer je
+  (Packstück/Bereich/Wo), `status`, `url` (erster Link), `attachments` (weitere Links, Orte). Helfer je
   Thema in `packages/shared/src/*.ts` (`due`, `packing`, `people`, `status`, `links`, `attachments`).
 - **Listen verschieben**: Der Server ignoriert `listId`-Änderungen – Verschieben = Kopie anlegen + Original
   löschen (`moveItems` in `apps/web/src/actions.ts`).
@@ -53,7 +51,7 @@ genutzt), `apps/server` (Fastify 5, Drizzle, PostgreSQL), `apps/web` (React-PWA,
   `*` Ort (allein: Standort), Link im Text. Semikolon (und neue Zeile) trennt Einträge, Komma nicht.
 - **Hinzufügen** überall über `planAdd` (`plan-add.ts`): legt zusammen statt zu verdoppeln.
 - **Web**: `App.tsx` (Routing, Seitenleiste), `components/ListView|PackingView|MemoView` (Kacheln),
-  `components/work/*` (ToDo: Tabelle, Kanban, Gantt, Details; Projektplanung `components/Planning.tsx`), `components/ItemEditor.tsx` (Details-Dialog),
+  `components/work/*` (ToDo: Tabelle, Kanban, Details), `components/ItemEditor.tsx` (Details-Dialog),
   `components/Attachments.tsx`, Tastatur `keyboard.ts`, Auswahl `selection.ts`, Ziehen `itemDrag.ts`.
   CSS in `apps/web/src/styles/NN-*.css` (Reihenfolge in `styles.css`), Farben in `13-design.css`.
 - **Server-Module**: `api/` (REST v1 + OpenAPI, `service.ts` ist die Logik für REST und MCP), `mcp/`,

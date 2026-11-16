@@ -23,10 +23,8 @@ import {
   type ListRow,
   type ListType,
   type UserInfo,
-  listPlans,
 } from '@shopping/shared';
 import { Attachments } from './Attachments';
-import { PlanningSection } from './Planning';
 import { useFileDropOn } from '../files';
 import { useEffect, useRef, useState } from 'react';
 import { addItems, createCategory, deleteItem, itemToNew, setChecked, updateItem } from '../actions';
@@ -425,8 +423,6 @@ export function ItemEditor({ item, list, items = [], users, onClose }: Props) {
             </datalist>
           </div>
         )}
-
-        {todo && !isTemplate && listPlans(list) && <PlanningSection item={item} list={list} items={items} />}
 
         {!memo && (
           <label className="field">

@@ -5,7 +5,6 @@ import { itemUrl, withUrl } from './links.js';
 import type { ItemPatch, ItemRow, ListRow, ListType } from './model.js';
 import { packingInfo } from './packing.js';
 import { peopleLabel } from './people.js';
-import { plannedStart } from './pm.js';
 import type { ParsedItem } from './parser.js';
 import { itemStatus, withStatus, type ListStatus } from './status.js';
 
@@ -95,8 +94,6 @@ export function itemToIcal(
   const inProcess = inProcessStatus(item, statuses);
   const p = packingInfo(item);
   const due = dueOf(item);
-  // The planned start (given or written by "Termine festschreiben"); DUE must not lie before it.
-  const start = plannedStart(item);
   const url = itemUrl(item);
   const place = itemPlaces(item)[0];
   const files = baseUrl ? itemFiles(item) : [];
@@ -113,7 +110,6 @@ export function itemToIcal(
     `LAST-MODIFIED:${stamp(lastModified(item))}`,
     `SUMMARY:${escapeText(taskTitle(item, list.listType))}`,
     ...(item.note ? [`DESCRIPTION:${escapeText(item.note)}`] : []),
-    ...(start && (!due || start <= due) ? [`DTSTART;VALUE=DATE:${start.replace(/-/g, '')}`] : []),
     ...(due ? [`DUE;VALUE=DATE:${due.replace(/-/g, '')}`] : []),
     ...(url ? [`URL:${url}`] : []),
     // The first place: as text for every app, with the position for maps.

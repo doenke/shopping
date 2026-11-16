@@ -16,10 +16,6 @@ import {
   listDefaultStatus,
   SUGGESTED_STATUSES,
   type ListStatus,
-  listPlans,
-  listProjectStart,
-  listWorkDays,
-  listAutomation,
 } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { editList, newListIcon } from '../actions';
@@ -52,10 +48,6 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
   const [statuses, setStatuses] = useState<ListStatus[]>(listStatuses(list));
   const [kanbanDone, setKanbanDone] = useState(kanbanShowsDone(list));
   const [defaultStatus, setDefaultStatus] = useState<string | null>(listDefaultStatus(list)?.id ?? null);
-  const [planning, setPlanning] = useState(listPlans(list));
-  const [workDays, setWorkDays] = useState<number[]>(listWorkDays(list));
-  const [projectStart, setProjectStart] = useState(listProjectStart(list) ?? '');
-  const [automation, setAutomation] = useState(listAutomation(list));
   const todo = list.listType === 'todo';
 
   useEffect(() => ref.current?.showModal(), []);
@@ -70,9 +62,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
           await editList(list, {
             name,
             description,
-            ...(todo
-              ? { group, statuses, defaultStatus, kanbanDone, planning: { on: planning, workDays, projectStart: projectStart || null, ...automation } }
-              : {}),
+            ...(todo ? { group, statuses, defaultStatus, kanbanDone } : {}),
             ...(canAutoReset(list) ? { reset } : {}),
             ...(templates.length ? { askTemplates } : {}),
           });
@@ -118,19 +108,6 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
           <label className="check field">
             <input type="checkbox" checked={kanbanDone} onChange={(e) => setKanbanDone(e.target.checked)} /> Erledigte als Spalte im Kanban-Board anzeigen
           </label>
-        )}
-
-        {todo && !list.isTemplate && (
-          <PlanningSettings
-            on={planning}
-            onOn={setPlanning}
-            workDays={workDays}
-            onWorkDays={setWorkDays}
-            projectStart={projectStart}
-            onProjectStart={setProjectStart}
-            automation={automation}
-            onAutomation={setAutomation}
-          />
         )}
 
         {templates.length > 0 && (
@@ -296,71 +273,5 @@ function StatusEditor({
         Für offene Aufgaben. ◉ = Standard, den bekommt jeder neue Eintrag. „Erledigt“ ist der Haken. Später die Spalten eines Kanban-Boards.
       </small>
     </div>
-  );
-}
-
-const WEEKDAYS: [number, string][] = [
-  [1, 'Mo'],
-  [2, 'Di'],
-  [3, 'Mi'],
-  [4, 'Do'],
-  [5, 'Fr'],
-  [6, 'Sa'],
-  [0, 'So'],
-];
-
-/** Project planning of a ToDo list: on/off, and when it is on, working days and project start. */
-function PlanningSettings(p: {
-  on: boolean;
-  onOn: (on: boolean) => void;
-  workDays: number[];
-  onWorkDays: (days: number[]) => void;
-  projectStart: string;
-  onProjectStart: (v: string) => void;
-  automation: { level: boolean; durationFromEffort: boolean };
-  onAutomation: (a: { level: boolean; durationFromEffort: boolean }) => void;
-}) {
-  return (
-    <>
-      <label className="check field">
-        <input type="checkbox" checked={p.on} onChange={(e) => p.onOn(e.target.checked)} /> Projektplanung (Dauer, Vorgänger, Aufwand in den Aufgabendetails)
-      </label>
-      {p.on && (
-        <div className="field pm-settings">
-          <span>Arbeitstage</span>
-          <div className="chips" role="group" aria-label="Arbeitstage">
-            {WEEKDAYS.map(([d, label]) => (
-              <label key={d} className={`chip chip--toggle${p.workDays.includes(d) ? ' chip--on' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={p.workDays.includes(d)}
-                  onChange={(e) => {
-                    const next = e.target.checked ? [...p.workDays, d] : p.workDays.filter((x) => x !== d);
-                    if (next.length) p.onWorkDays(next);
-                  }}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-          <label className="field">
-            <span>Projektbeginn (leer = heute)</span>
-            <input type="date" value={p.projectStart} onChange={(e) => p.onProjectStart(e.target.value)} />
-          </label>
-          <label className="check field">
-            <input type="checkbox" checked={p.automation.level} onChange={(e) => p.onAutomation({ ...p.automation, level: e.target.checked })} /> Jede Person
-            erledigt ihre Aufgaben nacheinander (Ressourcenabgleich)
-          </label>
-          <label className="check field">
-            <input
-              type="checkbox"
-              checked={p.automation.durationFromEffort}
-              onChange={(e) => p.onAutomation({ ...p.automation, durationFromEffort: e.target.checked })}
-            />{' '}
-            Ohne vorgegebene Dauer: Dauer = Aufwand ÷ Personen
-          </label>
-        </div>
-      )}
-    </>
   );
 }

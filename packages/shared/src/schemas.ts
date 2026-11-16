@@ -73,7 +73,6 @@ export const ItemPatchSchema = z
     deleted: z.boolean(),
     personChecks: z.record(z.string().trim().min(1).max(60), z.boolean()),
     attachments: z.record(z.string().min(1).max(40), AttachmentSchema.nullable()),
-    pm: z.record(z.string().min(1).max(60), z.unknown()).refine((r) => Object.keys(r).length <= 100),
   })
   .partial()
   .strict();

@@ -10,10 +10,6 @@ import {
   type CustomCategoryType,
   packingInfo,
   planAdd,
-  pmCalcChanges,
-  type ScheduledItem,
-  DEFAULT_WORK_DAYS,
-  pmChangesForCopy,
   changesToApply,
   isForEach,
   linkLabel,
@@ -122,16 +118,6 @@ export async function updateItem(id: string, patch: ItemPatch): Promise<void> {
   await sync.mutateItem(id, patch);
 }
 
-/**
- * Planning automation "Termine festschreiben": writes the computed start and end of the open tasks as
- * `calc` values (see `pmCalcChanges`). Returns how many tasks changed.
- */
-export async function writePlannedDates(items: ItemRow[], plan: Map<string, ScheduledItem>): Promise<number> {
-  const changes = pmCalcChanges(items, plan);
-  for (const [id, pm] of changes) await sync.mutateItem(id, { pm });
-  return changes.size;
-}
-
 export async function deleteItem(id: string): Promise<void> {
   await sync.mutateItem(id, { deleted: true });
 }
@@ -149,12 +135,10 @@ export async function moveItems(ids: string[], targetId: string): Promise<{ orig
     .reduce<string | null>((max, i) => (max === null || i.position > max ? i.position : max), null);
   const created: string[] = [];
   const changes: { id: string; patch: ItemPatch }[] = [];
-  const idMap = new Map(items.map((i) => [i.id, crypto.randomUUID()]));
   for (const item of [...items].sort((a, b) => comparePositions(a.position, b.position))) {
-    const id = idMap.get(item.id)!;
+    const id = crypto.randomUUID();
     last = generateKeyBetween(last, null);
-    const { status: _s, davName: _d, icalUid: _u, pm: _p, ...attributes } = item.attributes;
-    const pm = pmChangesForCopy(item, idMap);
+    const { status: _s, davName: _d, icalUid: _u, ...attributes } = item.attributes;
     changes.push({
       id,
       patch: {
@@ -168,7 +152,6 @@ export async function moveItems(ids: string[], targetId: string): Promise<{ orig
         position: last,
         optional: item.optional,
         attributes,
-        ...(pm ? { pm } : {}),
         ...(item.checked ? { checked: true } : {}),
       },
     });
@@ -325,25 +308,9 @@ export async function editList(
     /** Kanban: "Erledigt" as a column. */
     kanbanDone?: boolean;
     defaultStatus?: string | null;
-    /** Project planning: on/off, working days (0 = Sunday), start of the project. */
-    planning?: { on: boolean; workDays: number[]; projectStart: string | null; level?: boolean; durationFromEffort?: boolean };
   },
 ): Promise<void> {
   const settings = { ...list.settings };
-  if (edit.planning) {
-    if (edit.planning.on) settings.planning = true;
-    else delete settings.planning;
-    const days = [...new Set(edit.planning.workDays)].sort();
-    if (days.length && days.join() !== DEFAULT_WORK_DAYS.join()) settings.workDays = days;
-    else delete settings.workDays;
-    if (edit.planning.projectStart) settings.projectStart = edit.planning.projectStart;
-    else delete settings.projectStart;
-    // The automation is on unless switched off.
-    if (edit.planning.level === false) settings.level = false;
-    else delete settings.level;
-    if (edit.planning.durationFromEffort === false) settings.effortDuration = false;
-    else delete settings.effortDuration;
-  }
   if (edit.description.trim()) settings.description = edit.description.trim();
   else delete settings.description;
   if (edit.group !== undefined) {
