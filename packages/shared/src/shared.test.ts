@@ -39,6 +39,7 @@ import {
   listWorkDays,
   pmChangesForCopy,
   schedule,
+  pmCalcChanges,
   successorsOf,
   wouldCreateCycle,
 } from './pm.js';
@@ -594,6 +595,11 @@ describe('entries as tasks (CalDAV/JMAP)', () => {
     });
     // Unchanged: nothing to do.
     expect(taskPatch(row, 'todo', back, (t) => parseItem(t))).toEqual({});
+    // The planned start (project planning) goes along, unless it lies after the due date.
+    const planned = { ...row, attributes: { ...row.attributes, pm: { start: { v: '2026-11-10', src: 'calc' } } } };
+    expect(itemToIcal(planned, { name: 'Aufgaben', listType: 'todo' })).toContain('DTSTART;VALUE=DATE:20261110');
+    const late = { ...row, attributes: { ...row.attributes, pm: { start: { v: '2026-11-20', src: 'set' } } } };
+    expect(itemToIcal(late, { name: 'Aufgaben', listType: 'todo' })).not.toContain('DTSTART');
   });
 
   it('takes over what a task app changed', () => {
@@ -894,6 +900,25 @@ describe('project planning', () => {
     expect(s.get('a')).toMatchObject({ start: '2026-11-21', end: '2026-11-28' });
     expect(listWorkDays({ settings: { workDays: [] } })).toEqual([1, 2, 3, 4, 5]);
     expect(listCalendar({ settings: { workDays: [1], workHours: { '1': { from: '08:00', to: '12:30' } } } }).minutes[1]).toBe(270);
+  });
+
+  it('writes the computed dates as calc values, given ones stay', () => {
+    const items = [
+      task('a', { dur: days(2) }),
+      task('b', { start: { v: '2026-11-18', src: 'set' }, end: { v: '2026-11-30', src: 'calc' } }),
+      task('m', { milestone: true, end: { v: '2026-11-01', src: 'calc' }, deps: { a: fs } }),
+      { ...task('x'), checked: true },
+    ];
+    const plan = schedule(items, opts);
+    const ch = pmCalcChanges(items, plan);
+    expect(ch.get('a')).toEqual({ start: { v: '2026-11-16', src: 'calc' }, end: { v: '2026-11-17', src: 'calc' } });
+    expect(ch.get('b')).toEqual({ end: { v: '2026-11-18', src: 'calc' } });
+    expect(ch.get('m')).toEqual({ start: { v: '2026-11-17', src: 'calc' }, end: null });
+    expect(ch.has('x')).toBe(false);
+    // Applied, nothing is left to write – and calc values do not change the plan.
+    for (const it of items) if (ch.has(it.id)) applyItemPatch(it, { pm: ch.get(it.id)! }, '0009');
+    expect(pmCalcChanges(items, schedule(items, opts)).size).toBe(0);
+    expect(schedule(items, opts).get('a')).toMatchObject(plan.get('a')!);
   });
 
   it('prevents and survives circles', () => {

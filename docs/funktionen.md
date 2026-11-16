@@ -157,6 +157,10 @@ Start bis zum Ende, Meilensteine als Raute, Pfeile für die Verknüpfungen, frei
 der Fälligkeitstag rot gestrichelt. Rot = kritischer Pfad, grau = erledigt, roter Rand = Konflikt. Balken
 ziehen setzt den Start (als Vorgabe), am rechten Rand ziehen die Dauer; Klick wählt, Doppelklick oder Enter
 öffnet die Details, ↑ ↓ wechselt die Zeile. Zeitachse in *Tagen* oder *Wochen* (pro Liste gemerkt).
+**📌 Termine festschreiben** (mit Anzahl): schreibt die berechneten Start- und Endtermine in die offenen
+Aufgaben – weiter als „berechnet“ (grau), nicht als Vorgabe. Damit sehen sie auch Kalender-Apps (CalDAV:
+Beginn der Aufgabe), API, MCP und andere Geräte. Ändert sich der Plan, zeigt der Knopf wieder an, wie viele
+Aufgaben neue Termine bekämen.
 
 ### Arbeitsmodus
 

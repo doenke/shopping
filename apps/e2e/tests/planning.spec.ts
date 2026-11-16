@@ -155,6 +155,16 @@ test('planning automation: one person, one task after the other; duration from e
   await expect(gantt.getByRole('img', { name: /^Tapezieren: Di\., 8\.1\.2030/ })).toBeVisible();
   await expect(gantt.getByRole('img', { name: /^Lampen: Mo\., 7\.1\.2030 bis Di\., 8\.1\.2030$/ })).toBeVisible();
 
+  // Writing the computed dates: they stay calculated (grey), afterwards there is nothing left to write.
+  const fix = page.getByRole('button', { name: /Termine festschreiben/ });
+  await expect(fix).toHaveText(/\(3\)/);
+  await fix.click();
+  await expect(page.getByText('Termine für 3 Aufgaben festgeschrieben')).toBeVisible();
+  await expect(fix).toBeDisabled();
+  await gantt.getByRole('button', { name: 'Tapezieren' }).dblclick();
+  await expect(page.locator('.work-detail .pm input[type=date]').first()).toHaveValue('2030-01-08');
+  await expect(page.locator('.work-detail .pm input[type=date]').first()).toHaveClass(/pm-calc/);
+
   // Switched off: both on the first day.
   await page.getByRole('button', { name: 'Listenmenü' }).click();
   await page.getByRole('menuitem', { name: /Bearbeiten/ }).click();

@@ -672,3 +672,37 @@ export function schedule(
   }
   return out;
 }
+
+/**
+ * The planning automation "Termine festschreiben": the computed start and end of every open entry whose
+ * date is not given, as `calc` values – a hint for everyone reading the entry elsewhere (REST, MCP, the
+ * start date in CalDAV). Given values stay; calc values that are no longer right are replaced, ticked-off
+ * entries are left alone. `schedule` ignores calc values, so writing them never changes the plan. Only
+ * entries where something changes are returned (id → changes for the `pm` part of a patch).
+ */
+export function pmCalcChanges(
+  items: (Pick<ItemRow, 'id' | 'attributes' | 'deleted'> & { checked?: boolean })[],
+  plan: Map<string, ScheduledItem>,
+): Map<string, PmChanges> {
+  const out = new Map<string, PmChanges>();
+  for (const it of items) {
+    if (it.deleted || it.checked) continue;
+    const s = plan.get(it.id);
+    if (!s) continue;
+    const pm = itemPm(it);
+    const changes: PmChanges = {};
+    if (pm.start?.src !== 'set' && pm.start?.v !== s.start) changes.start = { v: s.start, src: 'calc' };
+    if (pm.end?.src !== 'set') {
+      if (s.milestone) {
+        if (pm.end) changes.end = null;
+      } else if (pm.end?.v !== s.end) changes.end = { v: s.end, src: 'calc' };
+    }
+    if (Object.keys(changes).length) out.set(it.id, changes);
+  }
+  return out;
+}
+
+/** The planned start of an entry as stored (given or written by "Termine festschreiben"), if any. */
+export function plannedStart(item: Pick<ItemRow, 'attributes'>): string | null {
+  return itemPm(item).start?.v ?? null;
+}

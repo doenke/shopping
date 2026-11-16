@@ -60,8 +60,11 @@ Projekts (sonst heute).
      Feste Start/Ende bleiben (Konflikt `resource`), Erledigtes belegt niemanden. Späteste Termine danach
      ohne Ressourcen gerechnet. `waitsFor` sagt, auf wen/was eine Aufgabe wartet.
    - Dauer aus Aufwand: ohne vorgegebene Dauer `effort ÷ Personen`.
-   Nicht gemacht: berechnete Termine festschreiben (`src: "calc"`), Kapazitäten pro Person (Teilzeit),
-   Gantt auf dem Handy.
+   - Termine festschreiben (Knopf im Gantt, `pmCalcChanges`): schreibt Start/Ende offener Aufgaben als
+     `src: "calc"` (Vorgaben bleiben, Meilensteine ohne Ende). Bewusst ein Knopf statt automatisch, damit
+     nicht jedes Gerät bei jeder Änderung Termine schreibt; `schedule()` ignoriert calc-Werte. CalDAV gibt
+     den gespeicherten Start als `DTSTART;VALUE=DATE` aus (nicht, wenn er nach `DUE` liegt).
+   Nicht gemacht: Kapazitäten pro Person (Teilzeit, Urlaub), Gantt auf dem Handy.
 
 Später möglich: Ist-Start/-Ende, Fortschritt/Restaufwand, Sammelaufgaben, Ressourcen-Kapazitäten,
 Basisplan, Abhängigkeiten über `RELATED-TO` in CalDAV.

@@ -10,6 +10,8 @@ import {
   type CustomCategoryType,
   packingInfo,
   planAdd,
+  pmCalcChanges,
+  type ScheduledItem,
   DEFAULT_WORK_DAYS,
   pmChangesForCopy,
   changesToApply,
@@ -118,6 +120,16 @@ export async function setListPersons(list: ListRow, persons: string[]): Promise<
 
 export async function updateItem(id: string, patch: ItemPatch): Promise<void> {
   await sync.mutateItem(id, patch);
+}
+
+/**
+ * Planning automation "Termine festschreiben": writes the computed start and end of the open tasks as
+ * `calc` values (see `pmCalcChanges`). Returns how many tasks changed.
+ */
+export async function writePlannedDates(items: ItemRow[], plan: Map<string, ScheduledItem>): Promise<number> {
+  const changes = pmCalcChanges(items, plan);
+  for (const [id, pm] of changes) await sync.mutateItem(id, { pm });
+  return changes.size;
 }
 
 export async function deleteItem(id: string): Promise<void> {
