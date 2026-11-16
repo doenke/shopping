@@ -4,7 +4,9 @@ import {
   dueOf,
   isoDate,
   itemPm,
+  listAutomation,
   listCalendar,
+  peopleOf,
   listProjectStart,
   minutesToDays,
   schedule,
@@ -49,7 +51,16 @@ const fmtHours = (min: number) => `${(Math.round((min / 60) * 10) / 10).toLocale
 
 /** The plan of a list (all its entries). */
 export function useSchedule(list: ListRow, items: ItemRow[]): Map<string, ScheduledItem> {
-  return useMemo(() => schedule(items, { calendar: listCalendar(list), projectStart: listProjectStart(list) ?? isoDate(new Date()) }), [items, list]);
+  return useMemo(
+    () =>
+      schedule(items, {
+        calendar: listCalendar(list),
+        projectStart: listProjectStart(list) ?? isoDate(new Date()),
+        resourcesOf: peopleOf,
+        ...listAutomation(list),
+      }),
+    [items, list],
+  );
 }
 
 /** What is wrong with the plan of an entry, in words. */
@@ -61,7 +72,9 @@ export function conflictTexts(s: ScheduledItem, due: string | null): string[] {
         ? 'Der vorgegebene Start ist früher, als die Vorgänger es erlauben.'
         : c === 'end'
           ? 'Das vorgegebene Ende ist früher, als die Vorgänger es erlauben.'
-          : 'Die Vorgänger bilden einen Kreis – diese Verknüpfungen werden nicht berücksichtigt.',
+          : c === 'resource'
+            ? `${s.resources.join(', ')} ${s.resources.length > 1 ? 'haben' : 'hat'} zur selben Zeit eine andere Aufgabe mit festem Termin.`
+            : 'Die Vorgänger bilden einen Kreis – diese Verknüpfungen werden nicht berücksichtigt.',
   );
 }
 
@@ -229,7 +242,15 @@ export function PlanningSection({ item, list, items }: Props) {
           {Math.round(((pm.spent ?? 0) / pm.effort) * 100)} % des Aufwands geleistet, noch {fmtHours(Math.max(0, pm.effort - (pm.spent ?? 0)))}
         </p>
       )}
-      <p className="muted pm__note">Grau = berechnet. Was du einträgst, ist eine Vorgabe; ↺ rechnet wieder.</p>
+      {s.waitsFor && byId.get(s.waitsFor.id) && (
+        <p className="pm__note pm__waits">
+          Nach hinten geschoben: {s.waitsFor.person} ist vorher mit „{byId.get(s.waitsFor.id)!.name}“ beschäftigt.
+        </p>
+      )}
+      <p className="muted pm__note">
+        Grau = berechnet{!durSet && !s.milestone && pm.effort && listAutomation(list).durationFromEffort ? ' (Dauer aus dem Aufwand)' : ''}. Was du einträgst,
+        ist eine Vorgabe; ↺ rechnet wieder.
+      </p>
 
       <DepList
         title="Vorgänger"

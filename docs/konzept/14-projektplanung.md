@@ -53,7 +53,15 @@ Projekts (sonst heute).
    Arbeitstage und Projektbeginn in den Listeneinstellungen – erledigt.
 3. Gantt-Ansicht (`components/work/GanttChart.tsx`, Stil `14-gantt.css`) – erledigt. Ziehen schreibt
    Vorgaben: verschieben = `start` (ein vorgegebenes `end` wandert mit), rechter Rand = `dur`.
-4. Planungsautomatik (Termine, später Ressourcenabgleich).
+4. Planungsautomatik – erledigt, live in `schedule()` (Optionen `resourcesOf`, `level`,
+   `durationFromEffort`; Listeneinstellungen `level`/`effortDuration`, an außer `false`):
+   - Ressourcenabgleich seriell: unter den Aufgaben, deren Vorgänger stehen, zuerst die mit dem spätesten
+     Start am frühesten (dann Listenposition), zum ersten Zeitpunkt, an dem alle ihre Personen frei sind.
+     Feste Start/Ende bleiben (Konflikt `resource`), Erledigtes belegt niemanden. Späteste Termine danach
+     ohne Ressourcen gerechnet. `waitsFor` sagt, auf wen/was eine Aufgabe wartet.
+   - Dauer aus Aufwand: ohne vorgegebene Dauer `effort ÷ Personen`.
+   Nicht gemacht: berechnete Termine festschreiben (`src: "calc"`), Kapazitäten pro Person (Teilzeit),
+   Gantt auf dem Handy.
 
 Später möglich: Ist-Start/-Ende, Fortschritt/Restaufwand, Sammelaufgaben, Ressourcen-Kapazitäten,
 Basisplan, Abhängigkeiten über `RELATED-TO` in CalDAV.

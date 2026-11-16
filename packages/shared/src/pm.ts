@@ -1,5 +1,6 @@
 import type { ItemRow } from './model.js';
 import { dueOf } from './due.js';
+import { comparePositions } from './order.js';
 
 /**
  * Project planning for ToDo lists (second level: the normal ToDo view stays as it is).
@@ -374,7 +375,9 @@ export type PmConflict =
   /** The planned end lies after the due date. */
   | 'due'
   /** Part of a circle of dependencies (those links are ignored). */
-  | 'cycle';
+  | 'cycle'
+  /** Someone has two given (fixed) tasks at the same time. */
+  | 'resource';
 
 export interface ScheduledItem {
   id: string;
@@ -394,6 +397,10 @@ export interface ScheduledItem {
   lateEnd: string;
   /** Total float in minutes of working time (negative: the plan does not work out). */
   float: number;
+  /** Who works on it (as given by `resourcesOf`). */
+  resources: string[];
+  /** Resource levelling moved it back: the task (id) whose person it waits for, and who that is. */
+  waitsFor: { id: string; person: string } | null;
   critical: boolean;
   conflicts: PmConflict[];
 }
@@ -402,6 +409,22 @@ export interface ScheduleOptions {
   calendar: WorkCalendar;
   /** Where the plan starts (list setting `projectStart`, else today). */
   projectStart: string;
+  /**
+   * Who works on an entry (the people of the item). With it, the planning automation:
+   * - levels resources: one person does one task after the other; of tasks that would overlap, the one
+   *   with the least float goes first (given starts and ends stay where they are);
+   * - derives a missing duration from the planned effort: effort ÷ number of people.
+   */
+  resourcesOf?: (item: Pick<ItemRow, 'id' | 'attributes'>) => string[];
+  /** Resource levelling (default on when `resourcesOf` is given). */
+  level?: boolean;
+  /** Duration from effort (default on when `resourcesOf` is given). */
+  durationFromEffort?: boolean;
+}
+
+/** The planning automation of a list (list settings `level` / `effortDuration`, both on unless false). */
+export function listAutomation(list: { settings: Record<string, unknown> }): { level: boolean; durationFromEffort: boolean } {
+  return { level: list.settings.level !== false, durationFromEffort: list.settings.effortDuration !== false };
 }
 
 interface Node {
@@ -421,6 +444,9 @@ interface Node {
   lf: number;
   /** The start was decided by a predecessor or a given date (a milestone then shows the day it ends). */
   bound: boolean;
+  res: string[];
+  done: boolean;
+  waitsFor: { id: string; person: string } | null;
   conflicts: Set<PmConflict>;
 }
 
@@ -430,17 +456,38 @@ interface Node {
  * fixed; a given start and end together decide the duration. Without a duration an entry takes one day,
  * a milestone none.
  */
-export function schedule(items: Pick<ItemRow, 'id' | 'attributes' | 'deleted'>[], opts: ScheduleOptions): Map<string, ScheduledItem> {
+export function schedule(
+  items: (Pick<ItemRow, 'id' | 'attributes' | 'deleted'> & { checked?: boolean; position?: string })[],
+  opts: ScheduleOptions,
+): Map<string, ScheduledItem> {
   const axis = new Axis(opts.calendar);
-  const live = items.filter((i) => !i.deleted);
+  // In list order: on a tie (same float), the entry higher up in the list goes first.
+  const live = items
+    .filter((i) => !i.deleted)
+    .sort((a, b) => (typeof a.position === 'string' && typeof b.position === 'string' ? comparePositions(a.position, b.position) : 0));
+  const fromEffort = opts.durationFromEffort ?? !!opts.resourcesOf;
   const nodes = new Map<string, Node>();
   for (const it of live) {
     const pm = itemPm(it);
     const milestone = pm.milestone === true;
+    const res = opts.resourcesOf
+      ? [
+          ...new Set(
+            opts
+              .resourcesOf(it)
+              .map((r) => r.trim())
+              .filter(Boolean),
+          ),
+        ]
+      : [];
     const fixedStart = pm.start?.src === 'set' ? axis.dayStart(dayNumber(pm.start.v)) : null;
     const fixedEnd = pm.end?.src === 'set' ? axis.dayEnd(dayNumber(pm.end.v)) : null;
     let dur = milestone ? 0 : pm.dur ? pm.dur.v : DAY_MINUTES;
     let durSrc: PmSource = milestone || pm.dur?.src === 'set' ? 'set' : 'calc';
+    if (!milestone && !pm.dur && fromEffort && pm.effort) {
+      dur = Math.ceil(pm.effort / Math.max(1, res.length));
+      durSrc = 'calc';
+    }
     if (!milestone && fixedStart !== null && fixedEnd !== null) {
       dur = Math.max(0, fixedEnd - fixedStart);
       durSrc = 'calc';
@@ -462,6 +509,9 @@ export function schedule(items: Pick<ItemRow, 'id' | 'attributes' | 'deleted'>[]
       ls: 0,
       lf: 0,
       bound: false,
+      res,
+      done: it.checked === true,
+      waitsFor: null,
       conflicts: new Set(),
     });
   }
@@ -500,9 +550,9 @@ export function schedule(items: Pick<ItemRow, 'id' | 'attributes' | 'deleted'>[]
     order.push(...rest);
   }
 
-  // Forward pass.
+  // Forward pass: the earliest start a task's predecessors (and the project start, "not before") allow.
   const projectStart = axis.dayStart(dayNumber(opts.projectStart));
-  for (const n of order) {
+  const earliest = (n: Node): number => {
     let es = Math.max(projectStart, n.notBefore ?? -Infinity);
     for (const { id, dep } of n.preds) {
       const p = nodes.get(id)!;
@@ -518,23 +568,79 @@ export function schedule(items: Pick<ItemRow, 'id' | 'attributes' | 'deleted'>[]
       if (n.fixedEnd - n.dur < es) n.conflicts.add('end');
       es = n.fixedEnd - n.dur;
     }
-    n.es = es;
-    n.ef = es + n.dur;
-  }
-
-  // Backward pass.
-  const projectEnd = Math.max(projectStart, ...order.map((n) => n.ef));
-  for (const n of [...order].reverse()) {
-    let lf = Math.min(projectEnd, n.deadline ?? Infinity);
-    for (const { id, dep } of n.succs) {
-      const s = nodes.get(id)!;
-      const t = dep.type === 'FS' ? s.ls - dep.lag : dep.type === 'SS' ? s.ls - dep.lag + n.dur : dep.type === 'FF' ? s.lf - dep.lag : s.lf - dep.lag + n.dur;
-      lf = Math.min(lf, t);
+    return es;
+  };
+  const forward = () => {
+    for (const n of order) {
+      n.es = earliest(n);
+      n.ef = n.es + n.dur;
     }
-    n.lf = lf;
-    n.ls = lf - n.dur;
-    if (n.deadline !== null && n.ef > n.deadline) n.conflicts.add('due');
+  };
+
+  // Backward pass: the latest dates that keep the project end (and the due dates).
+  const backward = () => {
+    const projectEnd = Math.max(projectStart, ...order.map((n) => n.ef));
+    for (const n of [...order].reverse()) {
+      let lf = Math.min(projectEnd, n.deadline ?? Infinity);
+      for (const { id, dep } of n.succs) {
+        const s = nodes.get(id)!;
+        const t = dep.type === 'FS' ? s.ls - dep.lag : dep.type === 'SS' ? s.ls - dep.lag + n.dur : dep.type === 'FF' ? s.lf - dep.lag : s.lf - dep.lag + n.dur;
+        lf = Math.min(lf, t);
+      }
+      n.lf = lf;
+      n.ls = lf - n.dur;
+    }
+  };
+
+  forward();
+  backward();
+
+  // Resource levelling (serial): of the tasks whose predecessors are planned, the one with the least float
+  // (latest start, then list order) goes next, at the first time all its people are free. Done tasks
+  // occupy nobody; given starts/ends stay and only report a clash.
+  const level = (opts.level ?? !!opts.resourcesOf) && order.some((n) => n.res.length && n.dur > 0 && !n.done);
+  if (level) {
+    const busy = new Map<string, { from: number; to: number; id: string }[]>();
+    const rank = new Map(order.map((n, i) => [n.id, i]));
+    const left = new Set(order.map((n) => n.id));
+    const placed = new Set<string>();
+    while (left.size) {
+      let next: Node | null = null;
+      for (const id of left) {
+        const n = nodes.get(id)!;
+        if (!n.preds.every((p) => placed.has(p.id))) continue;
+        if (!next || n.ls < next.ls || (n.ls === next.ls && rank.get(n.id)! < rank.get(next.id)!)) next = n;
+      }
+      // Cannot happen (the order is topological), but never loop forever.
+      if (!next) break;
+      const n = next;
+      let es = earliest(n);
+      const fixed = n.fixedStart !== null || n.fixedEnd !== null;
+      const uses = n.dur > 0 && !n.done ? n.res : [];
+      for (let guard = 0; guard < 10_000; guard++) {
+        let clash: { to: number; id: string; person: string } | null = null;
+        for (const r of uses) {
+          for (const b of busy.get(r) ?? []) {
+            if (b.from < es + n.dur && es < b.to && (!clash || b.to > clash.to)) clash = { to: b.to, id: b.id, person: r };
+          }
+        }
+        if (!clash) break;
+        if (fixed) {
+          n.conflicts.add('resource');
+          break;
+        }
+        es = clash.to;
+        n.waitsFor = { id: clash.id, person: clash.person };
+      }
+      n.es = es;
+      n.ef = es + n.dur;
+      for (const r of uses) busy.set(r, [...(busy.get(r) ?? []), { from: n.es, to: n.ef, id: n.id }]);
+      placed.add(n.id);
+      left.delete(n.id);
+    }
+    backward();
   }
+  for (const n of order) if (n.deadline !== null && n.ef > n.deadline) n.conflicts.add('due');
 
   const out = new Map<string, ScheduledItem>();
   for (const n of nodes.values()) {
@@ -559,6 +665,8 @@ export function schedule(items: Pick<ItemRow, 'id' | 'attributes' | 'deleted'>[]
       lateEnd: endDate(n.lf),
       float,
       critical: float <= 0,
+      resources: n.res,
+      waitsFor: n.waitsFor,
       conflicts: [...n.conflicts],
     });
   }

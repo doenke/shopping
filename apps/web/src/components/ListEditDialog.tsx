@@ -19,6 +19,7 @@ import {
   listPlans,
   listProjectStart,
   listWorkDays,
+  listAutomation,
 } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { editList, newListIcon } from '../actions';
@@ -54,6 +55,7 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
   const [planning, setPlanning] = useState(listPlans(list));
   const [workDays, setWorkDays] = useState<number[]>(listWorkDays(list));
   const [projectStart, setProjectStart] = useState(listProjectStart(list) ?? '');
+  const [automation, setAutomation] = useState(listAutomation(list));
   const todo = list.listType === 'todo';
 
   useEffect(() => ref.current?.showModal(), []);
@@ -68,7 +70,9 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
           await editList(list, {
             name,
             description,
-            ...(todo ? { group, statuses, defaultStatus, kanbanDone, planning: { on: planning, workDays, projectStart: projectStart || null } } : {}),
+            ...(todo
+              ? { group, statuses, defaultStatus, kanbanDone, planning: { on: planning, workDays, projectStart: projectStart || null, ...automation } }
+              : {}),
             ...(canAutoReset(list) ? { reset } : {}),
             ...(templates.length ? { askTemplates } : {}),
           });
@@ -124,6 +128,8 @@ export function ListEditDialog({ list, me, groups, onClose, onSortCategories }: 
             onWorkDays={setWorkDays}
             projectStart={projectStart}
             onProjectStart={setProjectStart}
+            automation={automation}
+            onAutomation={setAutomation}
           />
         )}
 
@@ -311,6 +317,8 @@ function PlanningSettings(p: {
   onWorkDays: (days: number[]) => void;
   projectStart: string;
   onProjectStart: (v: string) => void;
+  automation: { level: boolean; durationFromEffort: boolean };
+  onAutomation: (a: { level: boolean; durationFromEffort: boolean }) => void;
 }) {
   return (
     <>
@@ -338,6 +346,18 @@ function PlanningSettings(p: {
           <label className="field">
             <span>Projektbeginn (leer = heute)</span>
             <input type="date" value={p.projectStart} onChange={(e) => p.onProjectStart(e.target.value)} />
+          </label>
+          <label className="check field">
+            <input type="checkbox" checked={p.automation.level} onChange={(e) => p.onAutomation({ ...p.automation, level: e.target.checked })} /> Jede Person
+            erledigt ihre Aufgaben nacheinander (Ressourcenabgleich)
+          </label>
+          <label className="check field">
+            <input
+              type="checkbox"
+              checked={p.automation.durationFromEffort}
+              onChange={(e) => p.onAutomation({ ...p.automation, durationFromEffort: e.target.checked })}
+            />{' '}
+            Ohne vorgegebene Dauer: Dauer = Aufwand ÷ Personen
           </label>
         </div>
       )}

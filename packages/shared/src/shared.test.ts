@@ -33,6 +33,7 @@ import {
   DAY_MINUTES,
   isWorkDay,
   itemPm,
+  listAutomation,
   listCalendar,
   workBetween,
   listWorkDays,
@@ -933,5 +934,57 @@ describe('working calendar helpers', () => {
     // Thursday to Tuesday: Thu, Fri, Mon, Tue.
     expect(workBetween('2026-11-19', '2026-11-24', cal)).toBe(4 * DAY_MINUTES);
     expect(workBetween('2026-11-24', '2026-11-19', cal)).toBe(0);
+  });
+});
+
+describe('planning automation', () => {
+  const task = (id: string, pm: Record<string, unknown>, who: string[] = [], checked = false) =>
+    ({ id, deleted: false, checked, attributes: { pm, ...(who.length ? { who } : {}) } }) as unknown as ItemRow;
+  const day = (n: number) => ({ v: n * DAY_MINUTES, src: 'set' });
+  const base = {
+    calendar: listCalendar({ settings: {} }),
+    projectStart: '2026-11-16',
+    resourcesOf: (i: Pick<ItemRow, 'attributes'>) => (i.attributes.who as string[]) ?? [],
+  };
+
+  it('lets one person do one task after the other, the one with the least float first', () => {
+    const items = [task('a', { dur: day(2) }, ['Anna']), task('b', { dur: day(3) }, ['Anna']), task('c', { dur: day(1), deps: { b: { type: 'FS', lag: 0 } } })];
+    const s = schedule(items, base);
+    expect(s.get('b')).toMatchObject({ start: '2026-11-16', end: '2026-11-18', waitsFor: null });
+    expect(s.get('a')).toMatchObject({ start: '2026-11-19', end: '2026-11-20', waitsFor: { id: 'b', person: 'Anna' }, resources: ['Anna'] });
+    expect(s.get('c')).toMatchObject({ start: '2026-11-19' });
+    // Off: both at once.
+    expect(schedule(items, { ...base, level: false }).get('a')).toMatchObject({ start: '2026-11-16' });
+    // Done tasks occupy nobody; other people are free.
+    const done = [task('a', { dur: day(2) }, ['Anna']), task('b', { dur: day(3) }, ['Anna'], true), task('x', { dur: day(1) }, ['Ben'])];
+    const d = schedule(done, base);
+    expect(d.get('a')).toMatchObject({ start: '2026-11-16' });
+    expect(d.get('x')).toMatchObject({ start: '2026-11-16' });
+  });
+
+  it('on a tie, the entry higher up in the list goes first', () => {
+    const at = (t: ItemRow, position: string) => ({ ...t, position });
+    const items = [at(task('later', { dur: day(1) }, ['Anna']), 'a2'), at(task('first', { dur: day(1) }, ['Anna']), 'a1')];
+    const s = schedule(items, base);
+    expect(s.get('first')!.start).toBe('2026-11-16');
+    expect(s.get('later')).toMatchObject({ start: '2026-11-17', waitsFor: { id: 'first', person: 'Anna' } });
+  });
+
+  it('keeps given dates and reports a clash', () => {
+    const items = [task('a', { start: { v: '2026-11-17', src: 'set' } }, ['Anna']), task('b', { start: { v: '2026-11-17', src: 'set' } }, ['Anna'])];
+    const s = schedule(items, base);
+    expect(s.get('a')!.start).toBe('2026-11-17');
+    expect(s.get('b')!.start).toBe('2026-11-17');
+    expect([...s.get('a')!.conflicts, ...s.get('b')!.conflicts]).toContain('resource');
+  });
+
+  it('derives a missing duration from the effort', () => {
+    const items = [task('one', { effort: 16 * 60 }, ['Anna']), task('two', { effort: 16 * 60 }, ['Ben', 'Carla']), task('given', { effort: 60, dur: day(3) })];
+    const s = schedule(items, base);
+    expect(s.get('one')).toMatchObject({ duration: 2 * DAY_MINUTES, durationSrc: 'calc', end: '2026-11-17' });
+    expect(s.get('two')).toMatchObject({ duration: DAY_MINUTES, end: '2026-11-16' });
+    expect(s.get('given')).toMatchObject({ duration: 3 * DAY_MINUTES, durationSrc: 'set' });
+    expect(schedule(items, { ...base, durationFromEffort: false }).get('one')!.duration).toBe(DAY_MINUTES);
+    expect(listAutomation({ settings: { level: false } })).toEqual({ level: false, durationFromEffort: true });
   });
 });

@@ -144,6 +144,14 @@ Konflikten:
 - Berechnet: **frühester/spätester Start und frühestes/spätestes Ende**, **Puffer**, **kritischer Pfad**.
 - **Warnungen**: geplantes Ende nach der Fälligkeit, Vorgabe passt nicht zu den Vorgängern.
 
+**Planungsautomatik** (in den Listeneinstellungen, beides an): Die Planung rechnet bei jeder Änderung neu.
+- *Ressourcenabgleich*: Jede Person (`@Anna`) erledigt ihre Aufgaben nacheinander. Überschneiden sich
+  Aufgaben, geht die mit dem wenigsten Puffer vor (bei Gleichstand die weiter oben in der Liste); die
+  andere rückt nach hinten – die Details sagen, auf wen sie wartet. Feste Termine bleiben, eine
+  Doppelbelegung wird als Konflikt gemeldet. Erledigtes belegt niemanden.
+- *Dauer aus Aufwand*: Ohne vorgegebene Dauer ist sie der geplante Aufwand geteilt durch die Zahl der
+  Personen (16 h für eine Person = 2 Tage, für zwei Personen 1 Tag).
+
 **Gantt** (am Rechner, Umschalter *Tabelle | Kanban | Gantt*): eine Zeile pro Aufgabe, Balken vom geplanten
 Start bis zum Ende, Meilensteine als Raute, Pfeile für die Verknüpfungen, freie Tage grau, heute als Linie,
 der Fälligkeitstag rot gestrichelt. Rot = kritischer Pfad, grau = erledigt, roter Rand = Konflikt. Balken

@@ -314,7 +314,7 @@ export async function editList(
     kanbanDone?: boolean;
     defaultStatus?: string | null;
     /** Project planning: on/off, working days (0 = Sunday), start of the project. */
-    planning?: { on: boolean; workDays: number[]; projectStart: string | null };
+    planning?: { on: boolean; workDays: number[]; projectStart: string | null; level?: boolean; durationFromEffort?: boolean };
   },
 ): Promise<void> {
   const settings = { ...list.settings };
@@ -326,6 +326,11 @@ export async function editList(
     else delete settings.workDays;
     if (edit.planning.projectStart) settings.projectStart = edit.planning.projectStart;
     else delete settings.projectStart;
+    // The automation is on unless switched off.
+    if (edit.planning.level === false) settings.level = false;
+    else delete settings.level;
+    if (edit.planning.durationFromEffort === false) settings.effortDuration = false;
+    else delete settings.effortDuration;
   }
   if (edit.description.trim()) settings.description = edit.description.trim();
   else delete settings.description;

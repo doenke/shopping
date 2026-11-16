@@ -121,3 +121,47 @@ test('Gantt: bars, arrows, moving and stretching a bar', async ({ page }, info) 
   await expect(page.locator('.work-detail')).toBeVisible();
   await expect(page.locator('.work-detail .pm summary')).toContainText('3 Tage');
 });
+
+test('planning automation: one person, one task after the other; duration from effort', async ({ page }, info) => {
+  test.skip(phone(page), 'the Gantt chart is for the desktop');
+  await login(page, `Rita ${info.project.name}`);
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Wohnung', type: 'todo' } })).json();
+  await page.request.post(`/api/v1/lists/${list.id}/items`, { data: { items: ['Streichen @Anna', 'Tapezieren @Anna', 'Lampen @Ben'] } });
+  await page.goto(`/#/list/${list.id}`);
+  await page.getByRole('button', { name: 'Listenmenü' }).click();
+  await page.getByRole('menuitem', { name: /Bearbeiten/ }).click();
+  const dialog = page.locator('dialog[open]');
+  await dialog.getByRole('checkbox', { name: /Projektplanung/ }).check();
+  await dialog.getByLabel('Projektbeginn (leer = heute)').fill('2030-01-07');
+  await expect(dialog.getByRole('checkbox', { name: /Ressourcenabgleich/ })).toBeChecked();
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+
+  // 16 hours for Ben alone: two days.
+  const lampen = await openTask(page, 'Lampen');
+  await lampen.locator('.pm summary').click();
+  await lampen.getByRole('spinbutton', { name: 'Aufwand geplant in Stunden' }).fill('16');
+  await lampen.getByRole('spinbutton', { name: 'Aufwand geplant in Stunden' }).press('Enter');
+  await expect(lampen.locator('.pm summary')).toContainText('2 Tage');
+  await expect(lampen.locator('.pm')).toContainText('Dauer aus dem Aufwand');
+
+  const tapezieren = await openTask(page, 'Tapezieren');
+  await tapezieren.locator('.pm summary').click();
+  await expect(tapezieren.locator('.pm__waits')).toContainText('Anna ist vorher mit „Streichen“ beschäftigt');
+
+  await page.getByRole('button', { name: 'Gantt', exact: true }).click();
+  const gantt = page.locator('.gantt');
+  await expect(gantt.getByRole('img', { name: /^Streichen: Mo\., 7\.1\.2030/ })).toBeVisible();
+  await expect(gantt.getByRole('img', { name: /^Tapezieren: Di\., 8\.1\.2030/ })).toBeVisible();
+  await expect(gantt.getByRole('img', { name: /^Lampen: Mo\., 7\.1\.2030 bis Di\., 8\.1\.2030$/ })).toBeVisible();
+
+  // Switched off: both on the first day.
+  await page.getByRole('button', { name: 'Listenmenü' }).click();
+  await page.getByRole('menuitem', { name: /Bearbeiten/ }).click();
+  await page
+    .locator('dialog[open]')
+    .getByRole('checkbox', { name: /Ressourcenabgleich/ })
+    .uncheck();
+  await page.locator('dialog[open]').getByRole('button', { name: 'Speichern' }).click();
+  await expect(gantt.getByRole('img', { name: /^Tapezieren: Mo\., 7\.1\.2030/ })).toBeVisible();
+});

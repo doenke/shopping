@@ -279,7 +279,15 @@ export function GanttChart({ list, items, index, selected, onSelect, onOpen, vie
                 })
                 .filter(Boolean);
               const label = s.milestone ? `${item.name}: Meilenstein ${shortDate(s.start)}` : `${item.name}: ${shortDate(s.start)} bis ${shortDate(s.end)}`;
-              const title = [label, s.critical && !item.checked ? 'kritischer Pfad' : null, preds.length ? `nach ${preds.join(', ')}` : null, ...conflicts]
+              const waits = s.waitsFor ? rows.find((r) => r.item.id === s.waitsFor!.id)?.item.name : undefined;
+              const title = [
+                label,
+                s.resources.length ? `Wer: ${s.resources.join(', ')}` : null,
+                s.critical && !item.checked ? 'kritischer Pfad' : null,
+                preds.length ? `nach ${preds.join(', ')}` : null,
+                waits ? `wartet auf ${s.waitsFor!.person} („${waits}“)` : null,
+                ...conflicts,
+              ]
                 .filter(Boolean)
                 .join('\n');
               const cls = [
@@ -347,9 +355,9 @@ export function GanttChart({ list, items, index, selected, onSelect, onOpen, vie
                       {!s.milestone && !item.checked && <span className="gantt__handle" aria-hidden />}
                       {!s.milestone && g.width >= 60 && <span className="gantt__bar-label">{item.name}</span>}
                     </div>
-                    {s.milestone && (
-                      <span className="gantt__milestone-label" style={{ left: g.left + 10 }}>
-                        {shortDate(s.start)}
+                    {(s.milestone || s.resources.length > 0) && (
+                      <span className="gantt__milestone-label" style={{ left: g.left + g.width + (s.milestone ? 10 : 6) }}>
+                        {s.milestone ? shortDate(s.start) : s.resources.join(', ')}
                       </span>
                     )}
                   </div>
