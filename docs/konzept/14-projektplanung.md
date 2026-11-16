@@ -49,8 +49,8 @@ Projekts (sonst heute).
 ## Schritte
 
 1. Datenmodell und Rechenkern – erledigt.
-2. Details-Dialog „Projektplanung“ (zweite Ebene), Arbeitstage und Projektbeginn in den Listeneinstellungen,
-   Projektplanung ein/aus.
+2. Bereich „Projektplanung“ in den Aufgabendetails (zugeklappt, `components/Planning.tsx`), Schalter,
+   Arbeitstage und Projektbeginn in den Listeneinstellungen – erledigt.
 3. Gantt-Ansicht.
 4. Planungsautomatik (Termine, später Ressourcenabgleich).
 

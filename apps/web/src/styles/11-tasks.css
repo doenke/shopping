@@ -590,3 +590,141 @@ kbd {
   display: block;
   padding: 14px 6px 4px;
 }
+
+/* Project planning: the second level of the details (folded away). */
+.pm {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 10px;
+}
+.pm[open] {
+  padding-bottom: 10px;
+}
+.pm > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+.pm__title {
+  font-weight: 600;
+}
+.pm__summary {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.pm__warn,
+.pm__conflict {
+  color: var(--danger);
+}
+.pm__conflict {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+}
+.pm__row {
+  margin: 4px 0 8px;
+}
+.pm__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 12px;
+}
+.pm__grid > label,
+.pm__deps {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.pm__grid > label > span:first-child,
+.pm__label,
+.pm__calc dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.pm__input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pm input,
+.pm select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.pm input[type='checkbox'] {
+  width: auto;
+}
+/* Calculated values are grey; what is typed in (a given value) is normal. */
+.pm .pm-calc {
+  color: var(--muted);
+  font-style: italic;
+}
+.pm-reset {
+  flex: none;
+}
+.pm__note {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+}
+.pm__deps {
+  margin-top: 12px;
+}
+.pm__dep {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 2px 6px;
+  margin-bottom: 6px;
+}
+/* The name on its own line, the kind of link, the lag and ✕ below it. */
+.pm__dep-name {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm__dep select {
+  width: 100%;
+}
+.pm__lag {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+}
+.pm__lag input {
+  width: 4.5em;
+}
+.pm__calc {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+}
+.pm__calc dd {
+  margin: 0;
+}
+.pm-settings .chip--toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+.pm-settings .chip--toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.pm-settings .chip--toggle:has(input:focus-visible) {
+  outline: 2px solid var(--primary);
+}

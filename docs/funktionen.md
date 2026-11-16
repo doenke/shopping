@@ -125,6 +125,25 @@ gibt es nur die Tabelle). Im **Kanban** ist jeder Status eine Spalte:
   anzeigen* in den Listeneinstellungen; sonst verlassen erledigte Karten das Board. Aus „Erledigt“
   zurückgezogen ist eine Aufgabe wieder offen.
 
+### Projektplanung
+
+Für Projekte (Job, Garten umgestalten …) lässt sich eine ToDo-Liste planen: **⋮ → Bearbeiten … →
+Projektplanung**. Dort auch die **Arbeitstage** der Liste (Wochentage zum Anhaken, z. B. nur Sa/So fürs
+Gartenprojekt) und der **Projektbeginn** (leer = heute). Die normale Ansicht bleibt wie sie ist; in den
+Aufgabendetails kommt ein zugeklappter Bereich *Projektplanung* dazu, oben mit Dauer, Zeitraum und ⚠ bei
+Konflikten:
+
+- **Start, Ende, Dauer** (Tage): grau und kursiv = berechnet, Eingetragenes ist eine Vorgabe; ↺ rechnet
+  wieder. Von den dreien zählen höchstens zwei – Start und Ende zusammen legen die Dauer fest.
+- **Meilenstein**: ein Zeitpunkt ohne Dauer, am Tag, an dem sein Vorgänger endet.
+- **Nicht vor**: frühester möglicher Beginn.
+- **Aufwand** geplant und geleistet (Stunden), mit Prozent und Rest.
+- **Vorgänger / Nachfolger**, in beiden Aufgaben pflegbar: *nach Ende*, *gleicher Start*, *gleiches Ende*,
+  *Ende nach Start*, jeweils mit Abstand in Tagen (negativ = Überlappung). Was einen Kreis ergäbe, wird
+  nicht angeboten.
+- Berechnet: **frühester/spätester Start und frühestes/spätestes Ende**, **Puffer**, **kritischer Pfad**.
+- **Warnungen**: geplantes Ende nach der Fälligkeit, Vorgabe passt nicht zu den Vorgängern.
+
 ### Arbeitsmodus
 
 🏢 (Büro-Symbol oben in der Seitenleiste neben dem Titel) oder `Strg+Shift+A` (pro Gerät gemerkt) blendet
@@ -175,7 +194,7 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
   oder mit `V` („Verschieben nach …“) in eine andere Liste verschieben, im Kanban mit `Alt` + Pfeiltasten in
   die Nachbarspalte; `Entf` löscht alle, `Esc` hebt die Markierung auf. Verschieben und Löschen lassen sich
   rückgängig machen. Der Status bleibt dabei in der alten Liste (in der neuen gilt deren Standard).
-- **⋮ → Bearbeiten …**: Name, Beschreibung, Kategorie, Status, Kanban-Einstellung, Icon.
+- **⋮ → Bearbeiten …**: Name, Beschreibung, Kategorie, Status, Kanban-Einstellung, Projektplanung, Icon.
 - **⋮ → Berechtigungen …**: für den Haushalt oder nur für dich, **mit anderen Haushalten oder Personen
   teilen**, Einladungslink sehen, kopieren, teilen, erneuern (oder erst erstellen). In der Seitenleiste: 🔗 per Link, 👥 mit anderen geteilt (🔒 privat steht in der Liste selbst).
 - **⋮ → Als Text teilen …**: die offenen Einträge als Text, auf dem Handy in den Teilen-Dialog, am Laptop in

@@ -10,6 +10,7 @@ import {
   type CustomCategoryType,
   packingInfo,
   planAdd,
+  DEFAULT_WORK_DAYS,
   pmChangesForCopy,
   changesToApply,
   isForEach,
@@ -312,9 +313,20 @@ export async function editList(
     /** Kanban: "Erledigt" as a column. */
     kanbanDone?: boolean;
     defaultStatus?: string | null;
+    /** Project planning: on/off, working days (0 = Sunday), start of the project. */
+    planning?: { on: boolean; workDays: number[]; projectStart: string | null };
   },
 ): Promise<void> {
   const settings = { ...list.settings };
+  if (edit.planning) {
+    if (edit.planning.on) settings.planning = true;
+    else delete settings.planning;
+    const days = [...new Set(edit.planning.workDays)].sort();
+    if (days.length && days.join() !== DEFAULT_WORK_DAYS.join()) settings.workDays = days;
+    else delete settings.workDays;
+    if (edit.planning.projectStart) settings.projectStart = edit.planning.projectStart;
+    else delete settings.projectStart;
+  }
   if (edit.description.trim()) settings.description = edit.description.trim();
   else delete settings.description;
   if (edit.group !== undefined) {

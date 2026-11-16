@@ -13,7 +13,9 @@ import {
   type ItemRow,
   type ListRow,
   type UserInfo,
+  listPlans,
 } from '@shopping/shared';
+import { PlanningSection } from '../Planning';
 import { Attachments } from '../Attachments';
 import { useFileDropOn } from '../../files';
 import { useEffect, useRef, useState } from 'react';
@@ -169,6 +171,8 @@ export function TaskDetail({ item, list, items, users, focusTitle, onClose }: Pr
           ))}
         </datalist>
       </label>
+
+      {listPlans(list) && <PlanningSection item={item} list={list} items={items} />}
 
       <label className="work-field">
         <span>Notiz</span>
