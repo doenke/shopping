@@ -76,3 +76,4 @@ Wie es gebaut ist und warum (Stand Oktober 2026):
 | 11 | [Icons – Designrichtlinie](konzept/11-icon-designrichtlinie.md) | Stil, Raster, Farben, Prompt |
 | 12 | [UX & Oberfläche](konzept/12-ux-und-oberflaeche.md) | Handy, Laptop, Listentypen, Menü |
 | 13 | [Entscheidungen & Verlauf](konzept/13-roadmap-und-entscheidungen.md) | Entscheidungen, umgesetzte Phasen, Offenes |
+| 14 | [Projektplanung](konzept/14-projektplanung.md) | Dauer, Abhängigkeiten, Arbeitskalender, Netzplan |

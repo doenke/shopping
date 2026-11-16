@@ -10,6 +10,7 @@ import {
   type CustomCategoryType,
   packingInfo,
   planAdd,
+  pmChangesForCopy,
   changesToApply,
   isForEach,
   linkLabel,
@@ -135,10 +136,12 @@ export async function moveItems(ids: string[], targetId: string): Promise<{ orig
     .reduce<string | null>((max, i) => (max === null || i.position > max ? i.position : max), null);
   const created: string[] = [];
   const changes: { id: string; patch: ItemPatch }[] = [];
+  const idMap = new Map(items.map((i) => [i.id, crypto.randomUUID()]));
   for (const item of [...items].sort((a, b) => comparePositions(a.position, b.position))) {
-    const id = crypto.randomUUID();
+    const id = idMap.get(item.id)!;
     last = generateKeyBetween(last, null);
-    const { status: _s, davName: _d, icalUid: _u, ...attributes } = item.attributes;
+    const { status: _s, davName: _d, icalUid: _u, pm: _p, ...attributes } = item.attributes;
+    const pm = pmChangesForCopy(item, idMap);
     changes.push({
       id,
       patch: {
@@ -152,6 +155,7 @@ export async function moveItems(ids: string[], targetId: string): Promise<{ orig
         position: last,
         optional: item.optional,
         attributes,
+        ...(pm ? { pm } : {}),
         ...(item.checked ? { checked: true } : {}),
       },
     });

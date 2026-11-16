@@ -27,6 +27,7 @@ import {
   URL_ATTACHMENT_ID,
 } from './attachments.js';
 import { listAsText } from './list-text.js';
+import { DAY_MINUTES, itemPm, listCalendar, listWorkDays, pmChangesForCopy, schedule, successorsOf, wouldCreateCycle } from './pm.js';
 import type { ItemRow } from './model.js';
 import { seedCatalog } from './seed-catalog.js';
 
@@ -775,5 +776,136 @@ describe('attachments', () => {
     expect(itemPlaces(merged)).toHaveLength(1);
     expect(placeUrl(place, false)).toContain('openstreetmap.org');
     expect(placeUrl(place, true)).toMatch(/^geo:53\.55/);
+  });
+});
+
+describe('project planning', () => {
+  const task = (id: string, pm: Record<string, unknown> = {}, extra: Record<string, unknown> = {}): ItemRow => ({
+    id,
+    listId: 'l',
+    catalogItemId: null,
+    name: id,
+    amounts: [],
+    properties: [],
+    note: null,
+    categoryId: null,
+    checked: false,
+    checkedAt: null,
+    checkedBy: null,
+    position: 'a0',
+    optional: false,
+    attributes: { ...extra, ...(Object.keys(pm).length ? { pm } : {}) },
+    createdBy: null,
+    createdAt: '',
+    deleted: false,
+    mergedInto: null,
+    hlc: {},
+    seq: 0,
+  });
+  const days = (n: number) => ({ v: n * DAY_MINUTES, src: 'set' });
+  const fs = { type: 'FS', lag: 0 };
+  // Monday, 16 November 2026; Monday to Friday.
+  const opts = { calendar: listCalendar({ settings: {} }), projectStart: '2026-11-16' };
+
+  it('keeps every field with its own clock; an attributes patch never drops planning data', () => {
+    const row = task('a');
+    applyItemPatch(row, { pm: { dur: days(2), 'dep:b': fs } }, '0002');
+    applyItemPatch(row, { pm: { dur: days(5) } }, '0001'); // older: ignored
+    applyItemPatch(row, { attributes: { due: '2026-12-01' } }, '0003');
+    expect(itemPm(row)).toEqual({ dur: days(2), deps: { b: fs } });
+    expect(row.attributes.due).toBe('2026-12-01');
+    applyItemPatch(row, { pm: { 'dep:b': null, effort: 600, start: { v: 'kaputt', src: 'set' } } }, '0004');
+    expect(itemPm(row)).toEqual({ dur: days(2), effort: 600, deps: {} });
+    // An item cannot depend on itself.
+    applyItemPatch(row, { pm: { 'dep:a': fs } }, '0005');
+    expect(itemPm(row).deps).toEqual({});
+  });
+
+  it('keeps local planning changes that are not sent yet', () => {
+    const server = task('a');
+    applyItemPatch(server, { pm: { dur: days(1), effort: 60 } }, '0002');
+    const local: ItemRow = JSON.parse(JSON.stringify(server));
+    applyItemPatch(local, { pm: { effort: 120 } }, '0003');
+    applyItemPatch(server, { pm: { dur: days(4) } }, '0004');
+    const merged = mergeItem(local, server, ITEM_FIELDS);
+    expect(itemPm(merged)).toMatchObject({ dur: days(4), effort: 120 });
+  });
+
+  it('schedules a chain, skips weekends and finds the critical path', () => {
+    const items = [task('a', { dur: days(2) }), task('b', { dur: days(4), deps: { a: fs } }), task('c', { dur: days(1) })];
+    const s = schedule(items, opts);
+    expect(s.get('a')).toMatchObject({ start: '2026-11-16', end: '2026-11-17', critical: true, startSrc: 'calc', durationSrc: 'set' });
+    // Wed to Fri, then Monday.
+    expect(s.get('b')).toMatchObject({ start: '2026-11-18', end: '2026-11-23', critical: true, float: 0 });
+    expect(s.get('c')).toMatchObject({ earlyStart: '2026-11-16', lateStart: '2026-11-23', lateEnd: '2026-11-23', critical: false, float: 5 * DAY_MINUTES });
+    expect(successorsOf('a', items).map((x) => x.id)).toEqual(['b']);
+  });
+
+  it('knows lags, other link types and milestones', () => {
+    const items = [
+      task('a', { dur: days(2) }),
+      task('m', { milestone: true, deps: { a: fs } }),
+      task('b', { dur: days(1), deps: { m: { type: 'FS', lag: 2 * DAY_MINUTES } } }),
+      task('c', { dur: days(3), deps: { a: { type: 'SS', lag: DAY_MINUTES } } }),
+      task('k', { milestone: true }),
+    ];
+    const s = schedule(items, opts);
+    expect(s.get('m')).toMatchObject({ start: '2026-11-17', end: '2026-11-17', duration: 0, milestone: true });
+    expect(s.get('b')).toMatchObject({ start: '2026-11-20', end: '2026-11-20' });
+    expect(s.get('c')).toMatchObject({ start: '2026-11-17', end: '2026-11-19' });
+    // A milestone without predecessors sits on the project start.
+    expect(s.get('k')).toMatchObject({ start: '2026-11-16' });
+  });
+
+  it('works with given dates and reports conflicts', () => {
+    const items = [
+      task('a', { dur: days(3) }),
+      task('b', { start: { v: '2026-11-17', src: 'set' }, deps: { a: fs } }),
+      task('c', { start: { v: '2026-11-23', src: 'set' }, end: { v: '2026-11-25', src: 'set' } }, { due: '2026-11-24' }),
+      task('d', { notBefore: '2026-11-21' }),
+      task('e', { start: { v: '2026-11-30', src: 'calc' } }),
+    ];
+    const s = schedule(items, opts);
+    expect(s.get('b')).toMatchObject({ start: '2026-11-17', startSrc: 'set', conflicts: ['start'] });
+    expect(s.get('c')).toMatchObject({ duration: 3 * DAY_MINUTES, durationSrc: 'calc', end: '2026-11-25', conflicts: ['due'] });
+    // Saturday: the next working day.
+    expect(s.get('d')).toMatchObject({ start: '2026-11-23' });
+    // Calculated values are no constraint.
+    expect(s.get('e')).toMatchObject({ start: '2026-11-16', startSrc: 'calc' });
+  });
+
+  it('uses the working days of the list', () => {
+    const garden = { calendar: listCalendar({ settings: { workDays: [6, 0] } }), projectStart: '2026-11-16' };
+    const s = schedule([task('a', { dur: days(3) })], garden);
+    expect(s.get('a')).toMatchObject({ start: '2026-11-21', end: '2026-11-28' });
+    expect(listWorkDays({ settings: { workDays: [] } })).toEqual([1, 2, 3, 4, 5]);
+    expect(listCalendar({ settings: { workDays: [1], workHours: { '1': { from: '08:00', to: '12:30' } } } }).minutes[1]).toBe(270);
+  });
+
+  it('prevents and survives circles', () => {
+    const items = [task('a', { deps: { c: fs } }), task('b', { deps: { a: fs } }), task('c'), task('x')];
+    expect(wouldCreateCycle('b', 'c', items)).toBe(true); // c → a → b → c
+    expect(wouldCreateCycle('c', 'x', items)).toBe(false);
+    expect(wouldCreateCycle('c', 'b', items)).toBe(false);
+    expect(wouldCreateCycle('b', 'a', items)).toBe(true);
+    expect(wouldCreateCycle('a', 'a', items)).toBe(true);
+    const circle = [task('a', { deps: { b: fs } }), task('b', { deps: { a: fs } }), task('c', { deps: { b: fs } })];
+    const s = schedule(circle, opts);
+    expect(s.get('a')!.conflicts).toContain('cycle');
+    expect(s.size).toBe(3);
+  });
+
+  it('carries links along when entries move to another list', () => {
+    const b = task('b', { dur: days(2), deps: { a: fs, z: fs } });
+    expect(
+      pmChangesForCopy(
+        b,
+        new Map([
+          ['a', 'a2'],
+          ['b', 'b2'],
+        ]),
+      ),
+    ).toEqual({ dur: days(2), 'dep:a2': fs });
+    expect(pmChangesForCopy(task('c'), new Map())).toBeUndefined();
   });
 });

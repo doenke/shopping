@@ -43,7 +43,9 @@ genutzt), `apps/server` (Fastify 5, Drizzle, PostgreSQL), `apps/web` (React-PWA,
   `applyItemPatch`/`mergeItem` (`people.ts`). Eigene Uhren unter einem Feld: `done:<name>` (Abhaken pro
   Person), `att:<id>` (Anhänge). Ein `attributes`-Patch ändert diese nie.
 - **Eintrags-Daten** stecken großteils in `attributes`: `due`, `person`/`persons`/`done`, `container`
-  (Packstück/Bereich/Wo), `status`, `url` (erster Link), `attachments` (weitere Links, Orte). Helfer je
+  (Packstück/Bereich/Wo), `status`, `url` (erster Link), `attachments` (weitere Links, Orte), `pm`
+  (Projektplanung: Dauer, Vorgänger, Aufwand; eigene Uhren `pm:<feld>`, Rechnung `schedule()` in `pm.ts`,
+  siehe `docs/konzept/14-projektplanung.md`). Helfer je
   Thema in `packages/shared/src/*.ts` (`due`, `packing`, `people`, `status`, `links`, `attachments`).
 - **Listen verschieben**: Der Server ignoriert `listId`-Änderungen – Verschieben = Kopie anlegen + Original
   löschen (`moveItems` in `apps/web/src/actions.ts`).

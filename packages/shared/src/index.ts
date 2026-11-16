@@ -5,6 +5,7 @@ export * from './hlc.js';
 export * from './lww.js';
 export * from './model.js';
 export * from './due.js';
+export * from './pm.js';
 export * from './packing.js';
 export * from './people.js';
 export * from './links.js';
