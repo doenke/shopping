@@ -1,8 +1,9 @@
-import { listStatuses, type CatalogIndex, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
+import { listPlans, listStatuses, type CatalogIndex, type ItemRow, type ListRow, type UserInfo } from '@shopping/shared';
 import { useEffect, useRef, useState } from 'react';
 import { TaskDetail } from './TaskDetail';
 import { TaskTable } from './TaskTable';
 import { KanbanBoard } from './KanbanBoard';
+import { GanttChart } from './GanttChart';
 import { useDetailWidth } from './DetailResizer';
 
 interface Props {
@@ -14,11 +15,13 @@ interface Props {
   compact?: boolean;
 }
 
-type View = 'table' | 'kanban';
+type View = 'table' | 'kanban' | 'gantt';
+const VIEW_LABEL: Record<View, string> = { table: 'Tabelle', kanban: 'Kanban', gantt: 'Gantt' };
 
 function loadView(listId: string): View {
   try {
-    return localStorage.getItem(`task-view:${listId}`) === 'kanban' ? 'kanban' : 'table';
+    const v = localStorage.getItem(`task-view:${listId}`);
+    return v === 'kanban' || v === 'gantt' ? v : 'table';
   } catch {
     return 'table';
   }
@@ -29,10 +32,12 @@ function loadView(listId: string): View {
  * Shown for every ToDo list (work or not) – the Arbeitsmodus only decides which lists are in the sidebar.
  */
 export function TaskBoard({ list, items, index, users, compact = false }: Props) {
-  // Kanban needs columns: without statuses of its own a list is just the table (no switch).
-  const hasStatuses = listStatuses(list).length > 0 && !compact;
+  // Kanban needs columns (statuses of its own), Gantt project planning; else the list is just the table.
+  const views: View[] = compact
+    ? ['table']
+    : (['table', 'kanban', 'gantt'] as const).filter((v) => v === 'table' || (v === 'kanban' ? listStatuses(list).length > 0 : listPlans(list)));
   const [stored, setView] = useState<View>(() => loadView(list.id));
-  const view: View = hasStatuses ? stored : 'table';
+  const view: View = views.includes(stored) ? stored : 'table';
   useEffect(() => setView(loadView(list.id)), [list.id]);
   const choose = (v: View) => {
     setView(v);
@@ -42,15 +47,16 @@ export function TaskBoard({ list, items, index, users, compact = false }: Props)
       // Only a convenience.
     }
   };
-  const viewSwitch = !hasStatuses ? undefined : (
-    <div className="segmented" role="group" aria-label="Ansicht">
-      {(['table', 'kanban'] as const).map((v) => (
-        <button key={v} type="button" className={v === view ? 'active' : ''} aria-pressed={v === view} onClick={() => choose(v)}>
-          {v === 'table' ? 'Tabelle' : 'Kanban'}
-        </button>
-      ))}
-    </div>
-  );
+  const viewSwitch =
+    views.length < 2 ? undefined : (
+      <div className="segmented" role="group" aria-label="Ansicht">
+        {views.map((v) => (
+          <button key={v} type="button" className={v === view ? 'active' : ''} aria-pressed={v === view} onClick={() => choose(v)}>
+            {VIEW_LABEL[v]}
+          </button>
+        ))}
+      </div>
+    );
   const [selected, setSelected] = useState<string | null>(null);
   /** Enter/double click: edit this task's title (a plain selection leaves the focus in the table). */
   const [opened, setOpened] = useState<{ id: string; n: number } | null>(null);
@@ -64,9 +70,9 @@ export function TaskBoard({ list, items, index, users, compact = false }: Props)
     setSelected(null);
     setDetailsOpen(false);
   }, [list.id]);
-  // Kanban: Esc closes the details (not while typing or in a dialog).
+  // Kanban and Gantt: Esc closes the details (not while typing or in a dialog).
   useEffect(() => {
-    if (view !== 'kanban') return;
+    if (view === 'table') return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || document.querySelector('dialog[open]') || (e.target as HTMLElement).closest('input, textarea, select')) return;
       setDetailsOpen(false);
@@ -96,11 +102,13 @@ export function TaskBoard({ list, items, index, users, compact = false }: Props)
   }
 
   return (
-    // Kanban needs the width: the details only show once opened (double click / Enter).
+    // Kanban and Gantt need the width: the details only show once opened (double click / Enter).
     <div className={`task-board${!showDetails ? ' task-board--full' : ''}`} style={detailWidth.style}>
       <div className="task-board__main">
         {view === 'kanban' ? (
           <KanbanBoard list={list} items={items} index={index} selected={selected} onSelect={select} onOpen={open} viewSwitch={viewSwitch} />
+        ) : view === 'gantt' ? (
+          <GanttChart list={list} items={items} index={index} selected={selected} onSelect={select} onOpen={open} viewSwitch={viewSwitch} />
         ) : (
           <TaskTable list={list} items={items} index={index} selected={selected} onSelect={select} onOpen={open} viewSwitch={viewSwitch} />
         )}
@@ -116,7 +124,7 @@ export function TaskBoard({ list, items, index, users, compact = false }: Props)
               items={items}
               users={users}
               focusTitle={opened?.id === item.id ? opened.n : 0}
-              onClose={view === 'kanban' ? () => setDetailsOpen(false) : undefined}
+              onClose={view !== 'table' ? () => setDetailsOpen(false) : undefined}
             />
           ) : (
             <p className="work-empty">Eine Aufgabe auswählen – mit der Maus oder ↑ ↓.</p>

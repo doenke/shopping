@@ -144,6 +144,12 @@ Konflikten:
 - Berechnet: **frühester/spätester Start und frühestes/spätestes Ende**, **Puffer**, **kritischer Pfad**.
 - **Warnungen**: geplantes Ende nach der Fälligkeit, Vorgabe passt nicht zu den Vorgängern.
 
+**Gantt** (am Rechner, Umschalter *Tabelle | Kanban | Gantt*): eine Zeile pro Aufgabe, Balken vom geplanten
+Start bis zum Ende, Meilensteine als Raute, Pfeile für die Verknüpfungen, freie Tage grau, heute als Linie,
+der Fälligkeitstag rot gestrichelt. Rot = kritischer Pfad, grau = erledigt, roter Rand = Konflikt. Balken
+ziehen setzt den Start (als Vorgabe), am rechten Rand ziehen die Dauer; Klick wählt, Doppelklick oder Enter
+öffnet die Details, ↑ ↓ wechselt die Zeile. Zeitachse in *Tagen* oder *Wochen* (pro Liste gemerkt).
+
 ### Arbeitsmodus
 
 🏢 (Büro-Symbol oben in der Seitenleiste neben dem Titel) oder `Strg+Shift+A` (pro Gerät gemerkt) blendet

@@ -334,6 +334,27 @@ class Axis {
   }
 }
 
+/** Whether a date is a working day of the calendar. */
+export function isWorkDay(date: string, cal: WorkCalendar): boolean {
+  return (cal.minutes[weekday(dayNumber(date))] ?? 0) > 0;
+}
+
+/** A date plus some calendar days. */
+export function addCalendarDays(date: string, days: number): string {
+  return dateOfDay(dayNumber(date) + days);
+}
+
+/** Calendar days from one date to another (negative when `to` lies before `from`). */
+export function calendarDaysBetween(from: string, to: string): number {
+  return dayNumber(to) - dayNumber(from);
+}
+
+/** Working time from the start of one day to the end of another (0 if the end lies before the start). */
+export function workBetween(start: string, end: string, cal: WorkCalendar): number {
+  const axis = new Axis(cal);
+  return Math.max(0, axis.dayEnd(dayNumber(end)) - axis.dayStart(dayNumber(start)));
+}
+
 /** Duration (minutes of working time) shown in working days. */
 export function minutesToDays(min: number): number {
   return Math.round((min / DAY_MINUTES) * 100) / 100;

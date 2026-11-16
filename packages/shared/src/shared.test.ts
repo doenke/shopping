@@ -27,7 +27,20 @@ import {
   URL_ATTACHMENT_ID,
 } from './attachments.js';
 import { listAsText } from './list-text.js';
-import { DAY_MINUTES, itemPm, listCalendar, listWorkDays, pmChangesForCopy, schedule, successorsOf, wouldCreateCycle } from './pm.js';
+import {
+  addCalendarDays,
+  calendarDaysBetween,
+  DAY_MINUTES,
+  isWorkDay,
+  itemPm,
+  listCalendar,
+  workBetween,
+  listWorkDays,
+  pmChangesForCopy,
+  schedule,
+  successorsOf,
+  wouldCreateCycle,
+} from './pm.js';
 import type { ItemRow } from './model.js';
 import { seedCatalog } from './seed-catalog.js';
 
@@ -907,5 +920,18 @@ describe('project planning', () => {
       ),
     ).toEqual({ dur: days(2), 'dep:a2': fs });
     expect(pmChangesForCopy(task('c'), new Map())).toBeUndefined();
+  });
+});
+
+describe('working calendar helpers', () => {
+  const cal = listCalendar({ settings: {} });
+  it('counts working time and calendar days', () => {
+    expect(isWorkDay('2026-11-21', cal)).toBe(false);
+    expect(isWorkDay('2026-11-20', cal)).toBe(true);
+    expect(addCalendarDays('2026-11-30', 2)).toBe('2026-12-02');
+    expect(calendarDaysBetween('2026-11-30', '2026-11-28')).toBe(-2);
+    // Thursday to Tuesday: Thu, Fri, Mon, Tue.
+    expect(workBetween('2026-11-19', '2026-11-24', cal)).toBe(4 * DAY_MINUTES);
+    expect(workBetween('2026-11-24', '2026-11-19', cal)).toBe(0);
   });
 });

@@ -53,7 +53,7 @@ genutzt), `apps/server` (Fastify 5, Drizzle, PostgreSQL), `apps/web` (React-PWA,
   `*` Ort (allein: Standort), Link im Text. Semikolon (und neue Zeile) trennt Einträge, Komma nicht.
 - **Hinzufügen** überall über `planAdd` (`plan-add.ts`): legt zusammen statt zu verdoppeln.
 - **Web**: `App.tsx` (Routing, Seitenleiste), `components/ListView|PackingView|MemoView` (Kacheln),
-  `components/work/*` (ToDo: Tabelle, Kanban, Details), `components/ItemEditor.tsx` (Details-Dialog),
+  `components/work/*` (ToDo: Tabelle, Kanban, Gantt, Details; Projektplanung `components/Planning.tsx`), `components/ItemEditor.tsx` (Details-Dialog),
   `components/Attachments.tsx`, Tastatur `keyboard.ts`, Auswahl `selection.ts`, Ziehen `itemDrag.ts`.
   CSS in `apps/web/src/styles/NN-*.css` (Reihenfolge in `styles.css`), Farben in `13-design.css`.
 - **Server-Module**: `api/` (REST v1 + OpenAPI, `service.ts` ist die Logik für REST und MCP), `mcp/`,

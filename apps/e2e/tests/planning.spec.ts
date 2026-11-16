@@ -65,3 +65,59 @@ test('project planning is a second level: switched on per list, folded away in t
   // Circles are not offered: Fundament comes before, so it cannot come after.
   await expect(detail.getByRole('combobox', { name: 'Nachfolger hinzufügen' }).locator('option', { hasText: 'Fundament' })).toHaveCount(0);
 });
+
+test('Gantt: bars, arrows, moving and stretching a bar', async ({ page }, info) => {
+  test.skip(phone(page), 'the Gantt chart is for the desktop');
+  await login(page, `Gerd ${info.project.name}`);
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Umzug', type: 'todo' } })).json();
+  await page.request.post(`/api/v1/lists/${list.id}/items`, { data: { items: ['Kartons packen', 'Transporter fahren', 'Einzug'] } });
+  await page.goto(`/#/list/${list.id}`);
+  // No project planning: no Gantt.
+  await expect(page.getByRole('button', { name: 'Gantt' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Listenmenü' }).click();
+  await page.getByRole('menuitem', { name: /Bearbeiten/ }).click();
+  const dialog = page.locator('dialog[open]');
+  await dialog.getByRole('checkbox', { name: /Projektplanung/ }).check();
+  await dialog.getByLabel('Projektbeginn (leer = heute)').fill('2030-01-07');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+
+  const detail = await openTask(page, 'Transporter fahren');
+  await detail.locator('.pm summary').click();
+  await detail.getByRole('spinbutton', { name: 'Dauer in Tagen' }).fill('2');
+  await detail.getByRole('spinbutton', { name: 'Dauer in Tagen' }).press('Enter');
+  await detail.getByRole('combobox', { name: 'Vorgänger hinzufügen' }).selectOption({ label: 'Kartons packen' });
+  await (await openTask(page, 'Einzug')).locator('.pm summary').click();
+  await page.locator('.work-detail').getByRole('checkbox', { name: 'Meilenstein' }).click();
+  await page.locator('.work-detail').getByRole('combobox', { name: 'Vorgänger hinzufügen' }).selectOption({ label: 'Transporter fahren' });
+
+  await page.getByRole('button', { name: 'Gantt' }).click();
+  const gantt = page.locator('.gantt');
+  await expect(gantt.getByRole('img', { name: /^Kartons packen: Mo\., 7\.1\.2030 bis Mo\., 7\.1\.2030$/ })).toBeVisible();
+  await expect(gantt.getByRole('img', { name: /^Transporter fahren: Di\., 8\.1\.2030 bis Mi\., 9\.1\.2030$/ })).toBeVisible();
+  await expect(gantt.getByRole('img', { name: /^Einzug: Meilenstein Mi\., 9\.1\.2030$/ })).toBeVisible();
+  await expect(gantt.locator('.gantt__arrow')).toHaveCount(2);
+
+  // Two days to the right: a given start; the milestone follows.
+  const bar = gantt.getByRole('img', { name: /^Transporter fahren/ });
+  const box = (await bar.boundingBox())!;
+  await page.mouse.move(box.x + 10, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 10 + 2 * 28, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect(gantt.getByRole('img', { name: /^Transporter fahren: Do\., 10\.1\.2030 bis Fr\., 11\.1\.2030$/ })).toBeVisible();
+  await expect(gantt.getByRole('img', { name: /^Einzug: Meilenstein Fr\., 11\.1\.2030$/ })).toBeVisible();
+
+  // Its right edge one working day further (over the weekend): three days, until Monday.
+  const moved = (await gantt.getByRole('img', { name: /^Transporter fahren/ }).boundingBox())!;
+  await page.mouse.move(moved.x + moved.width - 3, moved.y + moved.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(moved.x + moved.width - 3 + 3 * 28, moved.y + moved.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect(gantt.getByRole('img', { name: /^Transporter fahren: Do\., 10\.1\.2030 bis Mo\., 14\.1\.2030$/ })).toBeVisible();
+
+  // A double click opens the details; Esc closes them.
+  await gantt.getByRole('button', { name: 'Transporter fahren' }).dblclick();
+  await expect(page.locator('.work-detail')).toBeVisible();
+  await expect(page.locator('.work-detail .pm summary')).toContainText('3 Tage');
+});

@@ -51,7 +51,8 @@ Projekts (sonst heute).
 1. Datenmodell und Rechenkern – erledigt.
 2. Bereich „Projektplanung“ in den Aufgabendetails (zugeklappt, `components/Planning.tsx`), Schalter,
    Arbeitstage und Projektbeginn in den Listeneinstellungen – erledigt.
-3. Gantt-Ansicht.
+3. Gantt-Ansicht (`components/work/GanttChart.tsx`, Stil `14-gantt.css`) – erledigt. Ziehen schreibt
+   Vorgaben: verschieben = `start` (ein vorgegebenes `end` wandert mit), rechter Rand = `dur`.
 4. Planungsautomatik (Termine, später Ressourcenabgleich).
 
 Später möglich: Ist-Start/-Ende, Fortschritt/Restaufwand, Sammelaufgaben, Ressourcen-Kapazitäten,
