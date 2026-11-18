@@ -147,6 +147,27 @@ describe('sync', () => {
     ws.close();
   });
 
+  it('rejects a broken mutation over the WebSocket without closing it', async () => {
+    // The server may already listen (earlier test).
+    const port = (t.app.server.address() as { port?: number } | null)?.port;
+    const address = port ? `http://127.0.0.1:${port}` : await t.app.listen({ port: 0, host: '127.0.0.1' });
+    const ws = new WebSocket(`${address.replace('http', 'ws')}/ws`, { headers: { cookie: anna.cookie } });
+    const messages: ServerMessage[] = [];
+    let closed = false;
+    ws.on('message', (d) => messages.push(JSON.parse(String(d))));
+    ws.on('close', () => (closed = true));
+    await new Promise((resolve) => ws.once('open', resolve));
+    const ok = annaClient.item(randomUUID(), { listId, name: 'Quark', position: 'a4' });
+    const broken = { mid: randomUUID(), entity: 'item', id: 'kaputt' };
+    ws.send(JSON.stringify({ t: 'push', mutations: [broken, ok] }));
+    await waitFor(() => messages.some((m) => m.t === 'ack'));
+    const ack = messages.find((m) => m.t === 'ack') as Extract<ServerMessage, { t: 'ack' }>;
+    expect(ack.mids).toEqual([ok.mid]);
+    expect(ack.rejected.map((r) => r.mid)).toEqual([broken.mid]);
+    expect(closed).toBe(false);
+    ws.close();
+  });
+
   it('tells members when a list is deleted', async () => {
     const { seq } = await pull(ben);
     await push(anna, [annaClient.list(listId, { deleted: true })]);

@@ -38,7 +38,23 @@ export interface RemoteCheck {
 const HEARTBEAT_MS = 10_000;
 const PONG_TIMEOUT_MS = 5_000;
 const ACK_TIMEOUT_MS = 8_000;
+/** A connection attempt that neither opens nor fails (weak signal) is given up after this. */
+const CONNECT_TIMEOUT_MS = 10_000;
 const MAX_BATCH = 200;
+/** Well below the server's message limit (1 MB). */
+const MAX_BATCH_BYTES = 256 * 1024;
+
+/** The first changes of the outbox, at most `size` of them and not too many bytes (at least one). */
+function takeBatch<T extends { mutation: unknown }>(entries: T[], size: number): T[] {
+  const batch: T[] = [];
+  let bytes = 0;
+  for (const e of entries.slice(0, size)) {
+    bytes += JSON.stringify(e.mutation).length;
+    if (batch.length && bytes > MAX_BATCH_BYTES) break;
+    batch.push(e);
+  }
+  return batch;
+}
 
 function uuid(): string {
   return crypto.randomUUID();
@@ -55,6 +71,14 @@ export class SyncEngine {
   private heartbeatTimer: ReturnType<typeof setInterval> | undefined;
   private pongTimer: ReturnType<typeof setTimeout> | undefined;
   private ackTimer: ReturnType<typeof setTimeout> | undefined;
+  private connectTimer: ReturnType<typeof setTimeout> | undefined;
+  /**
+   * How many changes go in one push. Halved whenever a push gets no answer (too much at once after a long
+   * time offline, or one change the server trips over), grows again with every answered push.
+   */
+  private batchSize = 50;
+  /** Pushes in a row that got no answer (reset by the next answer). */
+  private pushFailures = 0;
   private started = false;
   private me: Me | null = null;
 
@@ -248,8 +272,14 @@ export class SyncEngine {
     const ws = new WebSocket(url);
     this.ws = ws;
     let opened = false;
+    // Without this a hanging attempt blocks every new one until the phone gives up on it (minutes).
+    clearTimeout(this.connectTimer);
+    this.connectTimer = setTimeout(() => {
+      if (this.ws === ws && ws.readyState === WebSocket.CONNECTING) ws.close();
+    }, CONNECT_TIMEOUT_MS);
 
     ws.onopen = () => {
+      clearTimeout(this.connectTimer);
       opened = true;
       this.failures = 0;
       this.expectFull = this.cursor === 0;
@@ -262,8 +292,11 @@ export class SyncEngine {
       void this.handle(JSON.parse(String(ev.data)) as ServerMessage);
     };
     ws.onclose = () => {
+      clearTimeout(this.connectTimer);
       if (this.ws !== ws) return;
       this.ws = null;
+      // Closed while a push was waiting for its answer: next time fewer at once.
+      if (this.inflight.size) this.shrinkBatch();
       this.inflight.clear();
       this.stopHeartbeat();
       if (!opened) this.failures++;
@@ -274,12 +307,15 @@ export class SyncEngine {
   private async afterDisconnect(wasOpen: boolean): Promise<void> {
     if (!wasOpen) {
       // A failed upgrade may mean the session is gone, or WebSockets are blocked.
-      const res = await fetch('/api/v1/me', { cache: 'no-store' }).catch(() => null);
+      const res = await fetch('/api/v1/me', { cache: 'no-store', signal: AbortSignal.timeout(ACK_TIMEOUT_MS) }).catch(() => null);
       if (res?.status === 401) {
         this.setState('unauthorized');
         return;
       }
       if (res?.ok && this.failures >= 2) await this.httpSync();
+    } else if (this.pushFailures >= 2) {
+      // The connection opens but keeps breaking off: deliver over HTTP meanwhile.
+      await this.httpSync();
     }
     this.setState(navigator.onLine ? 'connecting' : 'offline');
     this.scheduleReconnect();
@@ -287,7 +323,7 @@ export class SyncEngine {
 
   private scheduleReconnect(): void {
     clearTimeout(this.reconnectTimer);
-    const base = Math.min(30_000, 1000 * 2 ** Math.min(this.failures, 5));
+    const base = Math.min(30_000, 1000 * 2 ** Math.min(Math.max(this.failures, this.pushFailures), 5));
     this.reconnectTimer = setTimeout(() => this.connect(), base / 2 + Math.random() * (base / 2));
   }
 
@@ -334,6 +370,7 @@ export class SyncEngine {
     const ws = this.ws;
     if (!ws) return;
     this.ws = null;
+    if (this.inflight.size) this.shrinkBatch();
     this.inflight.clear();
     this.stopHeartbeat();
     ws.onclose = null;
@@ -354,12 +391,18 @@ export class SyncEngine {
         .limit(MAX_BATCH * 2)
         .toArray()
     ).filter((e) => !this.inflight.has(e.mid));
-    const batch = entries.slice(0, MAX_BATCH);
+    const batch = takeBatch(entries, this.batchSize);
     if (batch.length === 0) return;
     for (const e of batch) this.inflight.add(e.mid);
     this.send({ t: 'push', mutations: batch.map((e) => e.mutation) });
     clearTimeout(this.ackTimer);
-    this.ackTimer = setTimeout(() => this.dropConnection(), ACK_TIMEOUT_MS);
+    // A big batch after a long time offline takes the server a while.
+    this.ackTimer = setTimeout(() => this.dropConnection(), ACK_TIMEOUT_MS + 50 * batch.length);
+  }
+
+  private shrinkBatch(): void {
+    this.batchSize = Math.max(1, Math.floor(this.batchSize / 2));
+    this.pushFailures++;
   }
 
   // ---- incoming -----------------------------------------------------------
@@ -373,6 +416,8 @@ export class SyncEngine {
         break;
       case 'ack': {
         clearTimeout(this.ackTimer);
+        this.batchSize = Math.min(MAX_BATCH, this.batchSize * 2);
+        this.pushFailures = 0;
         const done = [...msg.mids, ...msg.rejected.map((r) => r.mid)];
         for (const mid of done) this.inflight.delete(mid);
         await db.outbox.where('mid').anyOf(done).delete();
@@ -455,13 +500,13 @@ export class SyncEngine {
   /** Used when WebSockets do not get through (some proxies, captive portals). */
   private async httpSync(): Promise<void> {
     try {
-      const entries = await db.outbox.orderBy('n').limit(MAX_BATCH).toArray();
+      const entries = takeBatch(await db.outbox.orderBy('n').limit(MAX_BATCH).toArray(), this.batchSize);
       if (entries.length) {
         const res = await fetch('/api/v1/sync/push', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ mutations: entries.map((e) => e.mutation) }),
-          signal: AbortSignal.timeout(ACK_TIMEOUT_MS),
+          signal: AbortSignal.timeout(ACK_TIMEOUT_MS + 50 * entries.length),
         });
         if (res.ok) {
           const r = (await res.json()) as { acked: string[]; rejected: { mid: string }[] };

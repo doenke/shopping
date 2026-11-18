@@ -106,7 +106,9 @@ export const MutationSchema = z.discriminatedUnion('entity', [
 
 export const ClientMessageSchema = z.discriminatedUnion('t', [
   z.object({ t: z.literal('hello'), since: z.number().int().min(0) }),
-  z.object({ t: z.literal('push'), mutations: z.array(MutationSchema).max(500) }),
+  // Checked one by one when applied: one broken mutation is rejected on its own instead of failing the whole
+  // message (which closed the connection, and the app sent the same batch again and again).
+  z.object({ t: z.literal('push'), mutations: z.array(z.unknown()).max(500) }),
   z.object({ t: z.literal('ping') }),
 ]);
 
