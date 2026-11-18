@@ -114,6 +114,29 @@ test('Kanban: the order within a column is set by hand', async ({ page }, info) 
   await expect(page.getByRole('textbox', { name: 'Titel' })).toHaveValue('Erstens');
 });
 
+test('the task table: rows are put in another order by dragging', async ({ page }, info) => {
+  await login(page, `Rike ${info.project.name}`);
+  const list = await (await page.request.post('/api/v1/lists', { data: { name: 'Sortieren', type: 'todo' } })).json();
+  await page.request.post(`/api/v1/lists/${list.id}/items`, { data: { items: ['Erstens', 'Zweitens', 'Drittens', 'Später !12.12.2099'] } });
+  await page.goto(`/#/list/${list.id}`);
+  const titles = page.locator('.work-row .work-row__title');
+  await expect(titles).toHaveText(['Später', 'Erstens', 'Zweitens', 'Drittens']);
+  // Phones drag at the grip, the desktop anywhere on the row.
+  const handle = (name: string) => {
+    const row = page.locator('.work-row', { hasText: name });
+    return phone(page) ? row.locator('[data-drag-grip]') : row;
+  };
+  // "Drittens" onto the upper half of "Erstens": it goes first.
+  await handle('Drittens').dragTo(page.locator('.work-row', { hasText: 'Erstens' }), { targetPosition: { x: 60, y: 3 } });
+  await expect(titles).toHaveText(['Später', 'Drittens', 'Erstens', 'Zweitens']);
+  // Kept after a reload (it is synced).
+  await page.reload();
+  await expect(titles).toHaveText(['Später', 'Drittens', 'Erstens', 'Zweitens']);
+  // The due date decides first: a task without one does not go among the dated ones.
+  await handle('Zweitens').dragTo(page.locator('.work-row', { hasText: 'Später' }), { targetPosition: { x: 60, y: 3 } });
+  await expect(titles).toHaveText(['Später', 'Drittens', 'Erstens', 'Zweitens']);
+});
+
 test('Kanban by keyboard: Alt + arrows move a card', async ({ page }, info) => {
   test.skip(phone(page), 'the board is for the desktop');
   await login(page, `Mo ${info.project.name}`);

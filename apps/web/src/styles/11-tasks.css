@@ -590,3 +590,38 @@ kbd {
   display: block;
   padding: 14px 6px 4px;
 }
+
+/* ---- Changing the order by dragging (itemDrag.ts): where the row will go ---- */
+.work-row.is-dragged {
+  opacity: 0.45;
+}
+.work-row.drop-before td {
+  box-shadow: inset 0 2px 0 var(--primary);
+}
+.work-row.drop-after td {
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+.work-table--compact tr.work-row.drop-before {
+  box-shadow: inset 0 2px 0 var(--primary);
+}
+.work-table--compact tr.work-row.drop-after {
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+.work-table--compact tr.work-row:has(.work-row__grip[data-drag-grip]) {
+  padding-right: 40px;
+}
+.work-table--compact .work-row__grip[data-drag-grip] {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 1.1rem;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}

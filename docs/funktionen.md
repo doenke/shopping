@@ -106,6 +106,10 @@ Zeilen kompakt (Angaben in einer zweiten Zeile) und ein Tipp öffnet die Aufgabe
 rechts wird gruppiert: *Fällig* (Überfällig, Heute, Nächste 7 Tage, Später, Ohne Datum), *Status*,
 *Bereich*, *Wer* (eine Aufgabe für mehrere steht bei jeder Person, die noch dran ist; abhaken gilt nur für
 diese Person) oder *Alle* – pro Liste und Gerät gemerkt.
+Die **Reihenfolge** ändert sich durch **Ziehen** einer Zeile auf eine andere derselben Gruppe (am Rechner
+mit der Maus an der ganzen Zeile, auf dem Handy am Griff ⠿ rechts); eine Linie zeigt, wo sie landet. Die
+Fälligkeit geht vor: umsortiert wird unter Aufgaben mit demselben Datum (bzw. ohne Datum). Die Reihenfolge
+gilt für alle und in jeder Gruppierung.
 Die **Breite der Details** rechts lässt sich am linken Rand mit der Maus ziehen (pro Gerät gemerkt,
 Doppelklick stellt den Standard wieder her).
 

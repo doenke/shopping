@@ -1,4 +1,4 @@
-import { comparePositions } from '@shopping/shared';
+import { comparePositions, generateKeyBetween } from '@shopping/shared';
 import { mobile } from '../../places';
 import {
   dueOf,
@@ -21,8 +21,9 @@ import {
   type ItemRow,
   type ListRow,
 } from '@shopping/shared';
-import { useMemo, useState } from 'react';
-import { addItems, setChecked, setPersonChecked } from '../../actions';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { addItems, setChecked, setPersonChecked, updateItem } from '../../actions';
+import type { ReorderDetail } from '../../itemDrag';
 import { entryKeys } from '../../keyboard';
 import { useLinkDrop } from '../../linkDrop';
 import { PeopleDots, PersonCheckDialog } from '../People';
@@ -79,7 +80,33 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
       ))}
     </div>
   );
-  const colSpan = 2 + Object.values(cols).filter(Boolean).length;
+  const colSpan = 2 + Object.values(cols).filter(Boolean).length + (compact ? 1 : 0);
+
+  // Dragging a row onto another one of its group (same due date): it takes that place. The order within
+  // a due date is the list's own (position), so it shows the same in every grouping and on every device.
+  const section = useRef<HTMLElement>(null);
+  const groupsRef = useRef(groups);
+  groupsRef.current = groups;
+  useEffect(() => {
+    const el = section.current;
+    if (!el) return;
+    const onReorder = (e: Event) => {
+      const { id, target, after } = (e as CustomEvent<ReorderDetail>).detail;
+      const g = groupsRef.current.find((x) => x.items.some((t) => t.item.id === target));
+      const moved = g?.items.find((t) => t.item.id === id)?.item;
+      if (!g || !moved) return;
+      const same = g.items.map((t) => t.item).filter((i) => i.id !== id && dueOf(i) === dueOf(moved));
+      const at = same.findIndex((i) => i.id === target) + (after ? 1 : 0);
+      try {
+        const position = generateKeyBetween(same[at - 1]?.position ?? null, same[at]?.position ?? null);
+        void updateItem(id, { position });
+      } catch {
+        // Two entries with the same place (old data): leave the order as it is.
+      }
+    };
+    el.addEventListener('item-reorder', onReorder);
+    return () => el.removeEventListener('item-reorder', onReorder);
+  }, []);
 
   const toggle = ({ item, person }: TaskEntry) => {
     if (person) return void setPersonChecked(item, { [person]: !itemDone(item).includes(person) });
@@ -87,7 +114,8 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
     void setChecked(item, !item.checked);
   };
 
-  const row = (entry: TaskEntry) => {
+  /** `reorder`: the group's key – rows with the same key and due date can be put in another order. */
+  const row = (entry: TaskEntry, reorder?: string) => {
     const { item, person } = entry;
     const due = dueOf(item);
     const fmt = due ? formatDue(due) : null;
@@ -99,6 +127,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
       <tr
         key={`${item.id}:${person ?? ''}`}
         data-item-id={item.id}
+        data-reorder={reorder === undefined ? undefined : `${reorder}|${dueOf(item) ?? ''}`}
         tabIndex={0}
         className={`work-row${item.id === selected ? ' work-row--selected' : ''}${picked.has(item.id) ? ' is-picked' : ''}${item.checked ? ' work-row--done' : ''}`}
         aria-selected={item.id === selected}
@@ -165,6 +194,11 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
             )}
           </td>
         )}
+        {compact && (
+          <td className="work-row__grip" data-drag-grip={reorder === undefined ? undefined : ''} aria-hidden>
+            {reorder !== undefined && '⠿'}
+          </td>
+        )}
       </tr>
     );
   };
@@ -172,7 +206,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
   const checkItem = items.find((i) => i.id === checking);
 
   return (
-    <section className={`work-tasks${compact ? ' work-tasks--compact' : ''}`} aria-label={list.name} {...linkDrop}>
+    <section ref={section} className={`work-tasks${compact ? ' work-tasks--compact' : ''}`} aria-label={list.name} {...linkDrop}>
       <TaskHeader
         list={list}
         open={open.length}
@@ -212,7 +246,7 @@ export function TaskTable({ list, items, index, selected, onSelect, onOpen, view
                   </td>
                 </tr>
               )}
-              {g.items.map(row)}
+              {g.items.map((e) => row(e, g.key))}
             </tbody>
           ))}
           {done.length > 0 && (
