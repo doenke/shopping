@@ -184,6 +184,9 @@ Rechtsklick aufs Taskleisten-Icon „Arbeitsmodus“ und „Einkaufslisten“ al
   teilen**, Einladungslink sehen, kopieren, teilen, erneuern (oder erst erstellen). In der Seitenleiste: 🔗 per Link, 👥 mit anderen geteilt (🔒 privat steht in der Liste selbst).
 - **⋮ → Als Text teilen …**: die offenen Einträge als Text, auf dem Handy in den Teilen-Dialog, am Laptop in
   die Zwischenablage; geht auch offline.
+- **⋮ → Archivieren** (alle Listentypen) statt Löschen: die Liste wandert ins „Archiv“ der Seitenleiste. Dort
+  holt *⋮ → Aus dem Archiv holen* sie zurück; *⋮ → Endgültig löschen* gibt es (für den Besitzer) nur im Archiv.
+  Vorlagen lassen sich direkt löschen.
 - **Reihenfolge der Listen und Abschnitte** in der Seitenleiste: *Einstellungen → Reihenfolge*, je Benutzer.
   Am Rechner lassen sich Listen auch direkt in der Seitenleiste ziehen (innerhalb ihres Abschnitts bzw. ihrer
   Kategorie).

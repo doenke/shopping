@@ -236,7 +236,7 @@ export async function setVisibility(id: string, visibility: 'household' | 'priva
   await sync.mutateList(id, { visibility });
 }
 
-/** Done packing lists go to the archive instead of being deleted. */
+/** Lists (any type) go to the archive instead of being deleted; deleting for good only from there. */
 export async function archiveList(id: string, archived: boolean): Promise<void> {
   await sync.mutateList(id, { archivedAt: archived ? new Date().toISOString() : null });
 }

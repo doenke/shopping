@@ -57,6 +57,17 @@ describe('REST API', () => {
     expect((await call('GET', '/api/v1/lists/einkauf')).json().name).toBe('Einkauf');
   });
 
+  it('deletes a list only from the archive', async () => {
+    const { id } = (await call('POST', '/api/v1/lists', { name: 'Baumarkt' })).json();
+    const early = await call('DELETE', `/api/v1/lists/${id}`);
+    expect(early.statusCode).toBe(409);
+    expect(early.json().error).toBe('archive_first');
+    expect((await call('PATCH', `/api/v1/lists/${id}`, { archived: true })).statusCode).toBe(200);
+    expect((await call('DELETE', `/api/v1/lists/${id}`)).statusCode).toBe(200);
+    const all = (await call('GET', '/api/v1/lists?archived=true')).json() as { id: string }[];
+    expect(all.map((l) => l.id)).not.toContain(id);
+  });
+
   it('adds free text and structured items, merging like the app', async () => {
     const res = await call('POST', '/api/v1/lists/default/items', {
       text: '2 l Milch; 500g Hack gemischt bio',

@@ -252,6 +252,9 @@ export class SyncService {
     if (!(await this.hasAccess(tx, userId, id))) throw new Rejection('forbidden');
     const { listType: _t, isTemplate: _i, ...mutable } = patch;
     if ((mutable.deleted !== undefined || mutable.visibility !== undefined) && existing.ownerId !== userId) throw new Rejection('owner_only');
+    // Lists go to the archive first; only archived lists (and templates) can be deleted for good.
+    if (mutable.deleted === true && !existing.deleted && !existing.isTemplate && !(mutable.archivedAt ?? existing.archivedAt))
+      throw new Rejection('archive_first');
     const row = toListRow(existing);
     const applied = applyPatch(row, mutable, ts);
     if (applied.length === 0) return [];

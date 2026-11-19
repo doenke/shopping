@@ -94,8 +94,10 @@ function Shell({ me }: { me: Me }) {
   const todoLists = ordered.filter((l) => !l.isTemplate && !l.archivedAt && l.listType === 'todo');
   // Arbeitsmodus: only shows and hides lists – just the work lists in the sidebar, the search and as start.
   const workMode = useWorkModeSetting();
-  const workLists = todoLists.filter(isWorkList);
-  const archived = ordered.filter((l) => !l.isTemplate && l.archivedAt);
+  const workLists = todoLists.filter((l) => isWorkList(l));
+  // In the Arbeitsmodus the archive shows just the archived work lists.
+  const allArchived = ordered.filter((l) => !l.isTemplate && l.archivedAt);
+  const archived = workMode ? allArchived.filter((l) => isWorkList(l, { archived: true })) : allArchived;
   const templates = ordered.filter((l) => l.isTemplate);
   const [editing, setEditing] = useState(false);
   /** Short note at the bottom ("Liste als Text kopiert"). */
@@ -202,7 +204,8 @@ function Shell({ me }: { me: Me }) {
   }, [workMode]);
   // Arbeitsmodus on while a hidden list is open: go to the first work list.
   useEffect(() => {
-    if (workMode && route.page === 'list' && list && !isWorkList(list)) navigate(workLists[0] ? { page: 'list', listId: workLists[0].id } : { page: 'list' });
+    if (workMode && route.page === 'list' && list && !isWorkList(list) && !isWorkList(list, { archived: true }))
+      navigate(workLists[0] ? { page: 'list', listId: workLists[0].id } : { page: 'list' });
   }, [workMode, list?.id]);
 
   // A ToDo list on the desktop: tasks as a table with details.
@@ -300,7 +303,7 @@ function Shell({ me }: { me: Me }) {
           </div>
         );
       })}
-      {!workMode && archived.length > 0 && (
+      {archived.length > 0 && (
         <div className="sidebar__archive">
           {groupHeading('sidebar__section', `Archiv (${archived.length})`, 'sec:archive')}
           <ul>
@@ -514,7 +517,7 @@ function Shell({ me }: { me: Me }) {
               ]}
               onSave={async (ids) => {
                 await setSectionOrder(ids.filter((id) => id.startsWith('section:')).map((id) => id.slice('section:'.length) as SectionKey));
-                await setListOrder([...ids.filter((id) => !id.startsWith('section:')), ...archived.map((l) => l.id)]);
+                await setListOrder([...ids.filter((id) => !id.startsWith('section:')), ...allArchived.map((l) => l.id)]);
               }}
               onReset={async () => {
                 await setSectionOrder([]);

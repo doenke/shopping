@@ -139,3 +139,23 @@ test('Merkliste: a tap opens the details, done is said there (phone: at the top)
   await expect(dialog).toBeHidden();
   await expect(page.getByRole('button', { name: /Erledigt \(1\)/ })).toBeVisible();
 });
+
+test('lists are archived first and deleted for good only from the archive', async ({ page }, info) => {
+  await login(page, `Arno ${info.project.name}`);
+  await page.goto('/');
+  await newList(page, 'Baumarkt');
+  await page.getByRole('button', { name: 'Listenmenü' }).click();
+  await expect(page.getByRole('menuitem', { name: /löschen/ })).toHaveCount(0);
+  await page.getByRole('menuitem', { name: 'Archivieren' }).click();
+  await expect(page.getByText(/ist im Archiv/)).toBeVisible();
+
+  if (phone(page)) await page.getByRole('button', { name: 'Listen', exact: true }).click();
+  const sidebar = page.locator('.sidebar');
+  await sidebar.getByRole('button', { name: /Archiv \(1\)/ }).click();
+  await sidebar.getByRole('link', { name: /Baumarkt/ }).click();
+  await page.getByRole('button', { name: 'Listenmenü' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Aus dem Archiv holen' })).toBeVisible();
+  page.once('dialog', (d) => void d.accept());
+  await page.getByRole('menuitem', { name: 'Endgültig löschen' }).click();
+  await expect(page.locator('.sidebar').getByText(/Archiv \(/)).toHaveCount(0);
+});

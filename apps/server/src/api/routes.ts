@@ -183,10 +183,19 @@ export async function apiRoutes(app: FastifyInstance, opts: Options): Promise<vo
     },
   );
 
-  route('DELETE', '/api/v1/lists/:id', { summary: 'Liste löschen (nur Besitzer)', tag: 'Listen', params: ListRef }, async ({ userId, params }) => {
-    await api.deleteList(userId, params.id);
-    return { ok: true };
-  });
+  route(
+    'DELETE',
+    '/api/v1/lists/:id',
+    {
+      summary: 'Liste endgültig löschen (nur Besitzer, nur aus dem Archiv – vorher mit PATCH archived=true archivieren; Vorlagen direkt)',
+      tag: 'Listen',
+      params: ListRef,
+    },
+    async ({ userId, params }) => {
+      await api.deleteList(userId, params.id);
+      return { ok: true };
+    },
+  );
 
   route(
     'GET',

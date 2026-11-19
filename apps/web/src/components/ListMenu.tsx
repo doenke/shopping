@@ -96,13 +96,16 @@ export function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose
           Als Vorlage speichern
         </button>
       )}
-      {list.listType === 'packing' && !list.isTemplate && !guest && (
+      {!list.isTemplate && !guest && (
         <button
           type="button"
           role="menuitem"
           onClick={() => {
             void archiveList(list.id, !list.archivedAt);
-            if (!list.archivedAt) navigate({ page: 'list' });
+            if (!list.archivedAt) {
+              navigate({ page: 'list' });
+              onNotice(`„${list.name}“ ist im Archiv – dort lässt sie sich wiederherstellen oder endgültig löschen.`);
+            }
             onClose();
           }}
         >
@@ -178,20 +181,21 @@ export function ListMenu({ list, me, compact, membersSeen, hasTemplates, onClose
           Liste verlassen
         </button>
       )}
-      {isOwner && (
+      {/* Lists are archived first; only from the archive (and templates) they are deleted for good. */}
+      {isOwner && (list.isTemplate || list.archivedAt) && (
         <button
           type="button"
           role="menuitem"
           className="danger"
           onClick={() => {
-            if (confirm(`„${list.name}“ wirklich löschen?`)) {
+            if (confirm(`„${list.name}“ endgültig löschen? Das lässt sich nicht rückgängig machen.`)) {
               void deleteList(list.id);
               navigate({ page: 'list' });
             }
             onClose();
           }}
         >
-          Liste löschen
+          {list.isTemplate ? 'Vorlage löschen' : 'Endgültig löschen'}
         </button>
       )}
     </div>

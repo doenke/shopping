@@ -86,6 +86,7 @@ const REJECTIONS: Record<string, [number, string]> = {
   template_not_checkable: [409, 'In Vorlagen wird nichts abgehakt'],
   type_mismatch: [409, 'Listentyp passt nicht (Einkaufs- und Packliste)'],
   guest: [403, 'Gäste können keine Listen anlegen'],
+  archive_first: [409, 'Erst archivieren – endgültig gelöscht werden nur Listen aus dem Archiv'],
 };
 
 /**
@@ -416,7 +417,7 @@ export class ShoppingApi {
     await this.mutate(userId, 'list', [{ id: list.id, patch: { visibility } }]);
   }
 
-  /** Done packing lists are archived instead of deleted. */
+  /** Lists are archived instead of deleted (any type); deleting works only from the archive. */
   async archiveList(userId: string, ref: string, archived: boolean): Promise<void> {
     const list = await this.resolveList(userId, ref);
     await this.mutate(userId, 'list', [{ id: list.id, patch: { archivedAt: archived ? new Date().toISOString() : null } }]);
@@ -445,6 +446,7 @@ export class ShoppingApi {
     await this.mutate(userId, 'list', [{ id: list.id, patch: { settings } }]);
   }
 
+  /** For good – only archived lists (and templates); others have to be archived first. */
   async deleteList(userId: string, ref: string): Promise<void> {
     const list = await this.resolveList(userId, ref);
     await this.mutate(userId, 'list', [{ id: list.id, patch: { deleted: true } }]);

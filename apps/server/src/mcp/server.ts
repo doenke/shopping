@@ -94,7 +94,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     'list_lists',
     {
       title: 'Listen anzeigen',
-      description: 'Alle Einkaufs- und Packlisten (und optional Vorlagen, archivierte Packlisten) mit Anzahl offener Artikel.',
+      description: 'Alle Listen (und optional Vorlagen, archivierte Listen) mit Anzahl offener Artikel.',
       inputSchema: {
         include_templates: z.boolean().default(false),
         type: z.enum(['shopping', 'packing', 'memo', 'todo']).optional().describe('Nur Einkaufslisten (shopping), Packlisten (packing) oder Merklisten (memo)'),
@@ -288,7 +288,7 @@ export function createMcpServer(api: ShoppingApi, principal: Principal): McpServ
     'archive_list',
     {
       title: 'Liste archivieren',
-      description: 'Archiviert eine erledigte Packliste (oder holt sie mit archived=false zurück).',
+      description: 'Archiviert eine Liste (jeder Typ; statt Löschen) oder holt sie mit archived=false zurück.',
       inputSchema: { list: z.string().min(1), archived: z.boolean().default(true) },
     },
     guard('write', async ({ list, archived }: { list: string; archived: boolean }) => {

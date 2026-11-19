@@ -54,8 +54,8 @@ export function useWorkModeSetting(): boolean {
 }
 
 /** The lists of the Arbeitsmodus: ToDo lists in the Kategorie "Arbeit". */
-export function isWorkList(list: ListRow): boolean {
-  if (list.listType !== 'todo' || list.isTemplate || list.archivedAt) return false;
+export function isWorkList(list: ListRow, opts: { archived?: boolean } = {}): boolean {
+  if (list.listType !== 'todo' || list.isTemplate || !!list.archivedAt !== !!opts.archived) return false;
   return (listGroup(list) ?? '').trim().toLowerCase() === 'arbeit';
 }
 

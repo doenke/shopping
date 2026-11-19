@@ -168,8 +168,14 @@ describe('sync', () => {
     ws.close();
   });
 
+  it('deletes lists only from the archive', async () => {
+    const r = await push(anna, [annaClient.list(listId, { deleted: true })]);
+    expect(r.rejected[0]?.reason).toBe('archive_first');
+  });
+
   it('tells members when a list is deleted', async () => {
     const { seq } = await pull(ben);
+    await push(anna, [annaClient.list(listId, { archivedAt: new Date().toISOString() })]);
     await push(anna, [annaClient.list(listId, { deleted: true })]);
     const delta = await pull(ben, seq);
     expect(delta.removedLists).toContain(listId);
